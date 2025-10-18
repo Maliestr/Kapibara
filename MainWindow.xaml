@@ -1,0 +1,137 @@
+﻿<Window x:Class="Graphic_Editor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Graphic_Editor"
+        mc:Ignorable="d"
+        WindowState="Maximized"
+        WindowStyle="None"
+        AllowsTransparency="False"
+        ResizeMode="CanResize"
+        MinHeight="800"
+        MinWidth="1200"
+        Padding="6"
+        Background="#FF252525"
+        FontFamily="Gotham Pro">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40"
+                      ResizeBorderThickness="5"
+                      GlassFrameThickness="0"/>
+    </WindowChrome.WindowChrome>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40"/>
+            <!-- Title bar -->
+            <RowDefinition Height="*"/>
+            <!-- Content -->
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#424242">
+            <!--можно добавить MouseLeftButtonDown="TitleBar_MouseLeftButtonDown" для обработки событий связанных с левой кнопкой мыши-->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Image Grid.Column="0" 
+                       Source="/Icons/L.png"
+                       Width="25.82" Height="25.82" 
+                       Margin="15,11,15,3"/>
+
+                <Menu Background="Transparent" 
+                      FontSize="12" 
+                      Grid.Column="1" VerticalAlignment="Top" 
+                      Foreground="#FFEEEEEE" Grid.ColumnSpan="4" Margin="0,16,0,0">
+                    <!-- Пункт "Файл" -->
+                    <MenuItem Header="Файл" VerticalAlignment="Center" Margin="0,0,18,0">
+                        <MenuItem Header="Новый"/>
+                        <MenuItem Header="Открыть..."/>
+                        <MenuItem Header="Сохранить"/>
+                        <MenuItem Header="Сохранить как..."/>
+                        <Separator/>
+                        <MenuItem Header="Выход"/>
+                    </MenuItem>
+
+                    <!-- Пункт "Вид" -->
+                    <MenuItem Header="Вид" Margin="0,0,18,0">
+                        <MenuItem Header="Увеличить"/>
+                        <MenuItem Header="Уменьшить"/>
+                        <MenuItem Header="Сбросить масштаб"/>
+                    </MenuItem>
+
+                    <!-- Дополнительные пункты -->
+                    <MenuItem Header="Правка" Margin="0,0,18,0">
+                        <MenuItem Header="Отменить" InputGestureText="Ctrl+Z"/>
+                        <MenuItem Header="Повторить" InputGestureText="Ctrl+Y"/>
+                        <Separator/>
+                        <MenuItem Header="Вырезать" InputGestureText="Ctrl+X"/>
+                        <MenuItem Header="Копировать" InputGestureText="Ctrl+C"/>
+                        <MenuItem Header="Вставить" InputGestureText="Ctrl+V"/>
+                    </MenuItem>
+
+                    <MenuItem Header="Справка">
+                        <MenuItem Header="Справка" InputGestureText="F1"/>
+                        <MenuItem Header="О программе"/>
+                    </MenuItem>
+                </Menu>
+
+                <StackPanel/>
+
+                <!--<Style x:Key="CloseButtonStyle" TargetType="Button">
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="Width" Value="46"/>
+                    <Setter Property="Height" Value="32"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="bd" Background="{TemplateBinding Background}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="#e81123"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>-->
+
+                <!--<Style x:Key="CloseBtn" TargetType="Button">
+                    
+                </Style>-->
+
+                <!--<StackPanel Grid.Column="7" Orientation="Horizontal">
+                
+                    <Button x:Name="MinimizeBtn" Background="Transparent" BorderBrush="#00000000">
+                        <Image Source="/Icons/Line 3.png" Width="12" Height="12" Margin="16,8,16,0"/>
+                    </Button>
+
+                    <Button x:Name="MaximizeBtn" Background="Transparent" BorderBrush="#00000000">
+                        <Image Source="/Icons/Group 2.png" Width="12" Height="12" Margin="16,8,16,0"/>
+                    </Button>
+
+                    <Button x:Name="CloseBtn" Background="Transparent" BorderBrush="#00000000">
+                        <Image Source="/Icons/Group 1.png" Width="12" Height="12" Margin="16,8,24,0"/>
+                    </Button>
+                </StackPanel> -->
+            </Grid>
+        </Border>
+        <Button x:Name="escButton" Background="Transparent" BorderBrush="Transparent" 
+                IsCancel="True" Click="escButton_Click" Grid.Column="6"
+                Margin="1144,8,0,8">
+            <Image Source="/Icons/Group 1.png" Width="12" Height="12"/>
+        </Button>
+    </Grid>
+</Window>
