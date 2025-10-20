@@ -3,13 +3,13 @@
   "WorkspaceRootPath": "C:\\Users\\User\\Kapibara\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{0E2F854C-7347-4D4D-88C1-79EE8BFCFBEF}|Graphic Editor.csproj|c:\\users\\user\\desktop\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{0E2F854C-7347-4D4D-88C1-79EE8BFCFBEF}|Graphic Editor.csproj|c:\\users\\user\\desktop\\mainwindow.xaml||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{0E2F854C-7347-4D4D-88C1-79EE8BFCFBEF}|Graphic Editor.csproj|c:\\users\\user\\desktop\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{0E2F854C-7347-4D4D-88C1-79EE8BFCFBEF}|Graphic Editor.csproj|c:\\users\\user\\desktop\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -23,13 +23,13 @@
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "MainWindow.xaml",
               "DocumentMoniker": "C:\\Users\\User\\Desktop\\MainWindow.xaml",
               "RelativeDocumentMoniker": "..\\Desktop\\MainWindow.xaml",
               "ToolTip": "C:\\Users\\User\\Desktop\\MainWindow.xaml",
               "RelativeToolTip": "..\\Desktop\\MainWindow.xaml",
-              "ViewState": "AgIAALYAAAAAAAAAAAD4v70AAAAoAAAAAAAAAA==",
+              "ViewState": "AgIAALkAAAAAAAAAAAAIwNEAAAAVAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
               "WhenOpened": "2025-10-14T07:33:59.158Z",
               "EditorCaption": ""
@@ -38,11 +38,11 @@
         },
         {
           "DockedWidth": 175,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "MainWindow.xaml",
               "DocumentMoniker": "C:\\Users\\User\\Desktop\\MainWindow.xaml",
               "RelativeDocumentMoniker": "..\\Desktop\\MainWindow.xaml",
@@ -54,15 +54,16 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "MainWindow.xaml.cs",
               "DocumentMoniker": "C:\\Users\\User\\Desktop\\MainWindow.xaml.cs",
               "RelativeDocumentMoniker": "..\\Desktop\\MainWindow.xaml.cs",
               "ToolTip": "C:\\Users\\User\\Desktop\\MainWindow.xaml.cs",
               "RelativeToolTip": "..\\Desktop\\MainWindow.xaml.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAAHAAAAAAAAAA==",
+              "ViewState": "AgIAAJcBAAAAAAAAAAAYwLMBAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-13T11:46:47.998Z"
+              "WhenOpened": "2025-10-13T11:46:47.998Z",
+              "EditorCaption": ""
             }
           ]
         }
