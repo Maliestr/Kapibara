@@ -30,3 +30,33 @@ D:\Projects_C\Development\o\Graphic Editor\obj\Debug\Graphic Editor.csproj.Gener
 D:\Projects_C\Development\o\Graphic Editor\obj\Debug\Graphic Editor.csproj.CoreCompileInputs.cache
 D:\Projects_C\Development\o\Graphic Editor\obj\Debug\Graphic Editor.exe
 D:\Projects_C\Development\o\Graphic Editor\obj\Debug\Graphic Editor.pdb
+C:\Users\evasi\Kapibara\bin\Debug\Graphic Editor.exe.config
+C:\Users\evasi\Kapibara\bin\Debug\Graphic Editor.exe
+C:\Users\evasi\Kapibara\bin\Debug\Graphic Editor.pdb
+C:\Users\evasi\Kapibara\obj\Debug\Graphic Editor.csproj.AssemblyReference.cache
+C:\Users\evasi\Kapibara\obj\Debug\MainWindow.g.cs
+C:\Users\evasi\Kapibara\obj\Debug\App.g.cs
+C:\Users\evasi\Kapibara\obj\Debug\Graphic Editor_MarkupCompile.cache
+C:\Users\evasi\Kapibara\obj\Debug\Graphic Editor_MarkupCompile.lref
+C:\Users\evasi\Kapibara\obj\Debug\MainWindow.baml
+C:\Users\evasi\Kapibara\obj\Debug\Graphic Editor.g.resources
+C:\Users\evasi\Kapibara\obj\Debug\Graphic_Editor.Properties.Resources.resources
+C:\Users\evasi\Kapibara\obj\Debug\Graphic Editor.csproj.GenerateResource.cache
+C:\Users\evasi\Kapibara\obj\Debug\Graphic Editor.csproj.CoreCompileInputs.cache
+C:\Users\evasi\Kapibara\obj\Debug\Graphic Editor.exe
+C:\Users\evasi\Kapibara\obj\Debug\Graphic Editor.pdb
+C:\Graph.Editor\bin\Debug\Graphic Editor.exe.config
+C:\Graph.Editor\bin\Debug\Graphic Editor.exe
+C:\Graph.Editor\bin\Debug\Graphic Editor.pdb
+C:\Graph.Editor\obj\Debug\Graphic Editor.csproj.AssemblyReference.cache
+C:\Graph.Editor\obj\Debug\MainWindow.g.cs
+C:\Graph.Editor\obj\Debug\App.g.cs
+C:\Graph.Editor\obj\Debug\Graphic Editor_MarkupCompile.cache
+C:\Graph.Editor\obj\Debug\Graphic Editor_MarkupCompile.lref
+C:\Graph.Editor\obj\Debug\MainWindow.baml
+C:\Graph.Editor\obj\Debug\Graphic Editor.g.resources
+C:\Graph.Editor\obj\Debug\Graphic_Editor.Properties.Resources.resources
+C:\Graph.Editor\obj\Debug\Graphic Editor.csproj.GenerateResource.cache
+C:\Graph.Editor\obj\Debug\Graphic Editor.csproj.CoreCompileInputs.cache
+C:\Graph.Editor\obj\Debug\Graphic Editor.exe
+C:\Graph.Editor\obj\Debug\Graphic Editor.pdb

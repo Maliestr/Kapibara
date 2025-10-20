@@ -15,6 +15,54 @@
         Background="#FF252525"
         FontFamily="Gotham Pro">
 
+    <Window.Resources>
+        <!-- Общий стиль для кнопок заголовка (минимизация/максимизация) с подсветкой при наведении -->
+        <Style x:Key="TitleBarButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#33FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Красная подсветка для кнопки закрытия -->
+        <Style x:Key="CloseButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#e81123"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="40"
                       ResizeBorderThickness="5"
@@ -24,69 +72,96 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="40"/>
-            <!-- Title bar -->
             <RowDefinition Height="*"/>
-            <!-- Content -->
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#424242">
-            <!--можно добавить MouseLeftButtonDown="TitleBar_MouseLeftButtonDown" для обработки событий связанных с левой кнопкой мыши-->
+        <!-- Title Bar -->
+        <Border Grid.Row="0" Background="#424242" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <Image Grid.Column="0" 
-                       Source="/Icons/L.png"
-                       Width="25.82" Height="25.82" 
-                       Margin="15,11,15,3"/>
+                <!-- Логотип и меню -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Background="Transparent">
+                    <Image Source="/Icons/L.png" Width="25.82" Height="25.82" Margin="15,11,15,3"/>
 
-                <Menu Background="Transparent" 
-                      FontSize="12" 
-                      Grid.Column="1" VerticalAlignment="Top" 
-                      Foreground="#FFEEEEEE" Grid.ColumnSpan="4" Margin="0,16,0,0">
-                    <!-- Пункт "Файл" -->
-                    <MenuItem Header="Файл" VerticalAlignment="Center" Margin="0,0,18,0">
-                        <MenuItem Header="Новый"/>
-                        <MenuItem Header="Открыть..."/>
-                        <MenuItem Header="Сохранить"/>
-                        <MenuItem Header="Сохранить как..."/>
-                        <Separator/>
-                        <MenuItem Header="Выход"/>
-                    </MenuItem>
+                    <Menu Background="Transparent" FontSize="12" VerticalAlignment="Center" Foreground="#FFEEEEEE" 
+                          WindowChrome.IsHitTestVisibleInChrome="True">
+                        <MenuItem Header="Файл" VerticalAlignment="Center" Margin="0,0,18,0">
+                            <MenuItem Header="Новый" Click="NewFile_Click"/>
+                            <MenuItem Header="Открыть..." Click="OpenFile_Click"/>
+                            <MenuItem Header="Сохранить" Click="SaveFile_Click"/>
+                            <MenuItem Header="Сохранить как..." Click="SaveAsFile_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Выход" Click="Exit_Click"/>
+                        </MenuItem>
 
-                    <!-- Пункт "Вид" -->
-                    <MenuItem Header="Вид" Margin="0,0,18,0">
-                        <MenuItem Header="Увеличить"/>
-                        <MenuItem Header="Уменьшить"/>
-                        <MenuItem Header="Сбросить масштаб"/>
-                    </MenuItem>
+                        <MenuItem Header="Вид" Margin="0,0,18,0">
+                            <MenuItem Header="Увеличить" Click="ZoomIn_Click"/>
+                            <MenuItem Header="Уменьшить" Click="ZoomOut_Click"/>
+                            <MenuItem Header="Сбросить масштаб" Click="ResetZoom_Click"/>
+                        </MenuItem>
 
-                    <!-- Дополнительные пункты -->
-                    <MenuItem Header="Правка" Margin="0,0,18,0">
-                        <MenuItem Header="Отменить" InputGestureText="Ctrl+Z"/>
-                        <MenuItem Header="Повторить" InputGestureText="Ctrl+Y"/>
-                        <Separator/>
-                        <MenuItem Header="Вырезать" InputGestureText="Ctrl+X"/>
-                        <MenuItem Header="Копировать" InputGestureText="Ctrl+C"/>
-                        <MenuItem Header="Вставить" InputGestureText="Ctrl+V"/>
-                    </MenuItem>
+                        <MenuItem Header="Правка" Margin="0,0,18,0">
+                            <MenuItem Header="Отменить" InputGestureText="Ctrl+Z" Click="Undo_Click"/>
+                            <MenuItem Header="Повторить" InputGestureText="Ctrl+Y" Click="Redo_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Вырезать" InputGestureText="Ctrl+X" Click="Cut_Click"/>
+                            <MenuItem Header="Копировать" InputGestureText="Ctrl+C" Click="Copy_Click"/>
+                            <MenuItem Header="Вставить" InputGestureText="Ctrl+V" Click="Paste_Click"/>
+                        </MenuItem>
 
-                    <MenuItem Header="Справка">
-                        <MenuItem Header="Справка" InputGestureText="F1"/>
-                        <MenuItem Header="О программе"/>
-                    </MenuItem>
-                </Menu>
+                        <MenuItem Header="Справка">
+                            <MenuItem Header="Справка" InputGestureText="F1" Click="Help_Click"/>
+                            <MenuItem Header="О программе" Click="About_Click"/>
+                        </MenuItem>
+                    </Menu>
+                </StackPanel>
 
-                <StackPanel/>
+                <!-- Заголовок окна -->
+                <TextBlock Grid.Column="1" Text="Graphic Editor" Foreground="White" 
+                          VerticalAlignment="Center" HorizontalAlignment="Center"
+                          FontSize="14" Background="Transparent"/>
 
-                <!--<Style x:Key="CloseButtonStyle" TargetType="Button">
+                <!-- Кнопки управления окном -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Background="Transparent">
+                    <Button x:Name="MinimizeBtn" Background="Transparent" BorderBrush="Transparent"
+                            Click="MinimizeBtn_Click" Width="46" Height="32"
+                            Style="{StaticResource TitleBarButtonStyle}"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Image Source="/Icons/Line 3.png" Width="12" Height="12"/>
+                    </Button>
+
+                    <Button x:Name="MaximizeBtn" Background="Transparent" BorderBrush="Transparent"
+                            Click="MaximizeBtn_Click" Width="46" Height="32"
+                            Style="{StaticResource TitleBarButtonStyle}"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Image Source="/Icons/Group 2.png" Width="12" Height="12"/>
+                    </Button>
+
+                    <Button x:Name="CloseBtn" Background="Transparent" BorderBrush="Transparent"
+                            Click="CloseBtn_Click" Width="46" Height="32"
+                            Style="{StaticResource CloseButtonStyle}"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Image Source="/Icons/Group 1.png" Width="12" Height="12"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Content Area -->
+        <Border Grid.Row="1" Background="#FF1E1E1E">
+            <TextBlock Text="Контентная область" Foreground="White" 
+                       HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16"/>
+        </Border>
+    </Grid>
+</Window>
+
+
+<!--<Style x:Key="CloseButtonStyle" TargetType="Button">
                     <Setter Property="Foreground" Value="White"/>
                     <Setter Property="Background" Value="Transparent"/>
                     <Setter Property="BorderThickness" Value="0"/>
@@ -126,7 +201,9 @@
                         <Image Source="/Icons/Group 1.png" Width="12" Height="12" Margin="16,8,24,0"/>
                     </Button>
                 </StackPanel> -->
-            </Grid>
+                
+    
+<!--</Grid>
         </Border>
         <Button x:Name="escButton" Background="Transparent" BorderBrush="Transparent" 
                 IsCancel="True" Click="escButton_Click" Grid.Column="6"
@@ -134,4 +211,4 @@
             <Image Source="/Icons/Group 1.png" Width="12" Height="12"/>
         </Button>
     </Grid>
-</Window>
+</Window>-->
