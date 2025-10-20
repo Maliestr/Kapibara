@@ -24,13 +24,13 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="40"/>
-            <!-- Title bar -->
+
             <RowDefinition Height="*"/>
-            <!-- Content -->
+
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0" Background="#424242">
-            <!--можно добавить MouseLeftButtonDown="TitleBar_MouseLeftButtonDown" для обработки событий связанных с левой кнопкой мыши-->
+
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -51,7 +51,7 @@
                       FontSize="12" 
                       Grid.Column="1" VerticalAlignment="Top" 
                       Foreground="#FFEEEEEE" Grid.ColumnSpan="4" Margin="0,16,0,0">
-                    <!-- Пункт "Файл" -->
+
                     <MenuItem Header="Файл" VerticalAlignment="Center" Margin="0,0,18,0">
                         <MenuItem Header="Новый"/>
                         <MenuItem Header="Открыть..."/>
@@ -61,14 +61,14 @@
                         <MenuItem Header="Выход"/>
                     </MenuItem>
 
-                    <!-- Пункт "Вид" -->
+
                     <MenuItem Header="Вид" Margin="0,0,18,0">
                         <MenuItem Header="Увеличить"/>
                         <MenuItem Header="Уменьшить"/>
                         <MenuItem Header="Сбросить масштаб"/>
                     </MenuItem>
 
-                    <!-- Дополнительные пункты -->
+
                     <MenuItem Header="Правка" Margin="0,0,18,0">
                         <MenuItem Header="Отменить" InputGestureText="Ctrl+Z"/>
                         <MenuItem Header="Повторить" InputGestureText="Ctrl+Y"/>
@@ -128,10 +128,138 @@
                 </StackPanel> -->
             </Grid>
         </Border>
-        <Button x:Name="escButton" Background="Transparent" BorderBrush="Transparent" 
-                IsCancel="True" Click="escButton_Click" Grid.Column="6"
-                Margin="1144,8,0,8">
-            <Image Source="/Icons/Group 1.png" Width="12" Height="12"/>
-        </Button>
+
+        <Grid Grid.Row="1" Margin="10,0,-10,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="187*"/>
+                <ColumnDefinition Width="88*"/>
+                <ColumnDefinition Width="925*"/>
+            </Grid.ColumnDefinitions>
+
+
+
+
+            <!-- Основная карточка нотации -->
+            <Border x:Name="NotationCard"
+                        Canvas.Left="-274" 
+                        Canvas.Top="102"
+                        Width="274"
+                        Height="339"
+                        Background="#343434"
+                        BorderBrush="#CCCCCC"
+                        BorderThickness="1"
+                        CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="2" Margin="10,41,0,0">
+
+                <Border.Effect>
+                    <DropShadowEffect ShadowDepth="3" Color="Black" Opacity="0.3" BlurRadius="10"/>
+                </Border.Effect>
+
+                <Grid Margin="20,20,-1,2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" MinHeight="153.8"/>
+                        <RowDefinition Height="Auto" MinHeight="252.542"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="0*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Ellipse
+                        Width="110"
+                        Height="110"
+                        Fill="White"
+                        Stroke="#343434"
+                        StrokeThickness="3"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Cursor="Hand"/>
+                    <Ellipse x:Name="SimpleRing"
+                         Canvas.Left="200" 
+                         Canvas.Top="200"
+                         Width="110"
+                         Height="110"
+                         Stroke="White"
+                         StrokeThickness="5"
+                         Fill="Transparent"
+                         Cursor="Hand" Margin="116,145,6,183" Grid.RowSpan="2">
+                    </Ellipse>
+
+                    <Border x:Name="Square"
+                        Canvas.Left="200" 
+                        Canvas.Top="200"
+                        Width="100"
+                        Height="100"
+                        Background="#343434"
+                        BorderBrush="White"
+                        BorderThickness="2"
+                        CornerRadius="0"
+                        Cursor="Hand" Margin="119,28,0,29">
+                    </Border>
+                    <Border x:Name="ResizableSquare"
+                        Canvas.Left="200" 
+                        Canvas.Top="200"
+                        Width="70"
+                        Height="71"
+                        Background="#343434"
+                        BorderBrush="White"
+                        BorderThickness="2"
+                        CornerRadius="0"
+                        Cursor="Hand" Margin="26,14,157,196" RenderTransformOrigin="0.5,0.5" Grid.Row="1">
+                        <Border.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform/>
+                                <RotateTransform Angle="45.354"/>
+                                <TranslateTransform/>
+                            </TransformGroup>
+                        </Border.RenderTransform>
+                    </Border>
+                    <Line x:Name="Line"
+                      X1="50" Y1="200"
+                      X2="40" Y2="2"
+                      Stroke="White"
+                      StrokeThickness="3"
+                      Cursor="Hand" Margin="86,34,79,47" RenderTransformOrigin="0.681,0.581" Grid.Row="1">
+                        <Line.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform/>
+                                <RotateTransform Angle="93.201"/>
+                                <TranslateTransform X="-32.998" Y="-1.206"/>
+                            </TransformGroup>
+                        </Line.RenderTransform>
+
+
+                    </Line>
+
+                    <!-- Поле Horatum -->
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,115,15">
+                        <Border Background="#F0F0F0" 
+                                    BorderBrush="#DDDDDD" 
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="5,2"
+                                    Width="0"/>
+                    </StackPanel>
+                    <TextBlock Text="Нотация" 
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       Foreground="White"
+                                       RenderTransformOrigin="1.69,0.537" Margin="85,4,31,133">
+                        <TextBlock.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform/>
+                                <RotateTransform Angle="-0.028"/>
+                                <TranslateTransform Y="-0.03"/>
+                            </TransformGroup>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+
+                </Grid>
+            </Border>
+
+        </Grid>
     </Grid>
 </Window>
