@@ -88,8 +88,8 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Background="Transparent">
                     <Image Source="/Icons/L.png" Width="25.82" Height="25.82" Margin="15,11,15,3"/>
 
-                    <Menu Background="Transparent" FontSize="12" VerticalAlignment="Center" Foreground="#FFEEEEEE" 
-                          WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Menu Background="Transparent" FontSize="12" Foreground="#FFEEEEEE" 
+                          WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Center" Margin="0,8,0,0">
                         <MenuItem Header="Файл" VerticalAlignment="Center" Margin="0,0,18,0">
                             <MenuItem Header="Новый" Click="NewFile_Click"/>
                             <MenuItem Header="Открыть..." Click="OpenFile_Click"/>
@@ -122,30 +122,27 @@
                 </StackPanel>
 
                 <!-- Заголовок окна -->
-                <TextBlock Grid.Column="1" Text="Graphic Editor" Foreground="White" 
-                          VerticalAlignment="Center" HorizontalAlignment="Center"
-                          FontSize="14" Background="Transparent"/>
 
                 <!-- Кнопки управления окном -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Background="Transparent">
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Background="Transparent" Width="144">
                     <Button x:Name="MinimizeBtn" Background="Transparent" BorderBrush="Transparent"
                             Click="MinimizeBtn_Click" Width="46" Height="32"
                             Style="{StaticResource TitleBarButtonStyle}"
-                            WindowChrome.IsHitTestVisibleInChrome="True">
+                            WindowChrome.IsHitTestVisibleInChrome="True" Margin="0,0.6,0,0" VerticalAlignment="Bottom">
                         <Image Source="/Icons/Line 3.png" Width="12" Height="12"/>
                     </Button>
 
                     <Button x:Name="MaximizeBtn" Background="Transparent" BorderBrush="Transparent"
                             Click="MaximizeBtn_Click" Width="46" Height="32"
                             Style="{StaticResource TitleBarButtonStyle}"
-                            WindowChrome.IsHitTestVisibleInChrome="True">
+                            WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom">
                         <Image Source="/Icons/Group 2.png" Width="12" Height="12"/>
                     </Button>
 
                     <Button x:Name="CloseBtn" Background="Transparent" BorderBrush="Transparent"
                             Click="CloseBtn_Click" Width="46" Height="32"
                             Style="{StaticResource CloseButtonStyle}"
-                            WindowChrome.IsHitTestVisibleInChrome="True">
+                            WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom">
                         <Image Source="/Icons/Group 1.png" Width="12" Height="12"/>
                     </Button>
                 </StackPanel>
@@ -153,10 +150,7 @@
         </Border>
 
         <!-- Content Area -->
-        <Border Grid.Row="1" Background="#FF1E1E1E">
-            <TextBlock Text="Контентная область" Foreground="White" 
-                       HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16"/>
-        </Border>
+        <Border Grid.Row="1" Background="#FF1E1E1E"/>
     </Grid>
 </Window>
 

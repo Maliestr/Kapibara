@@ -60,3 +60,19 @@ C:\Graph.Editor\obj\Debug\Graphic Editor.csproj.GenerateResource.cache
 C:\Graph.Editor\obj\Debug\Graphic Editor.csproj.CoreCompileInputs.cache
 C:\Graph.Editor\obj\Debug\Graphic Editor.exe
 C:\Graph.Editor\obj\Debug\Graphic Editor.pdb
+D:\Projects_C\Development\Kapibara\bin\Debug\Graphic Editor.exe.config
+D:\Projects_C\Development\Kapibara\bin\Debug\Graphic Editor.exe
+D:\Projects_C\Development\Kapibara\bin\Debug\Graphic Editor.pdb
+D:\Projects_C\Development\Kapibara\obj\Debug\Graphic Editor.csproj.AssemblyReference.cache
+D:\Projects_C\Development\Kapibara\obj\Debug\Graphic Editor.exe.config
+D:\Projects_C\Development\Kapibara\obj\Debug\MainWindow.g.cs
+D:\Projects_C\Development\Kapibara\obj\Debug\App.g.cs
+D:\Projects_C\Development\Kapibara\obj\Debug\Graphic Editor_MarkupCompile.cache
+D:\Projects_C\Development\Kapibara\obj\Debug\Graphic Editor_MarkupCompile.lref
+D:\Projects_C\Development\Kapibara\obj\Debug\MainWindow.baml
+D:\Projects_C\Development\Kapibara\obj\Debug\Graphic Editor.g.resources
+D:\Projects_C\Development\Kapibara\obj\Debug\Graphic_Editor.Properties.Resources.resources
+D:\Projects_C\Development\Kapibara\obj\Debug\Graphic Editor.csproj.GenerateResource.cache
+D:\Projects_C\Development\Kapibara\obj\Debug\Graphic Editor.csproj.CoreCompileInputs.cache
+D:\Projects_C\Development\Kapibara\obj\Debug\Graphic Editor.exe
+D:\Projects_C\Development\Kapibara\obj\Debug\Graphic Editor.pdb
