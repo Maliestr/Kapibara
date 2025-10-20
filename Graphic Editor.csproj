@@ -107,5 +107,33 @@
     <Resource Include="Icons\Group 2.png" />
     <Resource Include="Icons\Line 3.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\message.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\Vector.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\pen.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\Rectangle 20.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\text.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\dashboard.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\text-align-center.png" />
+    <Resource Include="Icons\text-align-left.png" />
+    <Resource Include="Icons\text-align-right.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\align-horizontal-bottom.png" />
+    <Resource Include="Icons\align-horizontal-center.png" />
+    <Resource Include="Icons\align-horizontal-top.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

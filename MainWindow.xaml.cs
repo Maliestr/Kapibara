@@ -367,5 +367,10 @@ namespace Graphic_Editor
         {
             this.Close(); // закрытие окна
         }
+
+        private void HeightTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
+        }
     }
 }
