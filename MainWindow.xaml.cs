@@ -59,6 +59,7 @@ using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.IO;
 
 
 
@@ -71,6 +72,8 @@ namespace Graphic_Editor
         private Point offset;
         private Transform originalTransform;
         private Point dragStartPoint;
+        private string currentFilePath; //переменная отвечающая за текующий путь файла
+        private string fileExtention = ".png, .jpg"; //расширения, которые можно открыть в нашем редакторе
 
         public MainWindow()
         {
@@ -582,6 +585,147 @@ namespace Graphic_Editor
         private void escButton_Click(object sender, RoutedEventArgs e)
         {
             this.Close(); // закрытие окна
+        }
+
+        //реализация изменения имени
+        public void SetOpenedFile(string filePath) //устанавливает текущий путь файла. НУЖНО РЕАЛИЗОВАТЬ ПЕРЕДАЧУ FILE PATH
+        {
+            if (System.IO.File.Exists(filePath))
+            {
+                currentFilePath = filePath;
+                fileExtention = System.IO.Path.GetExtension(filePath).ToLower();
+                UpdateDisplay();
+            }
+            else
+            {
+                MessageBox.Show($"Файл не найден: {filePath}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private void UpdateDisplay() 
+        {
+            /*if (string.IsNullOrEmpty(currentFilePath) || !System.IO.File.Exists(currentFilePath)) //пусть пока будет
+            {
+               UpdateUIElements("Файл не выбран", "Файл не выбран", "Нет открытого файла");
+
+                return;
+            }
+            */
+
+            string fileNameWithoutExtention = System.IO.Path.GetFileNameWithoutExtension(currentFilePath);
+
+            UpdateUIElements(fileNameWithoutExtention, fileNameWithoutExtention, System.IO.Path.GetFileName(currentFilePath));
+
+        }
+
+
+        private void UpdateUIElements(string titleText, string textBoxText, string currentFileText) //отвечает за вывод текста в label "Title"
+        {
+            if (Title != null)
+                Title.Content = titleText;
+
+            if (Titletextbox != null)
+                Titletextbox.Text = textBoxText;
+
+            if (CurrentFileTitle != null)  //НУЖНО РЕАЛИЗОВАТЬ ПЕРЕДАЧУ CURRENT FILE TITLE
+                Title.Content = currentFileText;
+        }
+
+        private void Title_MouseDown(object sender, System.Windows.Input.MouseEventArgs e)  //открывает поле для ввода и скрывает label
+        {
+            if (string.IsNullOrEmpty(currentFilePath) || !System.IO.File.Exists(currentFilePath))
+                return;
+
+            if (Title != null) Title.Visibility = Visibility.Collapsed;
+
+            if (Titletextbox != null)
+            {
+                Titletextbox.Visibility = Visibility.Visible;
+                Titletextbox.Focus();
+                Titletextbox.SelectAll();
+            }
+        }
+
+        private void Titletextbox_LostFocus(object sender, RoutedEventArgs e) //если мы начинаем взаимодействовать с другими объектами, то происходит подтверждение изменений в имени
+        {
+            ApplyFileNameChange();
+        }
+
+        private void Titletextbox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e) //подтверждение изменений-enter, отмена-esc
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+                ApplyFileNameChange();
+            else if (e.Key == System.Windows.Input.Key.Escape)
+                CancelFileNameChange();
+        }
+
+        private void ApplyFileNameChange()
+        {
+            if (!string.IsNullOrEmpty(Titletextbox.Text))
+            {
+                RenameFile(Titletextbox.Text);
+            }
+            if (string.IsNullOrEmpty(currentFilePath) || !System.IO.File.Exists(currentFilePath))
+            {
+                UpdateUIElements("Файл не выбран", "Файл не выбран", "Нет открытого файла");
+
+                return;
+            }
+
+            if (Titletextbox != null) Titletextbox.Visibility = Visibility.Collapsed;
+            if (Title != null) Title.Visibility = Visibility.Visible;
+        }
+
+        private void CancelFileNameChange()
+        {
+            if (Titletextbox.Text != null)
+            {
+                Titletextbox.Text = System.IO.Path.GetFileNameWithoutExtension(currentFilePath);
+                Titletextbox.Visibility = Visibility.Collapsed;
+            }
+            if (Title != null) Title.Visibility = Visibility.Visible;
+        }
+
+        private void RenameFile(string newFileName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(currentFilePath) || !System.IO.File.Exists(currentFilePath))
+                    return;
+
+                string directory = System.IO.Path.GetDirectoryName(currentFilePath); //тут хранится только имя файла (без расширения)
+                string safeNewFileName = GetSafeFileName(newFileName);
+                string newFilePath = System.IO.Path.Combine(directory, safeNewFileName + fileExtention); //создание нового пути
+
+                if (newFilePath != currentFilePath)
+                {
+                    System.IO.File.Move(currentFilePath, newFilePath);
+                    currentFilePath = newFilePath;
+                    UpdateDisplay();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при переименовывании файла: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+
+
+        }
+
+        private string GetSafeFileName(string fileName) //отвечает за "безопасность" названия
+        {
+            char[] invalidChars = System.IO.Path.GetInvalidFileNameChars(); //масиив запрещенных символов для имен
+            foreach (char invalidChar in invalidChars)
+            {
+                fileName = fileName.Replace(invalidChar.ToString(), ""); //удаляет запрещенные символы в имени файла
+            }
+
+            fileName = fileName.Trim(); //убирает пробелы в начале и конце имени
+
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = "Untitled"; //если имени нет- присваивает имя Untitled
+            }
+            return fileName;
         }
     }
 }

@@ -911,6 +911,17 @@
 
             </Grid>
         </Border>
+        <Border x:Name="title1" CornerRadius="6" 
+                Background="#FF343434" 
+                Padding="13,17"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="24,26,0,0"
+                Height="60" Width="240"
+                Grid.Row="1">
+            <Label x:Name="Title" Content="Untitled" Foreground="#ffffff"  Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent"/>
+        </Border>
+        <TextBox x:Name="Titletextbox" HorizontalAlignment="Left" Margin="24,26,0,0" Grid.Row="1" TextWrapping="Wrap" VerticalAlignment="Top" Width="240" Height="60" Visibility="Hidden"/>
     </Grid>
 </Window>
 
