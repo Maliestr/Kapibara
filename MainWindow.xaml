@@ -151,6 +151,766 @@
 
         <!-- Content Area -->
         <Border Grid.Row="1" Background="#FF1E1E1E"/>
+
+        <Border Grid.Row="1" Grid.ColumnSpan="2">
+            <!--мои изменения тут -->
+            <Grid>
+
+                <!-- Основная рабочая область -->
+                <Canvas x:Name="MainCanvas"
+    Margin="10,0,10,20"/>
+
+                <!-- Прямоугольная панель снизу -->
+                <Border CornerRadius="11.72" 
+        Background="#FF343434" 
+        Width="293" 
+        Height="52"
+        Margin="458,694,453,38"
+        Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="">
+                    <StackPanel Orientation="Horizontal"
+               VerticalAlignment="Center" Width="293" Height="52" HorizontalAlignment="Center">
+                        <!-- Ручной инструмент -->
+                        <Button      
+                Width="32" 
+                Height="32"
+                Cursor="Hand"
+                Margin="16,0,5,0"
+                Background="#FF343434"
+                BorderBrush="Transparent"
+                FocusVisualStyle="{x:Null}" HorizontalAlignment="Center">
+                            <Image Source="/Icons/Vector.png"
+                            Width="30" 
+                            Height="30"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center"/>
+                        </Button>
+                        <!-- Перо -->
+                        <Button      
+                Width="32" 
+                Height="32"
+                Cursor="Hand"
+                Margin="9,0,11,0"
+                Background="#FF343434"
+                BorderBrush="Transparent"
+                FocusVisualStyle="{x:Null}">
+                            <Image Source="/Icons/pen.png"
+                            Width="30" 
+                            Height="30"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center"/>
+                        </Button>
+                        <!-- Квадратик -->
+                        <Button      
+                Width="32" 
+                Height="32"
+                Cursor="Hand"
+                Margin="4,0,5,0"
+                Background="#FF343434"
+                BorderBrush="Transparent"
+                FocusVisualStyle="{x:Null}">
+                            <Image Source="/Icons/Rectangle 20.png"
+                            Width="30" 
+                            Height="30"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center"/>
+                        </Button>
+                        <!-- Текст -->
+                        <Button      
+                Width="32" 
+                Height="32"
+                Cursor="Hand"
+                Margin="12,0,5,0"
+                Background="#FF343434"
+                BorderBrush="Transparent"
+                FocusVisualStyle="{x:Null}">
+                            <Image Source="/Icons/text.png"
+                            Width="30" 
+                            Height="30"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center"/>
+                        </Button>
+                        <!-- Комментарий -->
+                        <Button      
+                Width="32" 
+                Height="32"
+                Cursor="Hand"
+                Margin="8,0,5,0"
+                Background="#FF343434"
+                BorderBrush="Transparent"
+                FocusVisualStyle="{x:Null}">
+                            <Image Source="/Icons/message.png"
+                            Width="30" 
+                            Height="30"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center"/>
+                        </Button>
+                        <!-- Квадратики -->
+                        <Button      
+                Width="32" 
+                Height="32"
+                Cursor="Hand"
+                Margin="9,0,0,0"
+                Background="#FF343434"
+                BorderBrush="Transparent"
+                FocusVisualStyle="{x:Null}">
+                            <Image Source="/Icons/dashboard.png"
+                            Width="30" 
+                            Height="30"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center"/>
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+        <Border Grid.Row="1" Grid.ColumnSpan="2" Cursor="Hand">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="617*"/>
+                    <RowDefinition Height="143*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Прямоугольная панель справа 1 -->
+                <Border CornerRadius="15" 
+        Background="#FF343434" 
+        Width="240" 
+        Height="84"
+        Margin="939,15,26,518" HorizontalAlignment="Right">
+                    <StackPanel Orientation="Horizontal" 
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Height="84">
+
+                        <!-- Первый белый прямоугольник -->
+                        <Border CornerRadius="3"
+                Width="80" 
+                Height="24"
+                Background="#D9D9D9"
+                Margin="10,0,5,0"
+                VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" 
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                                <!-- Текст слева -->
+                                <Button      
+                    Width="22" 
+                    Height="22"
+                    Cursor="Hand"
+                    Margin="2,0"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    FocusVisualStyle="{x:Null}">
+                                    <Image Source="/Icons/text-align-left.png"
+                           Width="16" 
+                           Height="16"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"/>
+                                </Button>
+                                <!-- Текст в центре -->
+                                <Button      
+                    Width="22" 
+                    Height="22"
+                    Cursor="Hand"
+                    Margin="2,0"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    FocusVisualStyle="{x:Null}">
+                                    <Image Source="/Icons/text-align-center.png"
+                           Width="16" 
+                           Height="16"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"/>
+                                </Button>
+                                <!-- Текст справа -->
+                                <Button      
+                    Width="22" 
+                    Height="22"
+                    Cursor="Hand"
+                    Margin="2,0"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    FocusVisualStyle="{x:Null}">
+                                    <Image Source="/Icons/text-align-right.png"
+                           Width="16" 
+                           Height="16"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"/>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Второй белый прямоугольник -->
+                        <Border CornerRadius="3"
+                Width="80" 
+                Height="24"
+                Background="#D9D9D9"
+                Margin="5,0,10,0"
+                VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" 
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                                <!-- Сверху -->
+                                <Button      
+                    Width="22" 
+                    Height="22"
+                    Cursor="Hand"
+                    Margin="2,0"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    FocusVisualStyle="{x:Null}">
+                                    <Image Source="/Icons/align-horizontal-top.png"
+                           Width="16" 
+                           Height="16"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"/>
+                                </Button>
+                                <!-- В центре -->
+                                <Button      
+                    Width="22" 
+                    Height="22"
+                    Cursor="Hand"
+                    Margin="2,0"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    FocusVisualStyle="{x:Null}">
+                                    <Image Source="/Icons/align-horizontal-top.png"
+                           Width="16" 
+                           Height="16"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"/>
+                                </Button>
+                                <!-- Снизу -->
+                                <Button      
+                    Width="22" 
+                    Height="22"
+                    Cursor="Hand"
+                    Margin="2,0"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    FocusVisualStyle="{x:Null}">
+                                    <Image Source="/Icons/align-horizontal-bottom.png"
+                           Width="16" 
+                           Height="16"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"/>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Панель с размерами -->
+                <Border CornerRadius="15" 
+        Background="#FF343434" 
+        Width="240" 
+        Height="84"
+        Margin="939,116,26,417" HorizontalAlignment="Right">
+                    <StackPanel Orientation="Vertical" 
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Width="200" Height="61">
+
+                        <TextBlock Text="Размеры" 
+                   Foreground="White" 
+                   FontSize="14"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,10"/>
+
+                        <StackPanel Orientation="Horizontal" 
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+
+                            <!-- Ширина -->
+                            <StackPanel Orientation="Horizontal" 
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Margin="0,0,15,0">
+                                <TextBlock Text="W" 
+                           Foreground="White" 
+                           FontSize="12"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           Width="20"
+                           TextAlignment="Center"/>
+                                <Border CornerRadius="5"
+                        Width="60" 
+                        Height="22"
+                        Background="#D9D9D9"
+                        VerticalAlignment="Center"
+                        Margin="5,0,0,0">
+                                    <TextBox x:Name="WidthTextBox"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             FontSize="11"
+                             VerticalContentAlignment="Center"
+                             HorizontalContentAlignment="Center"
+                             Text=""/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Высота -->
+                            <StackPanel Orientation="Horizontal" 
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Margin="15,0,0,0">
+                                <TextBlock Text="H" 
+                           Foreground="White" 
+                           FontSize="12"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           Width="20"
+                           TextAlignment="Center"/>
+                                <Border CornerRadius="5"
+                        Width="60" 
+                        Height="22"
+                        Background="#D9D9D9"
+                        VerticalAlignment="Center"
+                        Margin="5,0,0,0">
+                                    <TextBox x:Name="HeightTextBox"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             FontSize="11"
+                             VerticalContentAlignment="Center"
+                             HorizontalContentAlignment="Center"
+                             Text=""/>
+                                </Border>
+                            </StackPanel>
+
+                        </StackPanel>
+
+                    </StackPanel>
+                </Border>
+                <!-- Панель с заливкой -->
+                <Border CornerRadius="15" 
+        Background="#FF343434" 
+        Width="240" 
+        Height="84"
+        Margin="939,216,26,317" HorizontalAlignment="Right">
+                    <StackPanel Orientation="Vertical" 
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Width="200">
+
+                        <TextBlock Text="Заливка" 
+                   Foreground="White" 
+                   FontSize="14"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,10"/>
+
+                        <StackPanel Orientation="Horizontal" 
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+
+                            <!-- Превью цвета -->
+                            <Border x:Name="FillColorPreview"
+                    CornerRadius="5"
+                    Width="40" 
+                    Height="22"
+                    Background="#FFC44141"
+                    VerticalAlignment="Center"
+                    Margin="0,0,10,0"
+                    BorderThickness="1"
+                    BorderBrush="#FF666666"/>
+
+                            <!-- HEX код цвета -->
+                            <Border CornerRadius="5"
+                    Width="80" 
+                    Height="22"
+                    Background="#D9D9D9"
+                    VerticalAlignment="Center"
+                    Margin="0,0,10,0">
+                                <TextBox x:Name="FillColorTextBox"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         FontSize="11"
+                         VerticalContentAlignment="Center"
+                         HorizontalContentAlignment="Center"
+                         Text="C44141"
+                         CharacterCasing="Upper"/>
+                            </Border>
+
+                            <!-- Кнопка выбора цвета -->
+                            <Button x:Name="FillColorPickerButton"
+                    Width="22" 
+                    Height="22"
+                    Cursor="Hand"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    FocusVisualStyle="{x:Null}">
+                            </Button>
+
+                        </StackPanel>
+
+                    </StackPanel>
+                </Border>
+                <!-- Панель с обводкой -->
+                <Border CornerRadius="15" 
+        Background="#FF343434" 
+        Width="240" 
+        Height="84"
+        Margin="940,315,26,218" HorizontalAlignment="Right">
+                    <StackPanel Orientation="Vertical" 
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Width="200">
+
+                        <TextBlock Text="Обводка" 
+                   Foreground="White" 
+                   FontSize="14"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,10"/>
+
+                        <!-- Поле с цветом обводки -->
+                        <StackPanel Orientation="Horizontal" 
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+
+                            <!-- Превью цвета -->
+                            <Border x:Name="StrokeColorPreview"
+                    CornerRadius="5"
+                    Width="40" 
+                    Height="22"
+                    Background="#FF000000"
+                    VerticalAlignment="Center"
+                    Margin="0,0,10,0"
+                    BorderThickness="1"
+                    BorderBrush="#FF666666"/>
+
+                            <!-- HEX код цвета -->
+                            <Border CornerRadius="5"
+                    Width="80" 
+                    Height="22"
+                    Background="#D9D9D9"
+                    VerticalAlignment="Center"
+                    Margin="0,0,10,0">
+                                <TextBox x:Name="StrokeColorTextBox"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         FontSize="11"
+                         VerticalContentAlignment="Center"
+                         HorizontalContentAlignment="Center"
+                         Text="000000"
+                         CharacterCasing="Upper"/>
+                            </Border>
+
+                            <!-- Кнопка выбора цвета -->
+                            <Button x:Name="StrokeColorPickerButton"
+                    Width="22" 
+                    Height="22"
+                    Cursor="Hand"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    FocusVisualStyle="{x:Null}">
+                            </Button>
+
+                        </StackPanel>
+
+                    </StackPanel>
+                </Border>
+                <!-- Панель с текстом -->
+                <Border CornerRadius="15" 
+        Background="#FF343434" 
+        Width="240" 
+        Height="120"
+        Margin="940,414,26,83" HorizontalAlignment="Right">
+                    <StackPanel Orientation="Vertical" 
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Width="200">
+
+                        <TextBlock Text="Текст" 
+                   Foreground="White" 
+                   FontSize="14"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,15"/>
+
+                        <!-- Шрифт -->
+                        <StackPanel Orientation="Horizontal" 
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Margin="0,0,0,10">
+
+                            <Border CornerRadius="5"
+                    Width="150" 
+                    Height="22"
+                    Background="#D9D9D9"
+                    VerticalAlignment="Center">
+                                <ComboBox x:Name="FontComboBox"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          FontSize="11"
+                          VerticalContentAlignment="Center"
+                          Padding="5,0">
+                                    <ComboBoxItem Content="Gotham Pro" IsSelected="True"/>
+                                    <ComboBoxItem Content="Arial"/>
+                                    <ComboBoxItem Content="Times New Roman"/>
+                                    <ComboBoxItem Content="Calibri"/>
+                                </ComboBox>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Стиль и размер -->
+                        <StackPanel Orientation="Horizontal" 
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+
+                            <!-- Стиль -->
+                            <StackPanel Orientation="Horizontal" 
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Margin="0,0,10,0">
+
+                                <Border CornerRadius="5"
+                        Width="60" 
+                        Height="22"
+                        Background="#D9D9D9"
+                        VerticalAlignment="Center">
+                                    <ComboBox x:Name="FontStyleComboBox"
+                              Background="Transparent"
+                              BorderThickness="0"
+                              FontSize="11"
+                              VerticalContentAlignment="Center"
+                              Padding="5,0" Margin="0,0,-8,0">
+                                        <ComboBoxItem Content="Regular" IsSelected="True"/>
+                                        <ComboBoxItem Content="Bold"/>
+                                        <ComboBoxItem Content="Italic"/>
+                                        <ComboBoxItem Content="Bold Italic"/>
+                                    </ComboBox>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Размер -->
+                            <StackPanel Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Margin="10,0,0,0" Width="53">
+
+                                <Border CornerRadius="5"
+                        Width="50" 
+                        Height="22"
+                        Background="#D9D9D9"
+                        VerticalAlignment="Center">
+                                    <ComboBox x:Name="FontSizeComboBox"
+                              Background="Transparent"
+                              BorderThickness="0"
+                              FontSize="11"
+                              VerticalContentAlignment="Center"
+                              Padding="5,0">
+                                        <ComboBoxItem Content="8"/>
+                                        <ComboBoxItem Content="9"/>
+                                        <ComboBoxItem Content="10" IsSelected="True"/>
+                                        <ComboBoxItem Content="11"/>
+                                        <ComboBoxItem Content="12"/>
+                                        <ComboBoxItem Content="14"/>
+                                        <ComboBoxItem Content="16"/>
+                                        <ComboBoxItem Content="18"/>
+                                        <ComboBoxItem Content="20"/>
+                                        <ComboBoxItem Content="24"/>
+                                    </ComboBox>
+                                </Border>
+                            </StackPanel>
+
+                        </StackPanel>
+
+                    </StackPanel>
+                </Border>
+                <!-- Панель с экспортом -->
+                <Border CornerRadius="15" 
+        Background="#FF343434" 
+        Width="240" 
+        Height="120"
+        Margin="940,550,26,90" Grid.RowSpan="2" HorizontalAlignment="Right">
+                    <StackPanel Orientation="Vertical" 
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Width="200">
+
+                        <TextBlock Text="Экспорт" 
+                   Foreground="White" 
+                   FontSize="14"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,15"/>
+
+                        <!-- Формат экспорта -->
+                        <StackPanel Orientation="Horizontal" 
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Margin="0,0,0,15">
+                            <Border CornerRadius="5"
+                    Width="150" 
+                    Height="22"
+                    Background="#D9D9D9"
+                    VerticalAlignment="Center">
+                                <ComboBox x:Name="ExportFormatComboBox"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          FontSize="11"
+                          VerticalContentAlignment="Center"
+                          Padding="5,0">
+                                    <ComboBoxItem Content="PNG" IsSelected="True"/>
+                                    <ComboBoxItem Content="JPG"/>
+                                    <ComboBoxItem Content="SVG"/>
+                                    <ComboBoxItem Content="PDF"/>
+                                </ComboBox>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Кнопка экспорта -->
+                        <Button x:Name="ExportButton"
+                Content="Экспорт диаграммы"
+                Width="160" 
+                Height="30"
+                Background="#FF505050"
+                Foreground="White"
+                BorderThickness="0"
+                FontSize="12"
+                FontWeight="SemiBold"/>
+
+                    </StackPanel>
+                </Border>
+
+                <!--<Grid Grid.Row="1" Margin="10,0,-10,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="187*"/>
+                        <ColumnDefinition Width="88*"/>
+                        <ColumnDefinition Width="925*"/>
+                    </Grid.ColumnDefinitions>
+
+                </Grid>-->
+
+                <!-- Нотация как было -->
+                <Border x:Name="NotationCard"
+                    Canvas.Left="-274" 
+                    Canvas.Top="102"
+                    Width="274"
+                    Height="339"
+                    Background="#343434"
+                    BorderBrush="#CCCCCC"
+                    BorderThickness="1"
+                    CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="2" Margin="26,41,0,0">
+
+                    <Border.Effect>
+                        <DropShadowEffect ShadowDepth="3" Color="Black" Opacity="0.3" BlurRadius="10"/>
+                    </Border.Effect>
+
+                    <Grid Margin="20,20,-1,2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" MinHeight="153.8"/>
+                            <RowDefinition Height="Auto" MinHeight="252.542"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="0*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Круг -->
+                        <Ellipse x:Name="Circle"
+                            Width="110"
+                            Height="110"
+                            Fill="White"
+                            Stroke="#343434"
+                            StrokeThickness="3"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Cursor="Hand"/>
+
+                        <!-- Кольцо -->
+                        <Ellipse x:Name="SimpleRing"
+                            Width="110"
+                            Height="110"
+                            Stroke="White"
+                            StrokeThickness="5"
+                            Fill="Transparent"
+                            Cursor="Hand" Margin="116,145,6,183" Grid.RowSpan="2"/>
+
+                        <!-- Квадрат -->
+                        <Border x:Name="Square"
+                            Width="100"
+                            Height="100"
+                            Background="#343434"
+                            BorderBrush="White"
+                            BorderThickness="2"
+                            CornerRadius="0"
+                            Cursor="Hand" Margin="119,28,0,29"/>
+
+                        <!-- Ромб -->
+                        <Border x:Name="ResizableSquare"
+                            Width="70"
+                            Height="71"
+                            Background="#343434"
+                            BorderBrush="White"
+                            BorderThickness="2"
+                            CornerRadius="0"
+                            Cursor="Hand" Margin="26,14,157,196" RenderTransformOrigin="0.5,0.5" Grid.Row="1">
+                            <Border.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <SkewTransform/>
+                                    <RotateTransform Angle="45.354"/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Border.RenderTransform>
+                        </Border>
+
+                        <!-- Линия -->
+                        <Line x:Name="Line"
+                        X1="50" Y1="200"
+                        X2="40" Y2="2"
+                        Stroke="White"
+                        StrokeThickness="3"
+                        Cursor="Hand" Margin="86,34,79,47" RenderTransformOrigin="0.681,0.581" Grid.Row="1">
+                            <Line.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <SkewTransform/>
+                                    <RotateTransform Angle="93.201"/>
+                                    <TranslateTransform X="-32.998" Y="-1.206"/>
+                                </TransformGroup>
+                            </Line.RenderTransform>
+                        </Line>
+
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,115,15">
+                            <Border Background="#F0F0F0" 
+                                BorderBrush="#DDDDDD" 
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="5,2"
+                                Width="0"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Нотация" 
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            Foreground="White"
+                            RenderTransformOrigin="1.69,0.537" Margin="85,4,31,133">
+                            <TextBlock.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <SkewTransform/>
+                                    <RotateTransform Angle="-0.028"/>
+                                    <TranslateTransform Y="-0.03"/>
+                                </TransformGroup>
+                            </TextBlock.RenderTransform>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+
+            </Grid>
+        </Border>
     </Grid>
 </Window>
 
@@ -177,11 +937,11 @@
                     </Setter>
                 </Style>-->
 
-                <!--<Style x:Key="CloseBtn" TargetType="Button">
+<!--<Style x:Key="CloseBtn" TargetType="Button">
                     
                 </Style>-->
 
-                <!--<StackPanel Grid.Column="7" Orientation="Horizontal">
+<!--<StackPanel Grid.Column="7" Orientation="Horizontal">
                 
                     <Button x:Name="MinimizeBtn" Background="Transparent" BorderBrush="#00000000">
                         <Image Source="/Icons/Line 3.png" Width="12" Height="12" Margin="16,8,16,0"/>
@@ -195,8 +955,8 @@
                         <Image Source="/Icons/Group 1.png" Width="12" Height="12" Margin="16,8,24,0"/>
                     </Button>
                 </StackPanel> -->
-                
-    
+
+
 <!--</Grid>
         </Border>
         <Button x:Name="escButton" Background="Transparent" BorderBrush="Transparent" 
