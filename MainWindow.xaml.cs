@@ -165,23 +165,19 @@ namespace Graphic_Editor
                 draggedElement = element;
                 element.CaptureMouse();
 
-                // Получаем позицию относительно элемента
-                offset = e.GetPosition(element);
-
                 // Сразу создаем полупрозрачную копию для перетаскивания
                 shapeCopy = CreateShapeCopy(element);
                 if (shapeCopy != null)
                 {
-                    // УСТАНАВЛИВАЕМ ВЫСОКИЙ ZIndex ДЛЯ ОТОБРАЖЕНИЯ ПОВЕРХ НОТАЦИИ
                     Canvas.SetZIndex(shapeCopy, 1000);
 
-                    // Позиционируем копию под курсором
+                    // Позиционируем копию так, чтобы центр фигуры был под курсором
                     Point startPosition = e.GetPosition(MainCanvas);
-                    Canvas.SetLeft(shapeCopy, startPosition.X - offset.X);
-                    Canvas.SetTop(shapeCopy, startPosition.Y - offset.Y);
+                    Canvas.SetLeft(shapeCopy, startPosition.X - (GetElementWidth(shapeCopy) / 2));
+                    Canvas.SetTop(shapeCopy, startPosition.Y - (GetElementHeight(shapeCopy) / 2));
 
                     MainCanvas.Children.Add(shapeCopy);
-                    shapeCopy.Opacity = 0.7; // Полупрозрачная копия
+                    shapeCopy.Opacity = 0.7;
                 }
 
                 // Визуальный фидбэк - делаем оригинал полупрозрачным
@@ -198,8 +194,8 @@ namespace Graphic_Editor
                 // Перемещаем копию фигуры за курсором
                 Point currentPosition = e.GetPosition(MainCanvas);
 
-                double newLeft = currentPosition.X - offset.X;
-                double newTop = currentPosition.Y - offset.Y;
+                double newLeft = currentPosition.X - (GetElementWidth(shapeCopy) / 2);
+                double newTop = currentPosition.Y - (GetElementHeight(shapeCopy) / 2);
 
                 Canvas.SetLeft(shapeCopy, newLeft);
                 Canvas.SetTop(shapeCopy, newTop);
@@ -244,11 +240,11 @@ namespace Graphic_Editor
             {
                 return new Ellipse
                 {
-                    Width = 110,
-                    Height = 110,
-                    Fill = Brushes.White,
-                    Stroke = Brushes.Black,
-                    StrokeThickness = 3,
+                    Width = Circle.Width,
+                    Height = Circle.Height,
+                    Fill = (Circle as Ellipse).Fill,
+                    Stroke = (Circle as Ellipse).Stroke,
+                    StrokeThickness = (Circle as Ellipse).StrokeThickness,
                     Cursor = Cursors.Hand
                 };
             }
@@ -256,58 +252,66 @@ namespace Graphic_Editor
             {
                 return new Ellipse
                 {
-                    Width = 110,
-                    Height = 110,
-                    Stroke = Brushes.White,
-                    StrokeThickness = 5,
+                    Width = SimpleRing.Width,
+                    Height = SimpleRing.Height,
+                    Stroke = (SimpleRing as Ellipse).Stroke,
+                    StrokeThickness = (SimpleRing as Ellipse).StrokeThickness,
                     Fill = Brushes.Transparent,
                     Cursor = Cursors.Hand
                 };
             }
             else if (original == Square)
             {
+                var originalBorder = Square as Border;
                 return new Border
                 {
-                    Width = 100,
-                    Height = 100,
-                    Background = new SolidColorBrush(Color.FromRgb(52, 52, 52)),
-                    BorderBrush = Brushes.White,
-                    BorderThickness = new Thickness(2),
-                    CornerRadius = new CornerRadius(0),
+                    Width = originalBorder.Width,
+                    Height = originalBorder.Height,
+                    Background = originalBorder.Background,
+                    BorderBrush = originalBorder.BorderBrush,
+                    BorderThickness = originalBorder.BorderThickness,
+                    CornerRadius = originalBorder.CornerRadius,
                     Cursor = Cursors.Hand
                 };
             }
             else if (original == ResizableSquare)
             {
+                var originalDiamond = ResizableSquare as Border;
                 var diamond = new Border
                 {
-                    Width = 70,
-                    Height = 71,
-                    Background = new SolidColorBrush(Color.FromRgb(52, 52, 52)),
-                    BorderBrush = Brushes.White,
-                    BorderThickness = new Thickness(2),
-                    CornerRadius = new CornerRadius(0),
+                    Width = originalDiamond.Width,
+                    Height = originalDiamond.Height,
+                    Background = originalDiamond.Background,
+                    BorderBrush = originalDiamond.BorderBrush,
+                    BorderThickness = originalDiamond.BorderThickness,
+                    CornerRadius = originalDiamond.CornerRadius,
                     Cursor = Cursors.Hand,
                     RenderTransformOrigin = new Point(0.5, 0.5)
                 };
-                diamond.RenderTransform = new RotateTransform(45.354);
+                // Применяем ТОЛЬКО поворот на 45 градусов как у оригинала
+                diamond.RenderTransform = new RotateTransform(45);
                 return diamond;
             }
             else if (original == Line)
             {
+                var originalLine = Line as Line;
                 var line = new Line
                 {
-                    X1 = 0,
-                    Y1 = 0,
-                    X2 = 50,
-                    Y2 = 0,
-                    Stroke = Brushes.White,
-                    StrokeThickness = 3,
-                    StrokeStartLineCap = PenLineCap.Round,
-                    StrokeEndLineCap = PenLineCap.Round,
+                    X1 = originalLine.X1,
+                    Y1 = originalLine.Y1,
+                    X2 = originalLine.X2,
+                    Y2 = originalLine.Y2,
+                    Stroke = originalLine.Stroke,
+                    StrokeThickness = originalLine.StrokeThickness,
+                    StrokeStartLineCap = originalLine.StrokeStartLineCap,
+                    StrokeEndLineCap = originalLine.StrokeEndLineCap,
                     Cursor = Cursors.Hand
                 };
-                line.RenderTransform = new RotateTransform(93.201);
+                // Копируем точную трансформацию
+                if (originalLine.RenderTransform is RotateTransform originalRotate)
+                {
+                    line.RenderTransform = new RotateTransform(originalRotate.Angle);
+                }
                 return line;
             }
 
@@ -330,7 +334,11 @@ namespace Graphic_Editor
                 draggedElement = element;
                 element.CaptureMouse();
 
-                offset = e.GetPosition(element);
+                // Рассчитываем смещение так, чтобы центр фигуры был под курсором
+                offset = new Point(
+                    GetElementWidth(element) / 2,
+                    GetElementHeight(element) / 2
+                );
 
                 // ПОДНИМАЕМ ЭЛЕМЕНТ НАВЕРХ ПРИ ЗАХВАТЕ (ZIndex = 1000)
                 Canvas.SetZIndex(element, 1000);
@@ -349,6 +357,7 @@ namespace Graphic_Editor
                 var element = draggedElement;
                 Point currentPosition = e.GetPosition(MainCanvas);
 
+                // Перемещаем элемент так, чтобы центр был под курсором
                 double newLeft = currentPosition.X - offset.X;
                 double newTop = currentPosition.Y - offset.Y;
 
@@ -357,7 +366,7 @@ namespace Graphic_Editor
             }
         }
 
-        private void CanvasShape_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        private void CanvasShape_MouseLeftButtonUp(object sender, MouseEventArgs e)
         {
             var element = sender as UIElement;
             if (element != null)
@@ -365,6 +374,13 @@ namespace Graphic_Editor
                 isDragging = false;
                 element.ReleaseMouseCapture();
                 draggedElement = null;
+
+                // ФИКСИРУЕМ ТРАНСФОРМАЦИЮ ДЛЯ РОМБА
+                if (element is Border border && border.RenderTransform is RotateTransform rotateTransform)
+                {
+                    // Убеждаемся что ромб сохраняет поворот на 45 градусов
+                    rotateTransform.Angle = 45;
+                }
 
                 // ВОЗВРАЩАЕМ НОРМАЛЬНЫЙ ZIndex ПОСЛЕ ПЕРЕТАСКИВАНИЯ
                 Canvas.SetZIndex(element, 1);
@@ -426,7 +442,9 @@ namespace Graphic_Editor
 
         private void AnimateShapeAppearance(UIElement shape)
         {
-            // Анимация появления - плавное увеличение
+            // Сохраняем оригинальную трансформацию перед анимацией
+            Transform originalTransform = shape.RenderTransform;
+
             var scaleAnimation = new DoubleAnimation
             {
                 From = 0.5,
@@ -435,12 +453,29 @@ namespace Graphic_Editor
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
             };
 
-            var transform = new ScaleTransform();
-            shape.RenderTransform = transform;
+            var transformGroup = new TransformGroup();
+            transformGroup.Children.Add(originalTransform); // Оригинальная трансформация
+            transformGroup.Children.Add(new ScaleTransform());
+
+            shape.RenderTransform = transformGroup;
             shape.RenderTransformOrigin = new Point(0.5, 0.5);
 
-            transform.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnimation);
-            transform.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnimation);
+            transformGroup.Children[1].BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnimation);
+            transformGroup.Children[1].BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnimation);
+        }
+
+        private double GetElementWidth(UIElement element)
+        {
+            if (element is FrameworkElement fe)
+                return fe.ActualWidth > 0 ? fe.ActualWidth : fe.Width;
+            return 0;
+        }
+
+        private double GetElementHeight(UIElement element)
+        {
+            if (element is FrameworkElement fe)
+                return fe.ActualHeight > 0 ? fe.ActualHeight : fe.Height;
+            return 0;
         }
 
         private void escButton_Click(object sender, RoutedEventArgs e)
