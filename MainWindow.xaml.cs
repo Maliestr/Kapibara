@@ -31,13 +31,19 @@ namespace Graphic_Editor
         private string currentFilePath = null;
         private List<UIElement> canvasElements = new List<UIElement>();
 
+        private UIElement selectedElement;
+        private UIElement copiedElement;
+        private Point lastMousePosition;
+        private Stack<UIElement> undoStack = new Stack<UIElement>();
+        private Stack<UIElement> redoStack = new Stack<UIElement>();
+
         public MainWindow()
         {
             InitializeComponent();
             MakeAllShapesDraggable();
         }
 
-        // File menu handlers - ОБНОВЛЕННЫЕ МЕТОДЫ
+        // Меню "Файл" - Обновленные
         private void NewFile_Click(object sender, RoutedEventArgs e)
         {
             // Очищаем холст
@@ -371,30 +377,30 @@ namespace Graphic_Editor
             MessageBox.Show("Сбросить масштаб");
         }
 
-        // Меню "Правка"
+        // Меню "Правка" - Обновленные
         private void Undo_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Отменить");
+            UndoLastAction();
         }
 
         private void Redo_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Повторить");
+            RedoLastAction();
         }
 
         private void Cut_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Вырезать");
+            CutSelectedElement();
         }
 
         private void Copy_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Копировать");
+            CopySelectedElement();
         }
 
         private void Paste_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Вставить");
+            PasteElement();
         }
 
         // Меню "Справка"
@@ -438,6 +444,8 @@ namespace Graphic_Editor
                 DragMove();
             }
         }
+
+
 
         private void MakeAllShapesDraggable()
         {
