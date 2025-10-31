@@ -445,7 +445,416 @@ namespace Graphic_Editor
             }
         }
 
+        // Новые методы для работы с фигурами
 
+        // Обработка горячих клавиш
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+            
+            if (Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                switch (e.Key)
+                {
+                    case Key.Z:
+                        UndoLastAction();
+                        e.Handled = true;
+                        break;
+                    case Key.Y:
+                        RedoLastAction();
+                        e.Handled = true;
+                        break;
+                    case Key.X:
+                        CutSelectedElement();
+                        e.Handled = true;
+                        break;
+                    case Key.C:
+                        CopySelectedElement();
+                        e.Handled = true;
+                        break;
+                    case Key.V:
+                        PasteElement();
+                        e.Handled = true;
+                        break;
+                    case Key.A:
+                        SelectAllElements();
+                        e.Handled = true;
+                        break;
+                }
+            }
+            
+            // Удаление выделенного элемента по клавише Delete
+            if (e.Key == Key.Delete && selectedElement != null)
+            {
+                DeleteSelectedElement();
+                e.Handled = true;
+            }
+        }
+
+        // Контекстное меню для фигур
+        private void CreateContextMenu(UIElement element)
+        {
+            ContextMenu contextMenu = new ContextMenu
+            {
+                Background = Brushes.White,
+                Foreground = Brushes.Black,
+                FontSize = 12,
+                Padding = new Thickness(5)
+            };
+
+            // Пункт "Вырезать"
+            MenuItem cutMenuItem = new MenuItem
+            {
+                Header = "Вырезать (Ctrl+X)",
+                Icon = new TextBlock { Text = "✂", FontSize = 14 }
+            };
+            cutMenuItem.Click += (s, e) => CutSelectedElement();
+            contextMenu.Items.Add(cutMenuItem);
+
+            // Пункт "Копировать"
+            MenuItem copyMenuItem = new MenuItem
+            {
+                Header = "Копировать (Ctrl+C)",
+                Icon = new TextBlock { Text = "📄", FontSize = 14 }
+            };
+            copyMenuItem.Click += (s, e) => CopySelectedElement();
+            contextMenu.Items.Add(copyMenuItem);
+
+            // Пункт "Вставить"
+            MenuItem pasteMenuItem = new MenuItem
+            {
+                Header = "Вставить (Ctrl+V)",
+                Icon = new TextBlock { Text = "📋", FontSize = 14 }
+            };
+            pasteMenuItem.Click += (s, e) => PasteElement();
+            contextMenu.Items.Add(pasteMenuItem);
+
+            contextMenu.Items.Add(new Separator());
+
+            // Пункт "Удалить"
+            MenuItem deleteMenuItem = new MenuItem
+            {
+                Header = "Удалить (Delete)",
+                Icon = new TextBlock { Text = "🗑", FontSize = 14 }
+            };
+            deleteMenuItem.Click += (s, e) => DeleteSelectedElement();
+            contextMenu.Items.Add(deleteMenuItem);
+
+            // Устанавливаем контекстное меню для элемента
+            element.ContextMenu = contextMenu;
+        }
+
+        // Выделение элемента
+        private void SelectElement(UIElement element)
+        {
+            // Снимаем выделение с предыдущего элемента
+            DeselectElement();
+            
+            selectedElement = element;
+            ApplySelectionVisualFeedback(element, true);
+            
+            // Создаем контекстное меню для выделенного элемента
+            CreateContextMenu(element);
+        }
+
+        // Снятие выделения
+        private void DeselectElement()
+        {
+            if (selectedElement != null)
+            {
+                ApplySelectionVisualFeedback(selectedElement, false);
+                selectedElement.ContextMenu = null;
+                selectedElement = null;
+            }
+        }
+
+        // Визуальное выделение элемента
+        private void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
+        {
+            if (isSelected)
+            {
+                if (element is Ellipse ellipse)
+                {
+                    ellipse.Stroke = Brushes.Blue;
+                    ellipse.StrokeThickness += 2;
+                }
+                else if (element is Border border)
+                {
+                    border.BorderBrush = Brushes.Blue;
+                    border.BorderThickness = new Thickness(4);
+                }
+                else if (element is Line line)
+                {
+                    line.Stroke = Brushes.Blue;
+                    line.StrokeThickness += 2;
+                }
+            }
+            else
+            {
+                // Возвращаем оригинальные цвета
+                if (element is Ellipse ellipse)
+                {
+                    if (ellipse.Fill == Brushes.Transparent) // Кольцо
+                    {
+                        ellipse.Stroke = Brushes.White;
+                    }
+                    else // Круг
+                    {
+                        ellipse.Stroke = Brushes.Black;
+                    }
+                    ellipse.StrokeThickness = Math.Max(ellipse.StrokeThickness - 2, 1);
+                }
+                else if (element is Border border)
+                {
+                    border.BorderBrush = Brushes.White;
+                    border.BorderThickness = new Thickness(2);
+                }
+                else if (element is Line line)
+                {
+                    line.Stroke = Brushes.White;
+                    line.StrokeThickness = Math.Max(line.StrokeThickness - 2, 1);
+                }
+            }
+        }
+
+        // Копирование выделенного элемента
+        private void CopySelectedElement()
+        {
+            if (selectedElement != null)
+            {
+                copiedElement = CloneUIElement(selectedElement);
+                MessageBox.Show("Элемент скопирован", "Копирование", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show("Сначала выделите элемент", "Копирование", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        // Вырезание выделенного элемента
+        private void CutSelectedElement()
+        {
+            if (selectedElement != null)
+            {
+                // Сохраняем копию для буфера обмена
+                copiedElement = CloneUIElement(selectedElement);
+                
+                // Сохраняем в стек отмены
+                SaveToUndoStack(selectedElement);
+                
+                // Удаляем элемент
+                MainCanvas.Children.Remove(selectedElement);
+                canvasElements.Remove(selectedElement);
+                
+                DeselectElement();
+                MessageBox.Show("Элемент вырезан", "Вырезание", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show("Сначала выделите элемент", "Вырезание", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        // Вставка элемента
+        private void PasteElement()
+        {
+            if (copiedElement != null)
+            {
+                // Создаем копию скопированного элемента со смещением
+                UIElement newElement = CloneUIElement(copiedElement);
+                
+                // Смещаем новую копию на 20 пикселей
+                double currentLeft = Canvas.GetLeft(newElement);
+                double currentTop = Canvas.GetTop(newElement);
+                
+                Canvas.SetLeft(newElement, currentLeft + 20);
+                Canvas.SetTop(newElement, currentTop + 20);
+                
+                // Добавляем на холст
+                MainCanvas.Children.Add(newElement);
+                canvasElements.Add(newElement);
+                MakeCanvasShapeDraggable(newElement);
+                
+                // Выделяем вставленный элемент
+                SelectElement(newElement);
+                
+                // Сохраняем в стек отмены
+                SaveToUndoStack(newElement);
+                
+                MessageBox.Show("Элемент вставлен", "Вставка", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show("Нет скопированного элемента", "Вставка", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        // Удаление выделенного элемента
+        private void DeleteSelectedElement()
+        {
+            if (selectedElement != null)
+            {
+                // Сохраняем в стек отмены
+                SaveToUndoStack(selectedElement);
+                
+                MainCanvas.Children.Remove(selectedElement);
+                canvasElements.Remove(selectedElement);
+                
+                DeselectElement();
+                MessageBox.Show("Элемент удален", "Удаление", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show("Сначала выделите элемент", "Удаление", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        // Клонирование UI элемента
+        private UIElement CloneUIElement(UIElement original)
+        {
+            if (original is Ellipse originalEllipse)
+            {
+                var newEllipse = new Ellipse
+                {
+                    Width = originalEllipse.Width,
+                    Height = originalEllipse.Height,
+                    Fill = originalEllipse.Fill,
+                    Stroke = originalEllipse.Stroke,
+                    StrokeThickness = originalEllipse.StrokeThickness,
+                    Cursor = Cursors.Hand
+                };
+
+                Canvas.SetLeft(newEllipse, Canvas.GetLeft(originalEllipse));
+                Canvas.SetTop(newEllipse, Canvas.GetTop(originalEllipse));
+
+                return newEllipse;
+            }
+            else if (original is Border originalBorder)
+            {
+                var newBorder = new Border
+                {
+                    Width = originalBorder.Width,
+                    Height = originalBorder.Height,
+                    Background = originalBorder.Background,
+                    BorderBrush = originalBorder.BorderBrush,
+                    BorderThickness = originalBorder.BorderThickness,
+                    CornerRadius = originalBorder.CornerRadius,
+                    Cursor = Cursors.Hand
+                };
+
+                // Копируем трансформации
+                if (originalBorder.RenderTransform is RotateTransform originalRotate)
+                {
+                    newBorder.RenderTransform = new RotateTransform(originalRotate.Angle);
+                    newBorder.RenderTransformOrigin = new Point(0.5, 0.5);
+                }
+
+                // Копируем позицию
+                Canvas.SetLeft(newBorder, Canvas.GetLeft(originalBorder));
+                Canvas.SetTop(newBorder, Canvas.GetTop(originalBorder));
+
+                return newBorder;
+            }
+            else if (original is Line originalLine)
+            {
+                var newLine = new Line
+                {
+                    X1 = originalLine.X1,
+                    Y1 = originalLine.Y1,
+                    X2 = originalLine.X2,
+                    Y2 = originalLine.Y2,
+                    Stroke = originalLine.Stroke,
+                    StrokeThickness = originalLine.StrokeThickness,
+                    StrokeStartLineCap = originalLine.StrokeStartLineCap,
+                    StrokeEndLineCap = originalLine.StrokeEndLineCap,
+                    Cursor = Cursors.Hand
+                };
+
+                // Копируем трансформации
+                if (originalLine.RenderTransform is RotateTransform originalRotate)
+                {
+                    newLine.RenderTransform = new RotateTransform(originalRotate.Angle);
+                }
+
+                return newLine;
+            }
+
+            return null;
+        }
+
+        // Отмена последнего действия
+        private void UndoLastAction()
+        {
+            if (undoStack.Count > 0)
+            {
+                UIElement element = undoStack.Pop();
+                
+                if (MainCanvas.Children.Contains(element))
+                {
+                    // Если элемент на холсте - удаляем его
+                    MainCanvas.Children.Remove(element);
+                    canvasElements.Remove(element);
+                    redoStack.Push(element);
+                }
+                else
+                {
+                    // Если элемента нет на холсте - восстанавливаем его
+                    MainCanvas.Children.Add(element);
+                    canvasElements.Add(element);
+                    MakeCanvasShapeDraggable(element);
+                    redoStack.Push(element);
+                }
+            }
+            else
+            {
+                MessageBox.Show("Нет действий для отмены", "Отмена", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        // Повтор последнего действия
+        private void RedoLastAction()
+        {
+            if (redoStack.Count > 0)
+            {
+                UIElement element = redoStack.Pop();
+                
+                if (MainCanvas.Children.Contains(element))
+                {
+                    MainCanvas.Children.Remove(element);
+                    canvasElements.Remove(element);
+                    undoStack.Push(element);
+                }
+                else
+                {
+                    MainCanvas.Children.Add(element);
+                    canvasElements.Add(element);
+                    MakeCanvasShapeDraggable(element);
+                    undoStack.Push(element);
+                }
+            }
+            else
+            {
+                MessageBox.Show("Нет действий для повтора", "Повтор", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        // Сохранение в стек отмены
+        private void SaveToUndoStack(UIElement element)
+        {
+            undoStack.Push(CloneUIElement(element));
+            // Очищаем стек повтора при новом действии
+            redoStack.Clear();
+        }
+
+        // Выделение всех элементов
+        private void SelectAllElements()
+        {
+            // Пока просто выделяем первый элемент (можно расширить для множественного выделения)
+            if (MainCanvas.Children.Count > 0)
+            {
+                SelectElement(MainCanvas.Children[0] as UIElement);
+            }
+        }
 
         private void MakeAllShapesDraggable()
         {
