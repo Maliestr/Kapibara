@@ -95,6 +95,8 @@
                             <MenuItem Header="Открыть..." Click="OpenFile_Click"/>
                             <MenuItem Header="Сохранить" Click="SaveFile_Click"/>
                             <MenuItem Header="Сохранить как..." Click="SaveAsFile_Click"/>
+                            <!-- Экспорт в картинку -->
+                            <MenuItem Header="Экспорт в изображение..." Click="ExportToImage_Click"/>
                             <Separator/>
                             <MenuItem Header="Выход" Click="Exit_Click"/>
                         </MenuItem>

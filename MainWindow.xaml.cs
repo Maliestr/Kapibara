@@ -1,50 +1,7 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-
-/*namespace Graphic_Editor
-{
-    /// <summary>
-    /// Логика взаимодействия для MainWindow.xaml
-    /// </summary>
-    public partial class MainWindow : Window
-    {
-        public MainWindow()
-        {
-            InitializeComponent();
-        }
-
-        private void escButton_Click(object sender, RoutedEventArgs e)
-        {
-            this.Close(); // закрытие окна
-        }
-    }
-}*/
-//namespace Graphic_Editor
-//{
-//    public partial class MainWindow : Window
-//    {
-//        public MainWindow()
-//        {
-//            InitializeComponent();
-//        }
-
-
-
-using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -59,8 +16,8 @@ using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-
-
+using System.Windows.Ink;
+using System.Globalization;
 
 namespace Graphic_Editor
 {
@@ -71,6 +28,8 @@ namespace Graphic_Editor
         private Point offset;
         private Transform originalTransform;
         private Point dragStartPoint;
+        private string currentFilePath = null;
+        private List<UIElement> canvasElements = new List<UIElement>();
 
         public MainWindow()
         {
@@ -78,25 +37,107 @@ namespace Graphic_Editor
             MakeAllShapesDraggable();
         }
 
-        // File menu handlers
+        // File menu handlers - ОБНОВЛЕННЫЕ МЕТОДЫ
         private void NewFile_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Новый файл");
+            // Очищаем холст
+            MainCanvas.Children.Clear();
+            canvasElements.Clear();
+            currentFilePath = null;
+            UpdateWindowTitle();
+            MessageBox.Show("Создан новый файл", "Новый файл", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void OpenFile_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Открыть файл");
+            OpenFileDialog openFileDialog = new OpenFileDialog
+            {
+                Filter = "Graphic Editor Files (*.ged)|*.ged|All files (*.*)|*.*",
+                Title = "Открыть файл"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    LoadFromFile(openFileDialog.FileName);
+                    currentFilePath = openFileDialog.FileName;
+                    UpdateWindowTitle();
+                    MessageBox.Show("Файл успешно открыт", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при открытии файла: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
 
         private void SaveFile_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Сохранить файл");
+            if (string.IsNullOrEmpty(currentFilePath))
+            {
+                SaveAsFile_Click(sender, e);
+            }
+            else
+            {
+                try
+                {
+                    SaveToFile(currentFilePath);
+                    MessageBox.Show("Файл успешно сохранен", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при сохранении файла: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
 
         private void SaveAsFile_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Сохранить как");
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Filter = "Graphic Editor Files (*.ged)|*.ged|All files (*.*)|*.*",
+                Title = "Сохранить как",
+                DefaultExt = ".ged"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    SaveToFile(saveFileDialog.FileName);
+                    currentFilePath = saveFileDialog.FileName;
+                    UpdateWindowTitle();
+                    MessageBox.Show("Файл успешно сохранен", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при сохранении файла: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void ExportToImage_Click(object sender, RoutedEventArgs e)
+        {
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Filter = "PNG Image (*.png)|*.png|JPEG Image (*.jpg)|*.jpg|All files (*.*)|*.*",
+                Title = "Экспорт в изображение",
+                DefaultExt = ".png"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    ExportCanvasToImage(saveFileDialog.FileName);
+                    MessageBox.Show("Изображение успешно экспортировано", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при экспорте изображения: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
 
         private void Exit_Click(object sender, RoutedEventArgs e)
@@ -104,7 +145,217 @@ namespace Graphic_Editor
             Application.Current.Shutdown();
         }
 
-        // View menu handlers
+        // Методы файловой системы
+        private void SaveToFile(string filePath)
+        {
+            using (StreamWriter writer = new StreamWriter(filePath))
+            {
+                writer.WriteLine("GEDv1.0"); // Заголовок файла
+
+                foreach (UIElement element in MainCanvas.Children)
+                {
+                    if (element is Ellipse ellipse)
+                    {
+                        double left = Canvas.GetLeft(ellipse);
+                        double top = Canvas.GetTop(ellipse);
+                        string fillColor = (ellipse.Fill as SolidColorBrush)?.Color.ToString() ?? "Transparent";
+                        string strokeColor = (ellipse.Stroke as SolidColorBrush)?.Color.ToString() ?? "Black";
+                        double strokeThickness = ellipse.StrokeThickness;
+
+                        writer.WriteLine($"ELLIPSE|{left}|{top}|{ellipse.Width}|{ellipse.Height}|{fillColor}|{strokeColor}|{strokeThickness}");
+                    }
+                    else if (element is Border border)
+                    {
+                        double left = Canvas.GetLeft(border);
+                        double top = Canvas.GetTop(border);
+                        string bgColor = (border.Background as SolidColorBrush)?.Color.ToString() ?? "Transparent";
+                        string borderColor = (border.BorderBrush as SolidColorBrush)?.Color.ToString() ?? "Black";
+                        double borderThickness = border.BorderThickness.Left;
+
+                        // Определяем тип Border (квадрат или ромб)
+                        string type = "SQUARE";
+                        if (border.RenderTransform is RotateTransform rotateTransform && Math.Abs(rotateTransform.Angle - 45.354) < 0.1)
+                        {
+                            type = "DIAMOND";
+                        }
+
+                        writer.WriteLine($"{type}|{left}|{top}|{border.Width}|{border.Height}|{bgColor}|{borderColor}|{borderThickness}");
+                    }
+                    else if (element is Line line)
+                    {
+                        string strokeColor = (line.Stroke as SolidColorBrush)?.Color.ToString() ?? "Black";
+                        double strokeThickness = line.StrokeThickness;
+                        double rotateAngle = 0;
+
+                        if (line.RenderTransform is RotateTransform rotateTransform)
+                        {
+                            rotateAngle = rotateTransform.Angle;
+                        }
+
+                        writer.WriteLine($"LINE|{line.X1}|{line.Y1}|{line.X2}|{line.Y2}|{strokeColor}|{strokeThickness}|{rotateAngle}");
+                    }
+                }
+            }
+        }
+
+        private void LoadFromFile(string filePath)
+        {
+            MainCanvas.Children.Clear();
+            canvasElements.Clear();
+
+            using (StreamReader reader = new StreamReader(filePath))
+            {
+                string header = reader.ReadLine();
+                if (header != "GEDv1.0")
+                {
+                    throw new Exception("Неверный формат файла");
+                }
+
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    string[] parts = line.Split('|');
+                    if (parts.Length < 2) continue;
+
+                    switch (parts[0])
+                    {
+                        case "ELLIPSE":
+                            CreateEllipseFromData(parts);
+                            break;
+                        case "SQUARE":
+                            CreateSquareFromData(parts);
+                            break;
+                        case "DIAMOND":
+                            CreateDiamondFromData(parts);
+                            break;
+                        case "LINE":
+                            CreateLineFromData(parts);
+                            break;
+                    }
+                }
+            }
+        }
+
+        private void CreateEllipseFromData(string[] data)
+        {
+            var ellipse = new Ellipse
+            {
+                Width = double.Parse(data[3]),
+                Height = double.Parse(data[4]),
+                Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString(data[5])),
+                Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString(data[6])),
+                StrokeThickness = double.Parse(data[7]),
+                Cursor = Cursors.Hand
+            };
+
+            Canvas.SetLeft(ellipse, double.Parse(data[1]));
+            Canvas.SetTop(ellipse, double.Parse(data[2]));
+            MainCanvas.Children.Add(ellipse);
+            MakeCanvasShapeDraggable(ellipse);
+        }
+
+        private void CreateSquareFromData(string[] data)
+        {
+            var square = new Border
+            {
+                Width = double.Parse(data[3]),
+                Height = double.Parse(data[4]),
+                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(data[5])),
+                BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(data[6])),
+                BorderThickness = new Thickness(double.Parse(data[7])),
+                CornerRadius = new CornerRadius(0),
+                Cursor = Cursors.Hand
+            };
+
+            Canvas.SetLeft(square, double.Parse(data[1]));
+            Canvas.SetTop(square, double.Parse(data[2]));
+            MainCanvas.Children.Add(square);
+            MakeCanvasShapeDraggable(square);
+        }
+
+        private void CreateDiamondFromData(string[] data)
+        {
+            var diamond = new Border
+            {
+                Width = double.Parse(data[3]),
+                Height = double.Parse(data[4]),
+                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(data[5])),
+                BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(data[6])),
+                BorderThickness = new Thickness(double.Parse(data[7])),
+                CornerRadius = new CornerRadius(0),
+                Cursor = Cursors.Hand,
+                RenderTransformOrigin = new Point(0.5, 0.5)
+            };
+
+            diamond.RenderTransform = new RotateTransform(45.354);
+            Canvas.SetLeft(diamond, double.Parse(data[1]));
+            Canvas.SetTop(diamond, double.Parse(data[2]));
+            MainCanvas.Children.Add(diamond);
+            MakeCanvasShapeDraggable(diamond);
+        }
+
+        private void CreateLineFromData(string[] data)
+        {
+            var line = new Line
+            {
+                X1 = double.Parse(data[1]),
+                Y1 = double.Parse(data[2]),
+                X2 = double.Parse(data[3]),
+                Y2 = double.Parse(data[4]),
+                Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString(data[5])),
+                StrokeThickness = double.Parse(data[6]),
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                Cursor = Cursors.Hand
+            };
+
+            line.RenderTransform = new RotateTransform(double.Parse(data[7]));
+            MainCanvas.Children.Add(line);
+            MakeCanvasShapeDraggable(line);
+        }
+
+        private void ExportCanvasToImage(string filePath)
+        {
+            // Создаем RenderTargetBitmap с размерами холста
+            var renderTargetBitmap = new RenderTargetBitmap(
+                (int)MainCanvas.ActualWidth,
+                (int)MainCanvas.ActualHeight,
+                96, 96, PixelFormats.Pbgra32);
+
+            renderTargetBitmap.Render(MainCanvas);
+
+            // Создаем encoder в зависимости от расширения файла
+            BitmapEncoder encoder;
+            string extension = System.IO.Path.GetExtension(filePath).ToLower();
+
+            switch (extension)
+            {
+                case ".jpg":
+                case ".jpeg":
+                    encoder = new JpegBitmapEncoder();
+                    break;
+                case ".png":
+                default:
+                    encoder = new PngBitmapEncoder();
+                    break;
+            }
+
+            encoder.Frames.Add(BitmapFrame.Create(renderTargetBitmap));
+
+            // Сохраняем файл
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                encoder.Save(fileStream);
+            }
+        }
+
+        private void UpdateWindowTitle()
+        {
+            string fileName = string.IsNullOrEmpty(currentFilePath) ? "Новый файл" : System.IO.Path.GetFileName(currentFilePath);
+            this.Title = $"Graphic Editor - {fileName}";
+        }
+
+        // Меню "Вид"
         private void ZoomIn_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show("Увеличить");
@@ -120,7 +371,7 @@ namespace Graphic_Editor
             MessageBox.Show("Сбросить масштаб");
         }
 
-        // Edit menu handlers
+        // Меню "Правка"
         private void Undo_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show("Отменить");
@@ -146,7 +397,7 @@ namespace Graphic_Editor
             MessageBox.Show("Вставить");
         }
 
-        // Help menu handlers
+        // Меню "Справка"
         private void Help_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show("Справка");
@@ -157,7 +408,7 @@ namespace Graphic_Editor
             MessageBox.Show("О программе");
         }
 
-        // Window control buttons
+        // Кнопоки управления окном
         private void MinimizeBtn_Click(object sender, RoutedEventArgs e)
         {
             WindowState = WindowState.Minimized;
@@ -175,7 +426,7 @@ namespace Graphic_Editor
             Close();
         }
 
-        // Window dragging
+        // Перетаскивание окна за заголовок
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ClickCount == 2)
@@ -363,6 +614,7 @@ namespace Graphic_Editor
             {
                 MainCanvas.Children.Add(newShape);
                 MakeCanvasShapeDraggable(newShape);
+                canvasElements.Add(newShape);
             }
         }
 
@@ -577,7 +829,6 @@ namespace Graphic_Editor
                 }
             }
         }
-
 
         private void escButton_Click(object sender, RoutedEventArgs e)
         {
