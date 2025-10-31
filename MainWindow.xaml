@@ -725,61 +725,7 @@
 
                     </StackPanel>
                 </Border>
-                <!-- Панель с экспортом -->
-                <Border CornerRadius="15" 
-        Background="#FF343434" 
-        Width="240" 
-        Height="120"
-        Margin="940,550,26,90" Grid.RowSpan="2" HorizontalAlignment="Right">
-                    <StackPanel Orientation="Vertical" 
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Width="200">
-
-                        <TextBlock Text="Экспорт" 
-                   Foreground="White" 
-                   FontSize="14"
-                   FontWeight="Bold"
-                   HorizontalAlignment="Center"
-                   Margin="0,0,0,15"/>
-
-                        <!-- Формат экспорта -->
-                        <StackPanel Orientation="Horizontal" 
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Margin="0,0,0,15">
-                            <Border CornerRadius="5"
-                    Width="150" 
-                    Height="22"
-                    Background="#D9D9D9"
-                    VerticalAlignment="Center">
-                                <ComboBox x:Name="ExportFormatComboBox"
-                          Background="Transparent"
-                          BorderThickness="0"
-                          FontSize="11"
-                          VerticalContentAlignment="Center"
-                          Padding="5,0">
-                                    <ComboBoxItem Content="PNG" IsSelected="True"/>
-                                    <ComboBoxItem Content="JPG"/>
-                                    <ComboBoxItem Content="SVG"/>
-                                    <ComboBoxItem Content="PDF"/>
-                                </ComboBox>
-                            </Border>
-                        </StackPanel>
-
-                        <!-- Кнопка экспорта -->
-                        <Button x:Name="ExportButton"
-                Content="Экспорт диаграммы"
-                Width="160" 
-                Height="30"
-                Background="#FF505050"
-                Foreground="White"
-                BorderThickness="0"
-                FontSize="12"
-                FontWeight="SemiBold"/>
-
-                    </StackPanel>
-                </Border>
+                
 
                 <!--<Grid Grid.Row="1" Margin="10,0,-10,0">
                     <Grid.ColumnDefinitions>
