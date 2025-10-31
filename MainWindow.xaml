@@ -161,15 +161,15 @@
 
                 <!-- Нотация -->
                 <Border x:Name="NotationCard"
-                        Canvas.Left="44" 
-                        Canvas.Top="160"
+                        Canvas.Left="42" 
+                        Canvas.Top="147"
                         Width="274"
-                        Height="340"
+                        Height="225"
                         Background="#343434"
                         BorderBrush="#CCCCCC"
                         BorderThickness="1"
                         CornerRadius="8"
-                        Canvas.ZIndex="1">
+                        Canvas.ZIndex="1" HorizontalAlignment="Center" VerticalAlignment="Top">
 
                     <Border.Effect>
                         <DropShadowEffect ShadowDepth="3" Color="Black" Opacity="0.3" BlurRadius="10"/>
@@ -177,96 +177,16 @@
 
                     <Grid Margin="20,20,-1,2">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" MinHeight="153.8"/>
-                            <RowDefinition Height="Auto" MinHeight="252.542"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="0*"/>
-                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-
-                        <!-- Круг -->
-                        <Ellipse x:Name="Circle"
-                                Width="110"
-                                Height="110"
-                                Fill="White"
-                                Stroke="#343434"
-                                StrokeThickness="3"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Center"
-                                Cursor="Hand"/>
-
-                        <!-- Кольцо -->
-                        <Ellipse x:Name="SimpleRing"
-                                Width="110"
-                                Height="110"
-                                Stroke="White"
-                                StrokeThickness="5"
-                                Fill="Transparent"
-                                Cursor="Hand" Margin="116,145,6,183" Grid.RowSpan="2"/>
-
-                        <!-- Квадрат -->
-                        <Border x:Name="Square"
-                                Width="100"
-                                Height="100"
-                                Background="#343434"
-                                BorderBrush="White"
-                                BorderThickness="2"
-                                CornerRadius="0"
-                                Cursor="Hand" Margin="119,28,0,29"/>
-
-                        <!-- Ромб -->
-                        <Border x:Name="ResizableSquare"
-                                Width="70"
-                                Height="71"
-                                Background="#343434"
-                                BorderBrush="White"
-                                BorderThickness="2"
-                                CornerRadius="0"
-                                Cursor="Hand" Margin="26,14,157,196" RenderTransformOrigin="0.5,0.5" Grid.Row="1">
-                            <Border.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform/>
-                                    <SkewTransform/>
-                                    <RotateTransform Angle="45.354"/>
-                                    <TranslateTransform/>
-                                </TransformGroup>
-                            </Border.RenderTransform>
-                        </Border>
-
-                        <!-- Линия -->
-                        <Line x:Name="Line"
-                              X1="50" Y1="200"
-                              X2="40" Y2="2"
-                              Stroke="White"
-                              StrokeThickness="3"
-                              Cursor="Hand" Margin="86,34,79,47" RenderTransformOrigin="0.681,0.581" Grid.Row="1">
-                            <Line.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform/>
-                                    <SkewTransform/>
-                                    <RotateTransform Angle="93.201"/>
-                                    <TranslateTransform X="-32.998" Y="-1.206"/>
-                                </TransformGroup>
-                            </Line.RenderTransform>
-                        </Line>
-
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,115,15">
-                            <Border Background="#F0F0F0" 
-                                    BorderBrush="#DDDDDD" 
-                                    BorderThickness="1"
-                                    CornerRadius="4"
-                                    Padding="5,2"
-                                    Width="0"/>
-                        </StackPanel>
-
                         <TextBlock Text="Нотация" 
-                                   FontSize="14"
-                                   FontWeight="SemiBold"
-                                   Foreground="White"
-                                   RenderTransformOrigin="1.69,0.537" Margin="85,4,31,133">
+                          Grid.Row="0"
+                          FontSize="14"
+                          FontWeight="SemiBold"
+                          Foreground="White"
+                          HorizontalAlignment="Left"
+                          Margin="89,-5,0,15">
                             <TextBlock.RenderTransform>
                                 <TransformGroup>
                                     <ScaleTransform/>
@@ -276,6 +196,100 @@
                                 </TransformGroup>
                             </TextBlock.RenderTransform>
                         </TextBlock>
+                        <ScrollViewer Grid.Row="1" 
+                             VerticalScrollBarVisibility="Auto"
+                             HorizontalScrollBarVisibility="Disabled"
+                             Padding="5">
+                            <Canvas x:Name="NotationCanvas" Height="428" Background="Transparent">
+
+                                <Ellipse x:Name="Circle"
+                                Width="80"
+                                Height="80"
+                                Fill="White"
+                                Stroke="#343434"
+                                StrokeThickness="3"
+                                Cursor="Hand" Canvas.Left="10"/>
+                                <Ellipse x:Name="SimpleRing"
+                                Width="80"
+                                Height="80"
+                                Stroke="White"
+                                StrokeThickness="5"
+                                Fill="Transparent"
+                                Cursor="Hand" Canvas.Left="131" Canvas.Top="3"/>
+                                <!-- Кольцо -->
+                                <Ellipse x:Name="Ellipse"
+                                Stroke="White"
+                                StrokeThickness="2"
+                                Fill="Transparent"
+                                Cursor="Hand" Height="42" Width="90" HorizontalAlignment="Left" Canvas.Top="106" VerticalAlignment="Center" Canvas.Left="126"/>
+                                <Border x:Name="UmlInitialNode" 
+                            Width="70" 
+                            Height="70"
+                            Background="Transparent"
+                            BorderBrush="White"
+                            BorderThickness="3"
+                            CornerRadius="35"
+                            Cursor="Hand" Canvas.Left="15" Canvas.Top="92">
+                                    <Ellipse Width="60"
+                             Height="60"
+                             Fill="White"
+                             Stroke="Black"
+                             StrokeThickness="1"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"/>
+                                </Border>
+                                <Border x:Name="Square"
+                                Width="50"
+                                Height="50"
+                                Background="#343434"
+                                BorderBrush="White"
+                                BorderThickness="2"
+                                CornerRadius="0"
+                                Cursor="Hand" Canvas.Left="20" Canvas.Top="294"/>
+                                <Border x:Name="Rectangle"
+                                Background="#343434"
+                                BorderBrush="White"
+                                BorderThickness="2"
+                                Cursor="Hand" RenderTransformOrigin="0.506,0.529" Height="38" Width="80" Canvas.Left="126" Canvas.Top="300"/>
+                                <!-- Овал -->
+                                <!-- Квадрат -->
+
+                                <!-- Прямоугольник -->
+                                <Border x:Name="SuperEllipse"
+                                Background="#343434"
+                                BorderBrush="White"
+                                BorderThickness="2"
+                                CornerRadius="25"
+                                Cursor="Hand" RenderTransformOrigin="0.506,0.529" Height="46" Width="89" Canvas.Left="127" Canvas.Top="182" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                                <Border x:Name="ResizableSquare"
+                                Width="50"
+                                Height="51"
+                                Background="#343434"
+                                BorderBrush="White"
+                                BorderThickness="2"
+                                CornerRadius="0"
+                                Cursor="Hand" RenderTransformOrigin="0.557,0.5" Canvas.Left="25" Canvas.Top="188">
+                                    <Border.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform/>
+                                            <SkewTransform/>
+                                            <RotateTransform Angle="45.354"/>
+                                            <TranslateTransform X="-0.845" Y="2.027"/>
+                                        </TransformGroup>
+                                    </Border.RenderTransform>
+                                </Border>
+                                <Border x:Name="stick"
+        Background="Black"
+        BorderBrush="Black"
+        BorderThickness="2"
+                                CornerRadius="0.5"
+        Cursor="Hand" RenderTransformOrigin="0.506,0.529" Height="4" Width="150" Canvas.Left="38" Canvas.Top="387"/>
+                                <!--Прямоугольник со скругленными углами  -->
+                                <!-- Ромб -->
+                            </Canvas>
+                        </ScrollViewer>
+
+
                     </Grid>
                 </Border>
 
@@ -386,8 +400,8 @@
         </Border>
 
         <!-- Панели справа -->
-        <Border Grid.Row="1" Grid.ColumnSpan="2" Cursor="Hand">
-            <Grid>
+        <Border Cursor="Hand" Margin="2,10,-2,-10" Grid.Row="1">
+            <Grid Margin="-51,10,51,-10">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="617*"/>
                     <RowDefinition Height="143*"/>
@@ -398,7 +412,7 @@
                         Background="#FF343434" 
                         Width="240" 
                         Height="84"
-                        Margin="939,116,26,417" HorizontalAlignment="Right">
+                        Margin="0,65,26,540" HorizontalAlignment="Right">
                     <StackPanel Orientation="Vertical" 
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
@@ -481,7 +495,7 @@
                         Background="#FF343434" 
                         Width="240" 
                         Height="84"
-                        Margin="939,216,26,317" HorizontalAlignment="Right">
+                        Margin="0,193,26,448" HorizontalAlignment="Right">
                     <StackPanel Orientation="Vertical" 
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
@@ -547,7 +561,7 @@
                         Background="#FF343434" 
                         Width="240" 
                         Height="84"
-                        Margin="940,315,26,218" HorizontalAlignment="Right">
+                        Margin="0,308,26,350" HorizontalAlignment="Right">
                     <StackPanel Orientation="Vertical" 
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
@@ -614,7 +628,7 @@
                         Background="#FF343434" 
                         Width="240" 
                         Height="120"
-                        Margin="940,414,26,83" HorizontalAlignment="Right">
+                        Margin="0,416,26,215" HorizontalAlignment="Right">
                     <StackPanel Orientation="Vertical" 
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
