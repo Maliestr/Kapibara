@@ -114,6 +114,9 @@
                             <MenuItem Header="Вырезать" InputGestureText="Ctrl+X" Click="Cut_Click"/>
                             <MenuItem Header="Копировать" InputGestureText="Ctrl+C" Click="Copy_Click"/>
                             <MenuItem Header="Вставить" InputGestureText="Ctrl+V" Click="Paste_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Выделить все" InputGestureText="Ctrl+A"/>
+                            <MenuItem Header="Удалить" InputGestureText="Delete"/>
                         </MenuItem>
 
                         <MenuItem Header="Справка">

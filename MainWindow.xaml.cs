@@ -31,8 +31,8 @@ namespace Graphic_Editor
         private string currentFilePath = null;
         private List<UIElement> canvasElements = new List<UIElement>();
 
-        private UIElement selectedElement;
-        private UIElement copiedElement;
+        private FrameworkElement selectedElement;
+        private FrameworkElement copiedElement;
         private Point lastMousePosition;
         private Stack<UIElement> undoStack = new Stack<UIElement>();
         private Stack<UIElement> redoStack = new Stack<UIElement>();
@@ -492,7 +492,7 @@ namespace Graphic_Editor
         }
 
         // Контекстное меню для фигур
-        private void CreateContextMenu(UIElement element)
+        private void CreateContextMenu(FrameworkElement element)
         {
             ContextMenu contextMenu = new ContextMenu
             {
@@ -545,7 +545,7 @@ namespace Graphic_Editor
         }
 
         // Выделение элемента
-        private void SelectElement(UIElement element)
+        private void SelectElement(FrameworkElement element)
         {
             // Снимаем выделение с предыдущего элемента
             DeselectElement();
@@ -563,7 +563,10 @@ namespace Graphic_Editor
             if (selectedElement != null)
             {
                 ApplySelectionVisualFeedback(selectedElement, false);
-                selectedElement.ContextMenu = null;
+                if (selectedElement is FrameworkElement frameworkElement)
+                {
+                    frameworkElement.ContextMenu = null;
+                }
                 selectedElement = null;
             }
         }
@@ -676,7 +679,7 @@ namespace Graphic_Editor
                 MakeCanvasShapeDraggable(newElement);
                 
                 // Выделяем вставленный элемент
-                SelectElement(newElement);
+                SelectElement(newElement as FrameworkElement);
                 
                 // Сохраняем в стек отмены
                 SaveToUndoStack(newElement);
@@ -710,7 +713,7 @@ namespace Graphic_Editor
         }
 
         // Клонирование UI элемента
-        private UIElement CloneUIElement(UIElement original)
+        private FrameworkElement CloneUIElement(UIElement original)
         {
             if (original is Ellipse originalEllipse)
             {
@@ -852,7 +855,7 @@ namespace Graphic_Editor
             // Пока просто выделяем первый элемент (можно расширить для множественного выделения)
             if (MainCanvas.Children.Count > 0)
             {
-                SelectElement(MainCanvas.Children[0] as UIElement);
+                SelectElement(MainCanvas.Children[0] as FrameworkElement);
             }
         }
 
@@ -1137,6 +1140,13 @@ namespace Graphic_Editor
             shape.MouseLeftButtonDown += CanvasShape_MouseLeftButtonDown;
             shape.MouseMove += CanvasShape_MouseMove;
             shape.MouseLeftButtonUp += CanvasShape_MouseLeftButtonUp;
+
+            // Обработчик пкм для контекстного меню
+            shape.MouseRightButtonDown += (s, e) =>
+            {
+                SelectElement(shape as FrameworkElement);
+                e.Handled = true;
+            };
         }
 
         private void CanvasShape_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1144,6 +1154,8 @@ namespace Graphic_Editor
             var element = sender as UIElement;
             if (element != null)
             {
+                // Выделяем элемент при щелчке лкм
+                SelectElement(element as FrameworkElement);
                 isDragging = true;
                 draggedElement = element;
                 element.CaptureMouse();
