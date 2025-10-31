@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using System.Xml;
 
 namespace Graphic_Editor
 {
@@ -138,8 +139,13 @@ namespace Graphic_Editor
             AddDragHandlers(SimpleRing);
             AddDragHandlers(Square);
             AddDragHandlers(ResizableSquare);
-            AddDragHandlers(Line);
+            AddDragHandlers(Rectangle);
+            AddDragHandlers(SuperEllipse);
+            AddDragHandlers(Ellipse);
+            AddDragHandlers(UmlInitialNode);
+            AddDragHandlers(stick);
         }
+        
 
         private void AddDragHandlers(UIElement element)
         {
@@ -193,12 +199,14 @@ namespace Graphic_Editor
             {
                 // Перемещаем копию фигуры за курсором
                 Point currentPosition = e.GetPosition(MainCanvas);
+                if (currentPosition.Y > 50) 
+                {
+                    double newLeft = currentPosition.X - (GetElementWidth(shapeCopy) / 2);
+                    double newTop = currentPosition.Y - (GetElementHeight(shapeCopy) / 2);
 
-                double newLeft = currentPosition.X - (GetElementWidth(shapeCopy) / 2);
-                double newTop = currentPosition.Y - (GetElementHeight(shapeCopy) / 2);
-
-                Canvas.SetLeft(shapeCopy, newLeft);
-                Canvas.SetTop(shapeCopy, newTop);
+                    Canvas.SetLeft(shapeCopy, newLeft);
+                    Canvas.SetTop(shapeCopy, newTop);
+                }
             }
         }
 
@@ -215,22 +223,58 @@ namespace Graphic_Editor
 
                 if (shapeCopy != null)
                 {
-                    // Если копия была создана, делаем ее полностью видимой и добавляем функционал перетаскивания
-                    shapeCopy.Opacity = 1.0;
+                    Point dropPosition = e.GetPosition(MainCanvas);
 
-                    // ВОЗВРАЩАЕМ НОРМАЛЬНЫЙ ZIndex ДЛЯ ФИГУРЫ НА ХОЛСТЕ
-                    Canvas.SetZIndex(shapeCopy, 1);
+                    // ЕСЛИ БРОСИЛИ ФИГУРУ НАД МЕНЮ - УДАЛЯЕМ ЕЕ
+                    if (dropPosition.Y <= 50)
+                    {
+                        MainCanvas.Children.Remove(shapeCopy);
+                    }
+                    else
+                    {
+                        // Если копия была создана, делаем ее полностью видимой и добавляем функционал перетаскивания
+                        shapeCopy.Opacity = 1.0;
 
-                    MakeCanvasShapeDraggable(shapeCopy);
+                        // ВОЗВРАЩАЕМ НОРМАЛЬНЫЙ ZIndex ДЛЯ ФИГУРЫ НА ХОЛСТЕ
+                        Canvas.SetZIndex(shapeCopy, 1);
 
-                    // Добавляем эффект появления
-                    AnimateShapeAppearance(shapeCopy);
+                        MakeCanvasShapeDraggable(shapeCopy);
+
+                        // Добавляем эффект появления
+                        AnimateShapeAppearance(shapeCopy);
+                        if (IsShapeFromNotation(element))
+                        {
+                            string shapeType = GetShapeType(element);
+                            
+                        }
+                    
+                    }
                 }
 
                 draggedElement = null;
                 shapeCopy = null;
                 e.Handled = true;
             }
+        }
+        private bool IsShapeFromNotation(UIElement element)
+        {
+            // Проверяем, находится ли фигура в панели нотации
+            return NotationCanvas?.Children.Contains(element) == true;
+        }
+
+        private string GetShapeType(UIElement element)
+        {
+            if (element == Circle) return "Circle";
+            if (element == SimpleRing) return "SimpleRing";
+            if (element == Square) return "Square";
+            if (element == ResizableSquare) return "ResizableSquare";
+            if (element == Rectangle) return "Rectangle";
+            if (element == SuperEllipse) return "SuperEllipse";
+            if (element == Ellipse) return "Ellipse";
+            if (element == UmlInitialNode) return "UmlInitialNode";
+           
+            if (element == stick) return "stick";
+            return "Unknown";
         }
 
         private UIElement CreateShapeCopy(UIElement original)
@@ -240,33 +284,84 @@ namespace Graphic_Editor
             {
                 return new Ellipse
                 {
-                    Width = Circle.Width,
-                    Height = Circle.Height,
+                    Width = GetElementWidth(Circle),
+                    Height = GetElementHeight(Circle),
                     Fill = (Circle as Ellipse).Fill,
                     Stroke = (Circle as Ellipse).Stroke,
                     StrokeThickness = (Circle as Ellipse).StrokeThickness,
                     Cursor = Cursors.Hand
                 };
             }
+            else if (original == UmlInitialNode)
+            {
+                var originalBorder = UmlInitialNode as Border;
+                var innerCircle = originalBorder.Child as Ellipse;
+
+                // Получаем размеры из оригинала
+                double containerWidth = GetElementWidth(UmlInitialNode);
+                double containerHeight = GetElementHeight(UmlInitialNode);
+
+                // Создаем внешний Border (кольцо)
+                var border = new Border
+                {
+                    Width = containerWidth,
+                    Height = containerHeight,
+                    Background = Brushes.Transparent,
+                    BorderBrush = Brushes.White,
+                    BorderThickness = new Thickness(3),
+                    CornerRadius = new CornerRadius(containerWidth / 2), // Делаем круглым
+                    Cursor = Cursors.Hand
+                };
+
+                // Создаем внутренний круг
+                var circle = new Ellipse
+                {
+                    Width = GetElementWidth(innerCircle),
+                    Height = GetElementHeight(innerCircle),
+                    Fill = Brushes.White,
+                    Stroke = Brushes.Black,
+                    StrokeThickness = 1,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+
+                // Добавляем круг внутрь Border'а
+                border.Child = circle;
+                return border;
+            }
+            
             else if (original == SimpleRing)
             {
                 return new Ellipse
                 {
-                    Width = SimpleRing.Width,
-                    Height = SimpleRing.Height,
+                    Width = GetElementWidth(SimpleRing),
+                    Height = GetElementHeight(SimpleRing),
                     Stroke = (SimpleRing as Ellipse).Stroke,
                     StrokeThickness = (SimpleRing as Ellipse).StrokeThickness,
                     Fill = Brushes.Transparent,
                     Cursor = Cursors.Hand
                 };
             }
+            else if (original == Ellipse)
+            {
+                return new Ellipse
+                {
+                    Width = GetElementWidth(Ellipse),
+                    Height = GetElementHeight(Ellipse),
+                    Stroke = (Ellipse as Ellipse).Stroke,
+                    StrokeThickness = (Ellipse as Ellipse).StrokeThickness,
+                    Fill = Brushes.Transparent,
+                    Cursor = Cursors.Hand
+                };
+            }
+
             else if (original == Square)
             {
                 var originalBorder = Square as Border;
                 return new Border
                 {
-                    Width = originalBorder.Width,
-                    Height = originalBorder.Height,
+                    Width = GetElementWidth(originalBorder),
+                    Height = GetElementHeight(originalBorder),
                     Background = originalBorder.Background,
                     BorderBrush = originalBorder.BorderBrush,
                     BorderThickness = originalBorder.BorderThickness,
@@ -279,8 +374,8 @@ namespace Graphic_Editor
                 var originalDiamond = ResizableSquare as Border;
                 var diamond = new Border
                 {
-                    Width = originalDiamond.Width,
-                    Height = originalDiamond.Height,
+                    Width = GetElementWidth(originalDiamond),
+                    Height = GetElementHeight(originalDiamond),
                     Background = originalDiamond.Background,
                     BorderBrush = originalDiamond.BorderBrush,
                     BorderThickness = originalDiamond.BorderThickness,
@@ -292,30 +387,50 @@ namespace Graphic_Editor
                 diamond.RenderTransform = new RotateTransform(45);
                 return diamond;
             }
-            else if (original == Line)
+            else if (original == Rectangle)
             {
-                var originalLine = Line as Line;
-                var line = new Line
+                var originalBorder = Rectangle as Border;
+                return new Border
                 {
-                    X1 = originalLine.X1,
-                    Y1 = originalLine.Y1,
-                    X2 = originalLine.X2,
-                    Y2 = originalLine.Y2,
-                    Stroke = originalLine.Stroke,
-                    StrokeThickness = originalLine.StrokeThickness,
-                    StrokeStartLineCap = originalLine.StrokeStartLineCap,
-                    StrokeEndLineCap = originalLine.StrokeEndLineCap,
+                    Width = GetElementWidth(originalBorder),
+                    Height = GetElementHeight(originalBorder),
+                    Background = originalBorder.Background,
+                    BorderBrush = originalBorder.BorderBrush,
+                    BorderThickness = originalBorder.BorderThickness,
+                    CornerRadius = originalBorder.CornerRadius,
                     Cursor = Cursors.Hand
                 };
-                // Копируем точную трансформацию
-                if (originalLine.RenderTransform is RotateTransform originalRotate)
-                {
-                    line.RenderTransform = new RotateTransform(originalRotate.Angle);
-                }
-                return line;
             }
-
+            else if (original == stick)
+            {
+                var originalBorder = stick as Border;
+                return new Border
+                {
+                    Width = GetElementWidth(originalBorder),
+                    Height = GetElementHeight(originalBorder),
+                    Background = originalBorder.Background,
+                    BorderBrush = originalBorder.BorderBrush,
+                    BorderThickness = originalBorder.BorderThickness,
+                    CornerRadius = originalBorder.CornerRadius,
+                    Cursor = Cursors.Hand
+                };
+            }
+            else if (original == SuperEllipse)
+            {
+                var originalBorder = SuperEllipse as Border;
+                return new Border
+                {
+                    Width = GetElementWidth(originalBorder),
+                    Height = GetElementHeight(originalBorder),
+                    Background = originalBorder.Background,
+                    BorderBrush = originalBorder.BorderBrush,
+                    BorderThickness = originalBorder.BorderThickness,
+                    CornerRadius = originalBorder.CornerRadius,
+                    Cursor = Cursors.Hand
+                };
+            }
             return null;
+                
         }
 
         private void MakeCanvasShapeDraggable(UIElement shape)
@@ -358,11 +473,14 @@ namespace Graphic_Editor
                 Point currentPosition = e.GetPosition(MainCanvas);
 
                 // Перемещаем элемент так, чтобы центр был под курсором
-                double newLeft = currentPosition.X - offset.X;
-                double newTop = currentPosition.Y - offset.Y;
+                if (currentPosition.Y > 50)
+                {
+                    double newLeft = currentPosition.X - offset.X;
+                    double newTop = currentPosition.Y - offset.Y;
 
-                Canvas.SetLeft(element, newLeft);
-                Canvas.SetTop(element, newTop);
+                    Canvas.SetLeft(element, newLeft);
+                    Canvas.SetTop(element, newTop);
+                }
             }
         }
 
@@ -406,11 +524,7 @@ namespace Graphic_Editor
                     border.BorderBrush = Brushes.Red;
                     border.BorderThickness = new Thickness(border.BorderThickness.Left + 2);
                 }
-                else if (element is Line line)
-                {
-                    line.Stroke = Brushes.Red;
-                    line.StrokeThickness += 2;
-                }
+                
             }
             else
             {
@@ -432,11 +546,7 @@ namespace Graphic_Editor
                     border.BorderBrush = Brushes.White;
                     border.BorderThickness = new Thickness(2);
                 }
-                else if (element is Line line)
-                {
-                    line.Stroke = Brushes.White;
-                    line.StrokeThickness = 3;
-                }
+                
             }
         }
 
