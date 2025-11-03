@@ -5,16 +5,20 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Graphic_Editor"
         mc:Ignorable="d"
-        WindowState="Maximized"
         WindowStyle="None"
+        WindowState="Maximized"
         AllowsTransparency="False"
         ResizeMode="CanResize"
+        Icon="/Icons/L.png"
+        Title="Kapibara"
         MinHeight="800"
         MinWidth="1200"
-        Padding="6"
+        Height="800"
+        Width="1200"
         Background="#FF252525"
         FontFamily="Gotham Pro">
-
+    <!--Widht и Height нужны для правильной визуализации окна-->
+    
     <Window.Resources>
         <!-- Общий стиль для кнопок заголовка (минимизация/максимизация) с подсветкой при наведении -->
         <Style x:Key="TitleBarButtonStyle" TargetType="Button">
@@ -70,13 +74,15 @@
     </WindowChrome.WindowChrome>
 
     <Grid>
+        
         <Grid.RowDefinitions>
             <RowDefinition Height="40"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Title Bar -->
-        <Border Grid.Row="0" Background="#424242" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+        <Border Grid.Row="0" Background="#424242"
+                MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -88,9 +94,9 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Background="Transparent">
                     <Image Source="/Icons/L.png" Width="25.82" Height="25.82" Margin="15,11,15,3"/>
 
-                    <Menu Background="Transparent" FontSize="12" Foreground="#FFEEEEEE" 
-                          WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Center" Margin="0,8,0,0">
-                        <MenuItem Header="Файл" VerticalAlignment="Center" Margin="0,0,18,0">
+                    <Menu Background="Transparent" FontSize="12" Foreground="#EEEEEE" 
+                          WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom" Height="34">
+                        <MenuItem Header="Файл" Margin="0,2,18,0" Height="32" Click="MenuItem_Click_1">
                             <MenuItem Header="Новый" Click="NewFile_Click"/>
                             <MenuItem Header="Открыть..." Click="OpenFile_Click"/>
                             <MenuItem Header="Сохранить" Click="SaveFile_Click"/>
@@ -99,13 +105,23 @@
                             <MenuItem Header="Выход" Click="Exit_Click"/>
                         </MenuItem>
 
-                        <MenuItem Header="Вид" Margin="0,0,18,0">
+                        <MenuItem Header="Вид" Margin="0,2,18,0" Height="32" Width="36">
                             <MenuItem Header="Увеличить" Click="ZoomIn_Click"/>
                             <MenuItem Header="Уменьшить" Click="ZoomOut_Click"/>
                             <MenuItem Header="Сбросить масштаб" Click="ResetZoom_Click"/>
+                            <Separator/>
+                            <!-- Новый пункт для переключения сетки -->
+                            <MenuItem x:Name="GridToggleMenuItem" 
+                                      Header="Сетка" 
+                                      Click="GridToggleMenuItem_Click"
+                                      IsCheckable="True"/>
+                            <MenuItem x:Name="SnapToGridMenuItem" 
+                                      Header="Привязка к сетке" 
+                                      Click="SnapToGridMenuItem_Click"
+                                      IsCheckable="True"/>
                         </MenuItem>
 
-                        <MenuItem Header="Правка" Margin="0,0,18,0">
+                        <MenuItem Header="Правка" Margin="0,2,18,0" Height="32" Click="MenuItem_Click">
                             <MenuItem Header="Отменить" InputGestureText="Ctrl+Z" Click="Undo_Click"/>
                             <MenuItem Header="Повторить" InputGestureText="Ctrl+Y" Click="Redo_Click"/>
                             <Separator/>
@@ -114,7 +130,7 @@
                             <MenuItem Header="Вставить" InputGestureText="Ctrl+V" Click="Paste_Click"/>
                         </MenuItem>
 
-                        <MenuItem Header="Справка">
+                        <MenuItem Header="Справка" Height="32" Margin="0,2,0,0">
                             <MenuItem Header="Справка" InputGestureText="F1" Click="Help_Click"/>
                             <MenuItem Header="О программе" Click="About_Click"/>
                         </MenuItem>
@@ -126,47 +142,43 @@
                 <!-- Кнопки управления окном -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Background="Transparent" Width="144">
                     <Button x:Name="MinimizeBtn" Background="Transparent" BorderBrush="Transparent"
-                            Click="MinimizeBtn_Click" Width="46" Height="32"
+                            Click="MinimizeBtn_Click" Width="46" Height="34"
                             Style="{StaticResource TitleBarButtonStyle}"
                             WindowChrome.IsHitTestVisibleInChrome="True" Margin="0,0.6,0,0" VerticalAlignment="Bottom">
-                        <Image Source="/Icons/Line 3.png" Width="12" Height="12"/>
+                        <Image Source="/Icons/Line 3.png" Width="12" Height="12" Margin="0,2,0,0"/>
                     </Button>
 
                     <Button x:Name="MaximizeBtn" Background="Transparent" BorderBrush="Transparent"
-                            Click="MaximizeBtn_Click" Width="46" Height="32"
+                            Click="MaximizeBtn_Click" Width="46" Height="34"
                             Style="{StaticResource TitleBarButtonStyle}"
                             WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom">
-                        <Image Source="/Icons/Group 2.png" Width="12" Height="12"/>
+                        <Image Source="/Icons/Group 2.png" Width="12" Height="12" Margin="0,2,0,0"/>
                     </Button>
 
                     <Button x:Name="CloseBtn" Background="Transparent" BorderBrush="Transparent"
-                            Click="CloseBtn_Click" Width="46" Height="32"
+                            Click="CloseBtn_Click" Width="46" Height="34"
                             Style="{StaticResource CloseButtonStyle}"
-                            WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom">
-                        <Image Source="/Icons/Group 1.png" Width="12" Height="12"/>
+                            WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom" Margin="0,0,6,0">
+                        <Image Source="/Icons/Group 1.png" Width="12" Height="12" Margin="0,2,0,0"/>
                     </Button>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- Content Area -->
-        <Border Grid.Row="1" Background="#FF1E1E1E"/>
-
-        <Border Grid.Row="1" Grid.ColumnSpan="2">
+        <Border Grid.Row="1" Grid.ColumnSpan="2" Background="#FF1E1E1E">
             <!--мои изменения тут -->
             <Grid>
-
                 <!-- Основная рабочая область -->
-                <Canvas x:Name="MainCanvas"
-    Margin="10,0,10,20"/>
+                <Canvas x:Name="MainCanvas" Loaded="MainCanvas_Loaded"/>
 
                 <!-- Прямоугольная панель снизу -->
                 <Border CornerRadius="11.72" 
         Background="#FF343434" 
         Width="293" 
-        Height="52"
-        Margin="458,694,453,38"
-        Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="">
+        Height="46"
+        Margin="0,0,0,70"
+        Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Bottom" Cursor="">
                     <StackPanel Orientation="Horizontal"
                VerticalAlignment="Center" Width="293" Height="52" HorizontalAlignment="Center">
                         <!-- Ручной инструмент -->
@@ -727,21 +739,21 @@
                 </Border>
                 <!-- Панель с экспортом -->
                 <Border CornerRadius="15" 
-        Background="#FF343434" 
-        Width="240" 
-        Height="120"
-        Margin="940,550,26,90" Grid.RowSpan="2" HorizontalAlignment="Right">
+                    Background="#FF343434" 
+                    Width="240" 
+                    Height="120"
+                    Margin="940,550,26,90" Grid.RowSpan="2" HorizontalAlignment="Right">
                     <StackPanel Orientation="Vertical" 
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Width="200">
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Width="200">
 
                         <TextBlock Text="Экспорт" 
-                   Foreground="White" 
-                   FontSize="14"
-                   FontWeight="Bold"
-                   HorizontalAlignment="Center"
-                   Margin="0,0,0,15"/>
+                            Foreground="White" 
+                            FontSize="14"
+                            FontWeight="Bold"
+                            HorizontalAlignment="Center"
+                            Margin="0,0,0,15"/>
 
                         <!-- Формат экспорта -->
                         <StackPanel Orientation="Horizontal" 

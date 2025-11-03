@@ -1,7 +1,7 @@
-﻿using Microsoft.Win32;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -9,56 +9,14 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-
-/*namespace Graphic_Editor
-{
-    /// <summary>
-    /// Логика взаимодействия для MainWindow.xaml
-    /// </summary>
-    public partial class MainWindow : Window
-    {
-        public MainWindow()
-        {
-            InitializeComponent();
-        }
-
-        private void escButton_Click(object sender, RoutedEventArgs e)
-        {
-            this.Close(); // закрытие окна
-        }
-    }
-}*/
-//namespace Graphic_Editor
-//{
-//    public partial class MainWindow : Window
-//    {
-//        public MainWindow()
-//        {
-//            InitializeComponent();
-//        }
-
-
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Shell;
 
 
 
@@ -72,10 +30,230 @@ namespace Graphic_Editor
         private Transform originalTransform;
         private Point dragStartPoint;
 
+        private bool isGridEnabled = false;
+        private bool isSnapToGridEnabled = false;
+        private Path gridPath;
+        private const double GridSize = 20; // Размер ячейки сетки
         public MainWindow()
         {
             InitializeComponent();
             MakeAllShapesDraggable();
+
+            InitializeGrid(); // Инициализируем сетку
+
+            // Обработка горячих клавиш
+            this.KeyDown += MainWindow_KeyDown;
+        }
+
+        // Инициализация сетки
+        private void InitializeGrid()
+        {
+            gridPath = new Path
+            {
+                Stroke = new SolidColorBrush(Color.FromArgb(60, 128, 128, 128)), // Полупрозрачный серый
+                StrokeThickness = 0.5,
+                IsHitTestVisible = false // Сетка не должна мешать взаимодействию
+            };
+
+            // Добавляем сетку на канвас, но скрываем
+            MainCanvas.Children.Add(gridPath);
+            gridPath.Visibility = Visibility.Collapsed;
+        }
+
+        // Создание сетки
+        private void CreateGrid()
+        {
+            if (MainCanvas.ActualWidth == 0 || MainCanvas.ActualHeight == 0)
+                return;
+
+            var geometryGroup = new GeometryGroup();
+
+            // Вертикальные линии
+            for (double x = 0; x < MainCanvas.ActualWidth; x += GridSize)
+            {
+                geometryGroup.Children.Add(new LineGeometry(
+                    new Point(x, 0),
+                    new Point(x, MainCanvas.ActualHeight)));
+            }
+
+            // Горизонтальные линии
+            for (double y = 0; y < MainCanvas.ActualHeight; y += GridSize)
+            {
+                geometryGroup.Children.Add(new LineGeometry(
+                    new Point(0, y),
+                    new Point(MainCanvas.ActualWidth, y)));
+            }
+
+            gridPath.Data = geometryGroup;
+        }
+
+        // Обработчик переключения сетки из меню
+        private void GridToggleMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleGridVisibility();
+        }
+
+        // Обработчик переключения привязки к сетке
+        private void SnapToGridMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleSnapToGrid();
+        }
+
+        // Метод переключения сетки
+        private void ToggleGridVisibility()
+        {
+            isGridEnabled = !isGridEnabled;
+
+            if (isGridEnabled)
+            {
+                // Создаем и показываем сетку
+                CreateGrid();
+                gridPath.Visibility = Visibility.Visible;
+                GridToggleMenuItem.IsChecked = true;
+                GridToggleMenuItem.Header = "Скрыть сетку";
+            }
+            else
+            {
+                // Скрываем сетку
+                gridPath.Visibility = Visibility.Collapsed;
+                GridToggleMenuItem.IsChecked = false;
+                GridToggleMenuItem.Header = "Показать сетку";
+            }
+        }
+
+        // Метод переключения привязки к сетке
+        private void ToggleSnapToGrid()
+        {
+            isSnapToGridEnabled = !isSnapToGridEnabled;
+
+            if (isSnapToGridEnabled)
+            {
+                SnapToGridMenuItem.IsChecked = true;
+                SnapToGridMenuItem.Header = "Отключить привязку";
+
+                // Автоматически включаем сетку если она выключена
+                if (!isGridEnabled)
+                {
+                    ToggleGridVisibility();
+                }
+            }
+            else
+            {
+                SnapToGridMenuItem.IsChecked = false;
+                SnapToGridMenuItem.Header = "Привязка к сетке";
+            }
+        }
+
+        // Метод для привязки точки к сетке
+        private Point SnapToGrid(Point originalPoint)
+        {
+            if (!isSnapToGridEnabled) return originalPoint;
+
+            double snappedX = Math.Round(originalPoint.X / GridSize) * GridSize;
+            double snappedY = Math.Round(originalPoint.Y / GridSize) * GridSize;
+
+            return new Point(snappedX, snappedY);
+        }
+
+        // Обновите метод создания копий фигур для привязки к сетке
+        private void CreateShapeCopyOnCanvas(Point position)
+        {
+            // Применяем привязку к сетке если включена
+            if (isSnapToGridEnabled)
+            {
+                position = SnapToGrid(position);
+            }
+
+            UIElement newShape = null;
+
+            // Определяем тип фигуры и создаем копию с оригинальными цветами
+            if (draggedElement == Circle)
+            {
+                newShape = CreateCircleCopy(position);
+            }
+            else if (draggedElement == SimpleRing)
+            {
+                newShape = CreateRingCopy(position);
+            }
+            else if (draggedElement == Square)
+            {
+                newShape = CreateSquareCopy(position);
+            }
+            else if (draggedElement == ResizableSquare)
+            {
+                newShape = CreateDiamondCopy(position);
+            }
+            else if (draggedElement == Line)
+            {
+                newShape = CreateLineCopy(position);
+            }
+
+            if (newShape != null)
+            {
+                MainCanvas.Children.Add(newShape);
+                MakeCanvasShapeDraggable(newShape);
+            }
+        }
+
+        // Обновите метод перемещения фигур на канвасе
+        private void CanvasShape_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (isDragging && draggedElement != null && e.LeftButton == MouseButtonState.Pressed)
+            {
+                var element = draggedElement;
+                Point currentPosition = e.GetPosition(MainCanvas);
+
+                // Применяем привязку к сетке если включена
+                if (isSnapToGridEnabled)
+                {
+                    currentPosition = SnapToGrid(currentPosition);
+                }
+
+                double newLeft = currentPosition.X - offset.X;
+                double newTop = currentPosition.Y - offset.Y;
+
+                Canvas.SetLeft(element, newLeft);
+                Canvas.SetTop(element, newTop);
+            }
+        }
+
+        // Обновляем сетку при изменении размера окна
+        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+        {
+            base.OnRenderSizeChanged(sizeInfo);
+
+            if (isGridEnabled && gridPath != null)
+            {
+                // Небольшая задержка для корректного обновления размеров
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    CreateGrid();
+                }), System.Windows.Threading.DispatcherPriority.Background);
+            }
+        }
+
+        // Обновляем сетку когда канвас полностью загружен и проинициализирован
+        private void MainCanvas_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (isGridEnabled)
+            {
+                CreateGrid();
+            }
+        }
+
+        // Добавьте горячие клавиши для удобства (опционально)
+        private void MainWindow_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.G && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                ToggleGridVisibility();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.S && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                ToggleSnapToGrid();
+                e.Handled = true;
+            }
         }
 
         // File menu handlers
@@ -333,39 +511,6 @@ namespace Graphic_Editor
             element.RenderTransform = newTransform;
         }
 
-        private void CreateShapeCopyOnCanvas(Point position)
-        {
-            UIElement newShape = null;
-
-            // Определяем тип фигуры и создаем копию с оригинальными цветами
-            if (draggedElement == Circle)
-            {
-                newShape = CreateCircleCopy(position);
-            }
-            else if (draggedElement == SimpleRing)
-            {
-                newShape = CreateRingCopy(position);
-            }
-            else if (draggedElement == Square)
-            {
-                newShape = CreateSquareCopy(position);
-            }
-            else if (draggedElement == ResizableSquare)
-            {
-                newShape = CreateDiamondCopy(position);
-            }
-            else if (draggedElement == Line)
-            {
-                newShape = CreateLineCopy(position);
-            }
-
-            if (newShape != null)
-            {
-                MainCanvas.Children.Add(newShape);
-                MakeCanvasShapeDraggable(newShape);
-            }
-        }
-
         private Ellipse CreateCircleCopy(Point position)
         {
             var circle = new Ellipse
@@ -488,21 +633,6 @@ namespace Graphic_Editor
             }
         }
 
-        private void CanvasShape_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (isDragging && draggedElement != null && e.LeftButton == MouseButtonState.Pressed)
-            {
-                var element = draggedElement;
-                Point currentPosition = e.GetPosition(MainCanvas);
-
-                double newLeft = currentPosition.X - offset.X;
-                double newTop = currentPosition.Y - offset.Y;
-
-                Canvas.SetLeft(element, newLeft);
-                Canvas.SetTop(element, newTop);
-            }
-        }
-
         private void CanvasShape_MouseLeftButtonUp(object sender, MouseEventArgs e)
         {
             var element = sender as UIElement;
@@ -577,11 +707,19 @@ namespace Graphic_Editor
                 }
             }
         }
-
-
         private void escButton_Click(object sender, RoutedEventArgs e)
         {
             this.Close(); // закрытие окна
+        }
+
+        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void MenuItem_Click_1(object sender, RoutedEventArgs e)
+        {
+
         }
     }
 }
