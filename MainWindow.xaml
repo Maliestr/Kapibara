@@ -101,6 +101,8 @@
                             <MenuItem Header="Открыть..." Click="OpenFile_Click"/>
                             <MenuItem Header="Сохранить" Click="SaveFile_Click"/>
                             <MenuItem Header="Сохранить как..." Click="SaveAsFile_Click"/>
+                            <!-- Экспорт в картинку -->
+                            <MenuItem Header="Экспорт в изображение..." Click="ExportToImage_Click"/>
                             <Separator/>
                             <MenuItem Header="Выход" Click="Exit_Click"/>
                         </MenuItem>
@@ -128,6 +130,9 @@
                             <MenuItem Header="Вырезать" InputGestureText="Ctrl+X" Click="Cut_Click"/>
                             <MenuItem Header="Копировать" InputGestureText="Ctrl+C" Click="Copy_Click"/>
                             <MenuItem Header="Вставить" InputGestureText="Ctrl+V" Click="Paste_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Выделить все" InputGestureText="Ctrl+A"/>
+                            <MenuItem Header="Удалить" InputGestureText="Delete"/>
                         </MenuItem>
 
                         <MenuItem Header="Справка" Height="32" Margin="0,2,0,0">
