@@ -8,7 +8,6 @@
         x:Name="Main"
         WindowState="Maximized"
         WindowStyle="None"
-        WindowState="Maximized"
         AllowsTransparency="False"
         ResizeMode="CanResize"
         Icon="/Icons/L.png"

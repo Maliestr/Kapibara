@@ -152,46 +152,6 @@ namespace Graphic_Editor
             return new Point(snappedX, snappedY);
         }
 
-        // Обновите метод создания копий фигур для привязки к сетке
-        private void CreateShapeCopyOnCanvas(Point position)
-        {
-            // Применяем привязку к сетке если включена
-            if (isSnapToGridEnabled)
-            {
-                position = SnapToGrid(position);
-            }
-
-            UIElement newShape = null;
-
-            // Определяем тип фигуры и создаем копию с оригинальными цветами
-            if (draggedElement == Circle)
-            {
-                newShape = CreateCircleCopy(position);
-            }
-            else if (draggedElement == SimpleRing)
-            {
-                newShape = CreateRingCopy(position);
-            }
-            else if (draggedElement == Square)
-            {
-                newShape = CreateSquareCopy(position);
-            }
-            else if (draggedElement == ResizableSquare)
-            {
-                newShape = CreateDiamondCopy(position);
-            }
-            else if (draggedElement == Line)
-            {
-                newShape = CreateLineCopy(position);
-            }
-
-            if (newShape != null)
-            {
-                MainCanvas.Children.Add(newShape);
-                MakeCanvasShapeDraggable(newShape);
-            }
-        }
-
         // Обновите метод перемещения фигур на канвасе
         private void CanvasShape_MouseMove(object sender, MouseEventArgs e)
         {
@@ -661,12 +621,6 @@ namespace Graphic_Editor
                 };
             }
             return null;
-                
-            // Добавляем трансформ перемещения
-            newTransform.Children.Add(translateTransform);
-
-            // Применяем к элементу
-            element.RenderTransform = newTransform;
         }
 
         private Ellipse CreateCircleCopy(Point position)
