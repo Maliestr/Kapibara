@@ -1,6 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
+using Microsoft.Win32;
 using System.IO;
+using System.Windows.Media.Imaging;
+using System.Diagnostics;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -40,7 +43,7 @@ namespace Graphic_Editor
 
         private bool isGridEnabled = false;
         private bool isSnapToGridEnabled = false;
-        private Path gridPath;
+        private System.Windows.Shapes.Path gridPath;
         private const double GridSize = 20; // Размер ячейки сетки
         public MainWindow()
         {
@@ -56,7 +59,7 @@ namespace Graphic_Editor
         // Инициализация сетки
         private void InitializeGrid()
         {
-            gridPath = new Path
+            gridPath = new System.Windows.Shapes.Path
             {
                 Stroke = new SolidColorBrush(Color.FromArgb(60, 128, 128, 128)), // Полупрозрачный серый
                 StrokeThickness = 0.5,
@@ -1276,9 +1279,6 @@ namespace Graphic_Editor
                     CornerRadius = originalBorder.CornerRadius,
                     Cursor = Cursors.Hand
                 };
-                MainCanvas.Children.Add(newShape);
-                MakeCanvasShapeDraggable(newShape);
-                canvasElements.Add(newShape);
             }
             else if (original == ResizableSquare)
             {
