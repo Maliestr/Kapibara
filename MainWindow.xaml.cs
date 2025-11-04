@@ -22,7 +22,6 @@ using System.Windows.Shell;
 using System.Windows.Ink;
 using System.Globalization;
 using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace Graphic_Editor
 {
@@ -1386,7 +1385,7 @@ namespace Graphic_Editor
                 originalTransform = element.RenderTransform;
                 dragStartPoint = e.GetPosition(MainCanvas);
                 offset = e.GetPosition(element);
-                ApplyDragVisualFeedback(element, true);
+                //ApplyDragVisualFeedback(element, true);
                 e.Handled = true;
             }
         }
