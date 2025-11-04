@@ -371,7 +371,8 @@
                         Margin="12,0,5,0"
                         Background="#FF343434"
                         BorderBrush="Transparent"
-                        FocusVisualStyle="{x:Null}">
+                        FocusVisualStyle="{x:Null}"
+                        Click="TextButton_Click">
                         <Image Source="/Icons/text.png"
                             Width="30" 
                             Height="30"
@@ -520,46 +521,74 @@
                         VerticalAlignment="Center">
 
                         <!-- Превью цвета -->
-                        <Border x:Name="FillColorPreview"
-                        CornerRadius="5"
-                        Width="40" 
-                        Height="22"
-                        Background="#FFC44141"
-                        VerticalAlignment="Center"
-                        Margin="0,0,10,0"
-                        BorderThickness="1"
-                        BorderBrush="#FF666666"/>
+                            <Border x:Name="FillColorPreview"
+                    CornerRadius="5"
+                    Width="40" 
+                    Height="22"
+                    Background="#FFC44141"
+                    VerticalAlignment="Center"
+                    Margin="0,0,10,0"
+                    BorderThickness="1"
+                    BorderBrush="#FF666666"/>
 
-                        <!-- HEX код цвета -->
-                        <Border CornerRadius="5"
-                        Width="80" 
-                        Height="22"
-                        Background="#D9D9D9"
-                        VerticalAlignment="Center"
-                        Margin="0,0,10,0">
-                            <TextBox x:Name="FillColorTextBox"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                FontSize="11"
-                                VerticalContentAlignment="Center"
-                                HorizontalContentAlignment="Center"
-                                Text="C44141"
-                                CharacterCasing="Upper"/>
-                        </Border>
+                            <!-- Выпадающий список цветов -->
+                            <ComboBox x:Name="FillColorComboBox"
+                      Width="92" 
+                      Height="22"
+                      VerticalAlignment="Center"
+                      Margin="0,0,10,0"
+                      Background="#D9D9D9"
+                      BorderThickness="0"
+                      FontSize="11"
+                      SelectedIndex="0"
+                      SelectionChanged="FillColorComboBox_SelectionChanged">
 
-                        <!-- Кнопка выбора цвета -->
-                        <Button x:Name="FillColorPickerButton"
-                        Width="22" 
-                        Height="22"
-                        Cursor="Hand"
-                        Background="Transparent"
-                        BorderBrush="Transparent"
-                        BorderThickness="0"
-                        FocusVisualStyle="{x:Null}">
-                        </Button>
+                                <ComboBoxItem Tag="C44141">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
 
+                                        <TextBlock Text="Красный" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+
+                                <ComboBoxItem Tag="4166C4">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
+
+                                        <TextBlock Text="Синий" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+
+                                <ComboBoxItem Tag="41C441">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
+
+                                        <TextBlock Text="Зеленый" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+
+                                <ComboBoxItem Tag="C4C441">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
+
+                                        <TextBlock Text="Желтый" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+
+                                <ComboBoxItem Tag="000000">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
+
+                                        <TextBlock Text="Черный" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+                            </ComboBox>
                     </StackPanel>
-
                 </StackPanel>
             </Border>
 
@@ -587,49 +616,78 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center">
 
-                        <!-- Превью цвета -->
-                        <Border x:Name="StrokeColorPreview"
-                        CornerRadius="5"
-                        Width="40" 
-                        Height="22"
-                        Background="#FF000000"
-                        VerticalAlignment="Center"
-                        Margin="0,0,10,0"
-                        BorderThickness="1"
-                        BorderBrush="#FF666666"/>
+                        <!-- Превью цвета обводки -->
+                            <Border x:Name="StrokeColorPreview"
+                    CornerRadius="5"
+                    Width="40" 
+                    Height="22"
+                    Background="#FF000000"
+                    VerticalAlignment="Center"
+                    Margin="0,0,10,0"
+                    BorderThickness="1"
+                    BorderBrush="#FF666666"/>
 
-                        <!-- HEX код цвета -->
-                        <Border CornerRadius="5"
-                        Width="80" 
-                        Height="22"
-                        Background="#D9D9D9"
-                        VerticalAlignment="Center"
-                        Margin="0,0,10,0">
-                            <TextBox x:Name="StrokeColorTextBox"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                FontSize="11"
-                                VerticalContentAlignment="Center"
-                                HorizontalContentAlignment="Center"
-                                Text="000000"
-                                CharacterCasing="Upper"/>
-                        </Border>
+                            <!-- Выпадающий список цветов обводки -->
+                            <ComboBox x:Name="StrokeColorComboBox"
+                      Width="92" 
+                      Height="22"
+                      VerticalAlignment="Center"
+                      Margin="0,0,10,0"
+                      Background="#D9D9D9"
+                      BorderThickness="0"
+                      FontSize="11"
+                      SelectedIndex="0"
+                      SelectionChanged="StrokeColorComboBox_SelectionChanged">
 
-                        <!-- Кнопка выбора цвета -->
-                        <Button x:Name="StrokeColorPickerButton"
-                        Width="22" 
-                        Height="22"
-                        Cursor="Hand"
-                        Background="Transparent"
-                        BorderBrush="Transparent"
-                        BorderThickness="0"
-                        FocusVisualStyle="{x:Null}">
-                        </Button>
+                                <ComboBoxItem Tag="000000">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
+                                        <TextBlock Text="Черный" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+
+                                <ComboBoxItem Tag="FFFFFF">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
+                                      
+                                        <TextBlock Text="Белый" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+
+                                <ComboBoxItem Tag="C44141">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
+
+                                        <TextBlock Text="Красный" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+
+                                <ComboBoxItem Tag="4166C4">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
+
+                                        <TextBlock Text="Синий" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+
+                                <ComboBoxItem Tag="41C441">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
+
+                                        <TextBlock Text="Зеленый" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+                            </ComboBox>
+
+                        </StackPanel>
 
                     </StackPanel>
-
-                </StackPanel>
-            </Border>
+                </Border>
 
             <!-- Панель с текстом -->
             <Border CornerRadius="15"
