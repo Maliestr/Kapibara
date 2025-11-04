@@ -121,5 +121,8 @@
     <Resource Include="Icons\align-horizontal-top.png" />
     <Resource Include="Icons\dashboard.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\КнСк.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

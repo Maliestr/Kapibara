@@ -94,7 +94,7 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Background="Transparent">
                     <Image Source="/Icons/L.png" Width="25.82" Height="25.82" Margin="15,11,15,3"/>
 
-                    <Menu Background="Transparent" FontSize="12" Foreground="#EEEEEE" 
+                    <Menu Background="Transparent" FontSize="12" Foreground="White" 
                           WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom" Height="34">
                         <MenuItem Header="Файл" Margin="0,2,18,0" Height="32" Click="MenuItem_Click_1">
                             <MenuItem Header="Новый" Click="NewFile_Click"/>
@@ -180,142 +180,208 @@
             <Canvas x:Name="MainCanvas" Background="#252525" 
                     Grid.Row="1" Grid.ColumnSpan="3" Loaded="MainCanvas_Loaded"/>
 
+            <Border x:Name="Titl" Grid.Column="0"
+                    Width="270" Height="60"
+                    Background="#343434"
+                    BorderBrush="#CCCCCC"
+                    BorderThickness="1" CornerRadius="10"
+                    HorizontalAlignment="Center" VerticalAlignment="Top"
+                    Margin="0,20,0,0">
+                
+                <Grid Width="{Binding ActualWidth, ElementName=Titl}" 
+                      Height="{Binding ActualHeight, ElementName=Titl}">
+                    
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="10*"/>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Text="Untaitled" Background="Transparent"
+                             Height="18" Grid.Column="1" Margin="0,0,0,1"
+                             Foreground="White" VerticalAlignment="Center"
+                             AcceptsReturn="False" MaxLength="50"
+                             BorderThickness="0" FontSize="16"/>
+
+                    <Button x:Name="TogglePanelsButton"
+                            Grid.Column="2" HorizontalAlignment="Right" 
+                            VerticalAlignment="Center" Margin="0,0,4,0"
+                            Background="Transparent" BorderThickness="0"
+                            Width="30" Height="20" Cursor="Hand"
+                            Click="TogglePanelsButton_Click">
+                        <Image Source="/Icons/КнСк.png" Width="24" Height="12"/>
+                    </Button>
+                </Grid>
+            </Border>
+            
             <!-- Нотация -->
             <Border x:Name="NotationCard"
-                            Grid.Column="0"
-                            Width="274"
-                            Height="225"
-                            Background="#343434"
-                            BorderBrush="#CCCCCC"
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Canvas.ZIndex="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-
-                <Border.Effect>
-                    <DropShadowEffect ShadowDepth="3" Color="Black" Opacity="0.3" BlurRadius="10"/>
-                </Border.Effect>
-                <!--разобраться-->
+                    Grid.Column="0"
+                    Width="270"
+                    Height="352"
+                    Background="#343434"
+                    BorderBrush="#CCCCCC"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    HorizontalAlignment="Center" VerticalAlignment="Top"
+                    Margin="0,100,0,0">
 
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="44"/>
                         <RowDefinition Height="*"/>
+                        <RowDefinition Height="20"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Нотация" 
-                                Grid.Row="0"
-                            
+                                Grid.Row="0"                            
                                 FontSize="14"
+                               Grid.ColumnSpan="2"
                                 FontWeight="SemiBold"
                                 Foreground="White"
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center">
                     </TextBlock>
 
-                    <ScrollViewer Grid.Row="1" Grid.Column="0"
-                                            VerticalScrollBarVisibility="Auto"
-                                            HorizontalScrollBarVisibility="Disabled">
-                        <Canvas x:Name="NotationCanvas" Height="428" Background="Transparent" Grid.Column="0">
+                    <ScrollViewer Grid.Row="1" Grid.ColumnSpan="2"
+                                  VerticalScrollBarVisibility="Hidden" 
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <!--Поменять стиль полосы прокрутки-->
+                        <Canvas x:Name="NotationCanvas" Height="428" 
+                                Background="Transparent">
 
-                            <Ellipse x:Name="Circle"
-                                    Width="80"
-                                    Height="80"
-                                    Fill="White"
-                                    Stroke="#343434"
-                                    StrokeThickness="3"
-                                    Cursor="Hand" Canvas.Left="10"/>
-                            <Ellipse x:Name="SimpleRing"
-                                    Width="80"
-                                    Height="80"
-                                    Stroke="White"
-                                    StrokeThickness="5"
-                                    Fill="Transparent"
-                                    Cursor="Hand" Canvas.Left="131" Canvas.Top="3"/>
-                            <!-- Кольцо -->
-                            <Ellipse x:Name="Ellipse"
-                                    Stroke="White"
-                                    StrokeThickness="2"
-                                    Fill="Transparent"
-                                    Cursor="Hand" Height="42" Width="90" HorizontalAlignment="Left" Canvas.Top="106" VerticalAlignment="Center" Canvas.Left="126"/>
-                            <Border x:Name="UmlInitialNode" 
-                                Width="70" 
-                                Height="70"
-                                Background="Transparent"
-                                BorderBrush="White"
-                                BorderThickness="3"
-                                CornerRadius="35"
-                                Cursor="Hand" Canvas.Left="15" Canvas.Top="92">
-                                <Ellipse Width="60"
-                                    Height="60"
-                                    Fill="White"
-                                    Stroke="Black"
-                                    StrokeThickness="1"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"/>
-                            </Border>
-                            <Border x:Name="Square"
-                                    Width="50"
-                                    Height="50"
-                                    Background="#343434"
-                                    BorderBrush="White"
-                                    BorderThickness="2"
-                                    CornerRadius="0"
-                                    Cursor="Hand" Canvas.Left="20" Canvas.Top="294"/>
-                            <Border x:Name="Rectangle"
-                                    Background="#343434"
-                                    BorderBrush="White"
-                                    BorderThickness="2"
-                                    Cursor="Hand" RenderTransformOrigin="0.506,0.529" Height="38" Width="80" Canvas.Left="126" Canvas.Top="300"/>
-                            <!-- Овал -->
-                            <!-- Квадрат -->
+                            <Grid Width="{Binding ActualWidth, ElementName=NotationCanvas}"
+                                  Height="{Binding ActualHeight, ElementName=NotationCanvas}">
 
-                            <!-- Прямоугольник -->
-                            <Border x:Name="SuperEllipse"
-                                    Background="#343434"
-                                    BorderBrush="White"
-                                    BorderThickness="2"
-                                    CornerRadius="25"
-                                    Cursor="Hand" RenderTransformOrigin="0.506,0.529" Height="46" Width="89" Canvas.Left="127" Canvas.Top="182" HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                            <Border x:Name="ResizableSquare"
-                                    Width="50"
-                                    Height="51"
-                                    Background="#343434"
-                                    BorderBrush="White"
-                                    BorderThickness="2"
-                                    CornerRadius="0"
-                                    Cursor="Hand" RenderTransformOrigin="0.557,0.5" Canvas.Left="25" Canvas.Top="188">
-                                <Border.RenderTransform>
-                                    <TransformGroup>
-                                        <ScaleTransform/>
-                                        <SkewTransform/>
-                                        <RotateTransform Angle="45"/>
-                                        <TranslateTransform X="0" Y="0"/>
-                                    </TransformGroup>
-                                </Border.RenderTransform>
-                            </Border>
-                            <Border x:Name="stick"
-            Background="Black"
-            BorderBrush="Black"
-            BorderThickness="2"
-                                    CornerRadius="0.5"
-            Cursor="Hand" Height="4" Width="150" Canvas.Left="38" Canvas.Top="387"/>
-                            <!--Прямоугольник со скругленными углами  -->
-                            <!-- Ромб -->
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Ellipse x:Name="Circle"
+                                         Width="70"
+                                         Height="70"
+                                         Fill="White"
+                                         Stroke="White"
+                                         StrokeThickness="3"
+                                         Grid.Column="0"
+                                         Cursor="Hand" HorizontalAlignment="Center" 
+                                         VerticalAlignment="Center"/>
+                            
+                                <Ellipse x:Name="SimpleRing"
+                                         Width="70"
+                                         Height="70"
+                                         Stroke="White"
+                                         StrokeThickness="3"
+                                         Fill="Transparent"
+                                         Grid.Column="1" HorizontalAlignment="Center" 
+                                         VerticalAlignment="Center" Cursor="Hand"/>
+                            
+                                <!-- Кольцо -->
+                                <Ellipse x:Name="Ellipse"
+                                        Stroke="White"
+                                        StrokeThickness="3"
+                                        Fill="Transparent" Grid.Column="1" Grid.Row="1"
+                                         HorizontalAlignment="Center" 
+                                        VerticalAlignment="Center"
+                                        Cursor="Hand" Height="42" Width="90"/>
+
+                                <Border x:Name="UmlInitialNode" 
+                                        Width="70" 
+                                        Height="70"
+                                        Background="Transparent"
+                                        BorderBrush="White"
+                                        BorderThickness="3"
+                                        HorizontalAlignment="Center" 
+                                        VerticalAlignment="Center"
+                                        CornerRadius="35" Grid.Column="0" Grid.Row="1"
+                                        Cursor="Hand">
+
+                                    <Ellipse Width="56"
+                                        Height="56"
+                                        Fill="White"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"/>
+                                </Border>
+                                
+                                <Border x:Name="Square"
+                                        Width="60"
+                                        Height="60"
+                                        Background="Transparent"
+                                        BorderBrush="White"
+                                        BorderThickness="3" 
+                                        HorizontalAlignment="Center" 
+                                        VerticalAlignment="Center" 
+                                        Grid.Column="0" Grid.Row="2"
+                                        Cursor="Hand"/>
+                                
+                                <Border x:Name="Rectangle"
+                                        Background="Transparent"
+                                        BorderBrush="White"
+                                        HorizontalAlignment="Center" 
+                                        VerticalAlignment="Center"
+                                        BorderThickness="3" Grid.Column="1" Grid.Row="2"
+                                        Cursor="Hand" RenderTransformOrigin="0.506,0.529" Height="38" Width="80"/>
+
+                                <!-- Прямоугольник -->
+                                <Border x:Name="SuperEllipse"
+                                        Background="Transparent"
+                                        BorderBrush="White"
+                                        BorderThickness="3"
+                                        CornerRadius="25" Grid.Column="0" Grid.Row="3" 
+                                        Cursor="Hand" RenderTransformOrigin="0.506,0.529" Height="38" Width="80" 
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                
+                                <Border x:Name="ResizableSquare"
+                                        Width="50"
+                                        Height="50"
+                                        Background="Transparent"
+                                        BorderBrush="White"
+                                        BorderThickness="3" HorizontalAlignment="Center" 
+                                        VerticalAlignment="Center"
+                                        CornerRadius="0" Grid.Column="1" Grid.Row="3"
+                                        Cursor="Hand" RenderTransformOrigin="0.557,0.5">
+                                    <Border.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform/>
+                                            <SkewTransform/>
+                                            <RotateTransform Angle="45"/>
+                                            <TranslateTransform X="0" Y="0"/>
+                                        </TransformGroup>
+                                    </Border.RenderTransform>
+                                </Border>
+                                <Border x:Name="stick"
+                                        Background="White"
+                                        BorderBrush="White"
+                                        BorderThickness="3" HorizontalAlignment="Center" 
+                                        VerticalAlignment="Center"
+                                        Grid.ColumnSpan="2" Grid.Row="4"
+                                        Cursor="Hand" Height="6" Width="150"/>
+
+                            </Grid>
                         </Canvas>
                     </ScrollViewer>
                 </Grid>
 
             </Border>
             <!-- Прямоугольная панель снизу -->
-            <Border CornerRadius="11.72" 
-                            Grid.Column="1"
-                            Background="#FF343434" 
-                            Width="293" 
-                            Height="52"
-                            Margin="80"
-                            Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Cursor="">
+            <Border CornerRadius="10" Grid.Column="1"
+                    Background="#FF343434" Width="293" 
+                    Height="52" Margin="80" BorderBrush="#CCCCCC"
+                    BorderThickness="1" Grid.Row="2" 
+                    HorizontalAlignment="Center" 
+                    VerticalAlignment="Bottom" Cursor="">
                 <StackPanel Orientation="Horizontal"
                         VerticalAlignment="Center" Width="293" Height="52" HorizontalAlignment="Center">
                     <!-- Ручной инструмент -->
@@ -413,11 +479,13 @@
             </Border>
 
             <!-- Панель с размерами -->
-            <Border CornerRadius="15"
+            <Border x:Name="DimensionsPanel" CornerRadius="10"
                             Grid.Column="2"
                             Background="#FF343434" 
-                            Width="240" 
+                            Width="270" 
                             Height="84"
+                    BorderBrush="#CCCCCC"
+                    BorderThickness="1"
                             Margin="0,20,0,0" HorizontalAlignment="Center"
                             VerticalAlignment="Top">
                 <StackPanel Orientation="Vertical" 
@@ -498,12 +566,14 @@
             </Border>
 
             <!-- Панель с заливкой -->
-            <Border CornerRadius="15" 
+            <Border x:Name="FillPanel" CornerRadius="10" 
                             Grid.Column="2"
+                    BorderBrush="#CCCCCC"
+                    BorderThickness="1"
             Background="#FF343434" 
-            Width="240" 
+            Width="270" 
             Height="84"
-            Margin="0,114,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
+            Margin="0,124,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
                 <StackPanel Orientation="Vertical" 
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
@@ -593,12 +663,14 @@
             </Border>
 
             <!-- Панель с обводкой -->
-            <Border CornerRadius="15"
+            <Border x:Name="StrokePanel" CornerRadius="10"
                             Grid.Column="2"
+                    BorderBrush="#CCCCCC"
+                    BorderThickness="1"
             Background="#FF343434" 
-            Width="240" 
+            Width="270" 
             Height="84"
-            Margin="0,208,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
+            Margin="0,228,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
                 <StackPanel Orientation="Vertical" 
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
@@ -690,12 +762,14 @@
                 </Border>
 
             <!-- Панель с текстом -->
-            <Border CornerRadius="15"
+            <Border x:Name="TextPanel" CornerRadius="10"
                             Grid.Column="2"
+                    BorderBrush="#CCCCCC"
+                    BorderThickness="1"
             Background="#FF343434" 
-            Width="240" 
+            Width="270" 
             Height="120"
-            Margin="0,302,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
+            Margin="0,332,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
                 <StackPanel Orientation="Vertical" 
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"

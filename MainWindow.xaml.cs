@@ -53,12 +53,18 @@ namespace Graphic_Editor
         private Dictionary<UIElement, Brush> originalFillColors = new Dictionary<UIElement, Brush>();
         private UIElement selectedShape;
 
+        private bool arePanelsVisible = true;
+
+        // Список всех плашек для управления видимостью
+        private List<Border> panels = new List<Border>();
+
         public MainWindow()
         {
             InitializeComponent();
             MakeAllShapesDraggable();
 
             InitializeGrid(); // Инициализируем сетку
+            InitializePanels();
 
             // Обработка горячих клавиш
             this.KeyDown += MainWindow_KeyDown;
@@ -233,9 +239,20 @@ namespace Graphic_Editor
                 ToggleSnapToGrid();
                 e.Handled = true;
             }
+            else if (e.Key == Key.F12)
+            {
+                TogglePanelsVisibility();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.H && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                // Ctrl+H - альтернативная горячая клавиша
+                TogglePanelsVisibility();
+                e.Handled = true;
+            }
         }
 
-        // Меню "Файл" - Обновленные
+        // Меню "Файл"
         private void NewFile_Click(object sender, RoutedEventArgs e)
         {
             // Очищаем холст
@@ -337,6 +354,87 @@ namespace Graphic_Editor
                 }
             }
         }
+
+        // Метод инициализации панелей
+        private void InitializePanels()
+        {
+            // Находим все панели по именам
+            var notationCard = FindName("NotationCard") as Border; //вопросы о панелях
+            var dimensionsPanel = FindName("DimensionsPanel") as Border;
+            var fillPanel = FindName("FillPanel") as Border;
+            var strokePanel = FindName("StrokePanel") as Border;
+            var textPanel = FindName("TextPanel") as Border;
+            //var filePanel = FindName("Titl") as Border;
+
+            // Добавляем панели в список
+            if (notationCard != null) panels.Add(notationCard);
+            if (dimensionsPanel != null) panels.Add(dimensionsPanel);
+            if (fillPanel != null) panels.Add(fillPanel);
+            if (strokePanel != null) panels.Add(strokePanel);
+            if (textPanel != null) panels.Add(textPanel);
+            //if (filePanel != null) panels.Add(filePanel);
+        }
+
+        // Обработчик кнопки скрытия/показа панелей
+        private void TogglePanelsButton_Click(object sender, RoutedEventArgs e)
+        {
+            TogglePanelsVisibility();
+        }
+
+        // Основной метод переключения видимости панелей
+        private void TogglePanelsVisibility()
+        {
+            arePanelsVisible = !arePanelsVisible;
+
+            if (arePanelsVisible)
+            {
+                ShowAllPanels();
+            }
+            else
+            {
+                HideAllPanels();
+            }
+        }
+
+        // Скрытие всех панелей
+        private void HideAllPanels()
+        {
+            foreach (var panel in panels)
+            {
+                if (panel != null)
+                {
+                    panel.Visibility = Visibility.Collapsed;
+                }
+            }
+
+            // Также скрываем нижнюю панель инструментов
+            var bottomToolbar = FindName("BottomToolbar") as Border;
+            if (bottomToolbar != null)
+            {
+                bottomToolbar.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        // Показать все панели
+        private void ShowAllPanels()
+        {
+            foreach (var panel in panels)
+            {
+                if (panel != null)
+                {
+                    panel.Visibility = Visibility.Visible;
+                }
+            }
+
+            // Показываем нижнюю панель инструментов
+            var bottomToolbar = FindName("BottomToolbar") as Border;
+            if (bottomToolbar != null)
+            {
+                bottomToolbar.Visibility = Visibility.Visible;
+            }
+        }
+
+        
 
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
