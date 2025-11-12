@@ -400,15 +400,15 @@
                             HorizontalAlignment="Center"/>
                     </Button>
                     <!-- Перо -->
-                    <Button      
+                    <Button x:Name="PenButton"      
                         Width="32" 
                         Height="32"
                         Cursor="Hand"
                         Margin="9,0,11,0"
                         Background="#FF343434"
                         BorderBrush="Transparent"
-                        FocusVisualStyle="{x:Null}">
-                        <Image Source="/Icons/pen.png"
+                        FocusVisualStyle="{x:Null}" Click="PenButton_Click">
+                        <Image x:Name="PenImage" Source="/Icons/pen.png"
                             Width="30" 
                             Height="30"
                             VerticalAlignment="Center"
