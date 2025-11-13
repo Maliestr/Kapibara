@@ -887,10 +887,7 @@ namespace Graphic_Editor
                 }
                 selectedShape = null;
             }
-            FillColorComboBox.SelectedIndex = -1;
-            StrokeColorComboBox.SelectedIndex = -1;
-            FillColorPreview.Background = Brushes.Transparent;
-            StrokeColorPreview.Background = Brushes.Transparent;
+            ClearColorComboBoxes();
         }
         private void ClearColorComboBoxes()
         {
@@ -902,22 +899,23 @@ namespace Graphic_Editor
         // Визуальное выделение элемента
         private void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
         {
+            // делаем фул ширину константной 
             if (isSelected)
             {
                 if (element is Ellipse ellipse)
                 {
                     ellipse.Stroke = Brushes.Blue;
-                    ellipse.StrokeThickness += 2;
+                    
                 }
                 else if (element is Border border)
                 {
                     border.BorderBrush = Brushes.Blue;
-                    border.BorderThickness = new Thickness(4);
+                    
                 }
                 else if (element is Line line)
                 {
                     line.Stroke = Brushes.Blue;
-                    line.StrokeThickness += 2;
+                    
                 }
                 else if (element is TextBlock textBlock)
                 {
@@ -932,10 +930,12 @@ namespace Graphic_Editor
                     if (ellipse.Fill == Brushes.Transparent) // Кольцо
                     {
                         ellipse.Stroke = Brushes.White;
+                        ellipse.StrokeThickness = 5;
                     }
                     else // Круг
                     {
                         ellipse.Stroke = Brushes.Black;
+                        ellipse.StrokeThickness = 3;
                     }
                     ellipse.StrokeThickness = Math.Max(ellipse.StrokeThickness - 2, 1);
                 }
@@ -943,11 +943,12 @@ namespace Graphic_Editor
                 {
                     border.BorderBrush = Brushes.White;
                     border.BorderThickness = new Thickness(2);
+
                 }
                 else if (element is Line line)
                 {
                     line.Stroke = Brushes.White;
-                    line.StrokeThickness = Math.Max(line.StrokeThickness - 2, 1);
+                    line.StrokeThickness = 3;
                 }
                 else if (element is TextBlock textBlock)
                 {
@@ -1188,7 +1189,17 @@ namespace Graphic_Editor
         {
             if (element is Ellipse ellipse)
             {
-                // Возвращаем оригинальные цвета и толщину
+                // Возвращаем фиксированную толщину обводки
+                if (element == SimpleRing)
+                {
+                    ellipse.StrokeThickness = 5; // ФИКСИРОВАННАЯ для кольца
+                }
+                else
+                {
+                    ellipse.StrokeThickness = 3; // ФИКСИРОВАННАЯ для круга и овала
+                }
+
+                // Возвращаем оригинальные цвета
                 if (ellipse.Fill == Brushes.Transparent) // Кольцо
                 {
                     ellipse.Stroke = Brushes.White;
@@ -1197,19 +1208,18 @@ namespace Graphic_Editor
                 {
                     ellipse.Stroke = Brushes.Black;
                 }
-                ellipse.StrokeThickness = ellipse == SimpleRing ? 5 : 3;
                 ellipse.Opacity = 1.0;
             }
             else if (element is Border border)
             {
                 border.BorderBrush = Brushes.White;
-                border.BorderThickness = new Thickness(2);
+                border.BorderThickness = new Thickness(2); // ФИКСИРОВАННАЯ толщина
                 border.Opacity = 1.0;
             }
             else if (element is Line line)
             {
                 line.Stroke = Brushes.White;
-                line.StrokeThickness = 3;
+                line.StrokeThickness = 3; // ФИКСИРОВАННАЯ толщина
                 line.Opacity = 1.0;
             }
             else if (element is TextBlock textBlock)
@@ -1781,7 +1791,7 @@ namespace Graphic_Editor
                     Height = GetElementHeight(Circle),
                     Fill = (Circle as Ellipse).Fill,
                     Stroke = (Circle as Ellipse).Stroke,
-                    StrokeThickness = (Circle as Ellipse).StrokeThickness,
+                    StrokeThickness = 3,
                     Cursor = Cursors.Hand
                 };
             }
@@ -1830,7 +1840,7 @@ namespace Graphic_Editor
                     Width = GetElementWidth(SimpleRing),
                     Height = GetElementHeight(SimpleRing),
                     Stroke = (SimpleRing as Ellipse).Stroke,
-                    StrokeThickness = (SimpleRing as Ellipse).StrokeThickness,
+                    StrokeThickness = 5,
                     Fill = Brushes.Transparent,
                     Cursor = Cursors.Hand
                 };
@@ -1842,7 +1852,7 @@ namespace Graphic_Editor
                     Width = GetElementWidth(Ellipse),
                     Height = GetElementHeight(Ellipse),
                     Stroke = (Ellipse as Ellipse).Stroke,
-                    StrokeThickness = (Ellipse as Ellipse).StrokeThickness,
+                    StrokeThickness = 3,
                     Fill = Brushes.Transparent,
                     Cursor = Cursors.Hand
                 };
@@ -1857,7 +1867,7 @@ namespace Graphic_Editor
                     Height = GetElementHeight(originalBorder),
                     Background = originalBorder.Background,
                     BorderBrush = originalBorder.BorderBrush,
-                    BorderThickness = originalBorder.BorderThickness,
+                    BorderThickness = new Thickness(2),
                     CornerRadius = originalBorder.CornerRadius,
                     Cursor = Cursors.Hand
                 };
@@ -1871,7 +1881,7 @@ namespace Graphic_Editor
                     Height = GetElementHeight(originalDiamond),
                     Background = originalDiamond.Background,
                     BorderBrush = originalDiamond.BorderBrush,
-                    BorderThickness = originalDiamond.BorderThickness,
+                    BorderThickness = new Thickness(2),
                     CornerRadius = originalDiamond.CornerRadius,
                     Cursor = Cursors.Hand,
                     RenderTransformOrigin = new Point(0.5, 0.5)
@@ -1889,7 +1899,7 @@ namespace Graphic_Editor
                     Height = GetElementHeight(originalBorder),
                     Background = originalBorder.Background,
                     BorderBrush = originalBorder.BorderBrush,
-                    BorderThickness = originalBorder.BorderThickness,
+                    BorderThickness = new Thickness(2),
                     CornerRadius = originalBorder.CornerRadius,
                     Cursor = Cursors.Hand
                 };
@@ -1903,7 +1913,7 @@ namespace Graphic_Editor
                     Height = GetElementHeight(originalBorder),
                     Background = originalBorder.Background,
                     BorderBrush = originalBorder.BorderBrush,
-                    BorderThickness = originalBorder.BorderThickness,
+                    BorderThickness = new Thickness(2),
                     CornerRadius = originalBorder.CornerRadius,
                     Cursor = Cursors.Hand
                 };
@@ -1917,7 +1927,7 @@ namespace Graphic_Editor
                     Height = GetElementHeight(originalBorder),
                     Background = originalBorder.Background,
                     BorderBrush = originalBorder.BorderBrush,
-                    BorderThickness = originalBorder.BorderThickness,
+                    BorderThickness = new Thickness(2),
                     CornerRadius = originalBorder.CornerRadius,
                     Cursor = Cursors.Hand
                 };
@@ -1998,38 +2008,15 @@ namespace Graphic_Editor
         {
             if (isDragging)
             {
-                // Только визуальные эффекты без изменения реальных цветов
+                // Только визуальные эффекты без изменения реальной толщины
                 element.Opacity = 0.7;
-                if (element is Ellipse ellipse)
-                {
-                    ellipse.StrokeThickness += 1;
-                }
-                else if (element is Border border)
-                {
-                    border.BorderThickness = new Thickness(3);
-                }
-                else if (element is Line line)
-                {
-                    line.StrokeThickness += 1;
-                }
-
+                // НЕ меняем StrokeThickness при перетаскивании
             }
             else
             {
-                // Возвращаем оригинальные цвета
+                // Возвращаем оригинальные настройки
                 element.Opacity = 1.0;
-                if (element is Ellipse ellipse)
-                {
-                    ellipse.StrokeThickness = ellipse == SimpleRing ? 5 : 3;
-                }
-                else if (element is Border border)
-                {
-                    border.BorderThickness = new Thickness(2);
-                }
-                else if (element is Line line)
-                {
-                    line.StrokeThickness -= 1;
-                }
+                // Толщина остается фиксированной
             }
         }
 
