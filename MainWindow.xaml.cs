@@ -873,6 +873,7 @@ namespace Graphic_Editor
                 if (selectedElement is FrameworkElement frameworkElement)
                 {
                     frameworkElement.ContextMenu = null;
+                    Canvas.SetZIndex(frameworkElement, 1);
                 }
                 selectedElement = null;
             }
@@ -880,10 +881,24 @@ namespace Graphic_Editor
             if (selectedShape != null)
             {
                 RemoveSelectionVisual(selectedShape);
+                if (selectedShape is FrameworkElement shapeFrameworkElement)
+                {
+                    Canvas.SetZIndex(shapeFrameworkElement, 1);
+                }
                 selectedShape = null;
             }
+            FillColorComboBox.SelectedIndex = -1;
+            StrokeColorComboBox.SelectedIndex = -1;
+            FillColorPreview.Background = Brushes.Transparent;
+            StrokeColorPreview.Background = Brushes.Transparent;
         }
-
+        private void ClearColorComboBoxes()
+        {
+            FillColorComboBox.SelectedIndex = -1;
+            StrokeColorComboBox.SelectedIndex = -1;
+            FillColorPreview.Background = Brushes.Transparent;
+            StrokeColorPreview.Background = Brushes.Transparent;
+        }
         // Визуальное выделение элемента
         private void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
         {
@@ -1111,6 +1126,7 @@ namespace Graphic_Editor
         {
             if (undoStack.Count > 0)
             {
+                DeselectAll();
                 UIElement element = undoStack.Pop();
 
                 if (MainCanvas.Children.Contains(element))
@@ -1119,6 +1135,8 @@ namespace Graphic_Editor
                     MainCanvas.Children.Remove(element);
                     canvasElements.Remove(element);
                     redoStack.Push(element);
+
+                    
                 }
                 else
                 {
@@ -1127,6 +1145,7 @@ namespace Graphic_Editor
                     canvasElements.Add(element);
                     MakeCanvasShapeDraggable(element);
                     redoStack.Push(element);
+                    RestoreOriginalAppearance(element);
                 }
             }
             else
@@ -1140,6 +1159,7 @@ namespace Graphic_Editor
         {
             if (redoStack.Count > 0)
             {
+                DeselectAll();
                 UIElement element = redoStack.Pop();
 
                 if (MainCanvas.Children.Contains(element))
@@ -1147,6 +1167,8 @@ namespace Graphic_Editor
                     MainCanvas.Children.Remove(element);
                     canvasElements.Remove(element);
                     undoStack.Push(element);
+                    
+                    
                 }
                 else
                 {
@@ -1154,6 +1176,7 @@ namespace Graphic_Editor
                     canvasElements.Add(element);
                     MakeCanvasShapeDraggable(element);
                     undoStack.Push(element);
+                    RestoreOriginalAppearance(element);
                 }
             }
             else
@@ -1161,15 +1184,158 @@ namespace Graphic_Editor
                 MessageBox.Show("Нет действий для повтора", "Повтор", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
+        private void RestoreOriginalAppearance(UIElement element)
+        {
+            if (element is Ellipse ellipse)
+            {
+                // Возвращаем оригинальные цвета и толщину
+                if (ellipse.Fill == Brushes.Transparent) // Кольцо
+                {
+                    ellipse.Stroke = Brushes.White;
+                }
+                else // Круг
+                {
+                    ellipse.Stroke = Brushes.Black;
+                }
+                ellipse.StrokeThickness = ellipse == SimpleRing ? 5 : 3;
+                ellipse.Opacity = 1.0;
+            }
+            else if (element is Border border)
+            {
+                border.BorderBrush = Brushes.White;
+                border.BorderThickness = new Thickness(2);
+                border.Opacity = 1.0;
+            }
+            else if (element is Line line)
+            {
+                line.Stroke = Brushes.White;
+                line.StrokeThickness = 3;
+                line.Opacity = 1.0;
+            }
+            else if (element is TextBlock textBlock)
+            {
+                textBlock.Background = Brushes.Transparent;
+                textBlock.Opacity = 1.0;
+            }
 
+            // Возвращаем нормальный ZIndex
+            Canvas.SetZIndex(element, 1);
+        }
         // Сохранение в стек отмены
         private void SaveToUndoStack(UIElement element)
         {
+            UIElement elementCopy = CloneUIElement(element);
+            SaveOriginalColorsForCopy(element, elementCopy);
             undoStack.Push(CloneUIElement(element));
             // Очищаем стек повтора при новом действии
             redoStack.Clear();
         }
+        // Сохранение оригинальных цветов для копии элемента
+        private void SaveOriginalColorsForCopy(UIElement original, UIElement copy)
+        {
+            if (original is Ellipse originalEllipse && copy is Ellipse copyEllipse)
+            {
+                if (originalStrokeColors.ContainsKey(original))
+                {
+                    originalStrokeColors[copy] = originalStrokeColors[original];
+                }
+                else
+                {
+                    originalStrokeColors[copy] = originalEllipse.Stroke;
+                }
 
+                if (originalFillColors.ContainsKey(original))
+                {
+                    originalFillColors[copy] = originalFillColors[original];
+                }
+                else
+                {
+                    originalFillColors[copy] = originalEllipse.Fill;
+                }
+            }
+            else if (original is Border originalBorder && copy is Border copyBorder)
+            {
+                if (originalStrokeColors.ContainsKey(original))
+                {
+                    originalStrokeColors[copy] = originalStrokeColors[original];
+                }
+                else
+                {
+                    originalStrokeColors[copy] = originalBorder.BorderBrush;
+                }
+
+                if (originalFillColors.ContainsKey(original))
+                {
+                    originalFillColors[copy] = originalFillColors[original];
+                }
+                else
+                {
+                    originalFillColors[copy] = originalBorder.Background;
+                }
+            }
+            else if (original is Line originalLine && copy is Line copyLine)
+            {
+                if (originalStrokeColors.ContainsKey(original))
+                {
+                    originalStrokeColors[copy] = originalStrokeColors[original];
+                }
+                else
+                {
+                    originalStrokeColors[copy] = originalLine.Stroke;
+                }
+            }
+            else if (original is TextBlock originalText && copy is TextBlock copyText)
+            {
+                if (originalStrokeColors.ContainsKey(original))
+                {
+                    originalStrokeColors[copy] = originalStrokeColors[original];
+                }
+                else
+                {
+                    originalStrokeColors[copy] = originalText.Foreground;
+                }
+            }
+        }
+        // Восстановление оригинальных цветов элемента
+        private void RestoreOriginalColors(UIElement element)
+        {
+            if (element is Ellipse ellipse)
+            {
+                if (originalStrokeColors.ContainsKey(element))
+                {
+                    ellipse.Stroke = originalStrokeColors[element];
+                }
+                if (originalFillColors.ContainsKey(element))
+                {
+                    ellipse.Fill = originalFillColors[element];
+                }
+            }
+            else if (element is Border border)
+            {
+                if (originalStrokeColors.ContainsKey(element))
+                {
+                    border.BorderBrush = originalStrokeColors[element];
+                }
+                if (originalFillColors.ContainsKey(element))
+                {
+                    border.Background = originalFillColors[element];
+                }
+            }
+            else if (element is Line line)
+            {
+                if (originalStrokeColors.ContainsKey(element))
+                {
+                    line.Stroke = originalStrokeColors[element];
+                }
+            }
+            else if (element is TextBlock textBlock)
+            {
+                if (originalStrokeColors.ContainsKey(element))
+                {
+                    textBlock.Foreground = originalStrokeColors[element];
+                }
+            }
+        }
         // Выделение всех элементов
         private void SelectAllElements()
         {
