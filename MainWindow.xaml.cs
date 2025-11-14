@@ -69,6 +69,21 @@ namespace Graphic_Editor
             // Обработка горячих клавиш
             this.KeyDown += MainWindow_KeyDown;
         }
+        
+        // Для выделения кнопок
+        //private void Button_Click(object sender, RoutedEventArgs e)
+        //{
+        //    // Сбрасываем выделение у всех кнопок
+        //    cursor.Tag = null;
+        //    pencil.Tag = null;
+        //    rectangle.Tag = null;
+        //    text.Tag = null;
+        //    comment.Tag = null;
+        //    dash.Tag = null;
+
+        //    // Выделяем нажатую кнопку
+        //    ((Button)sender).Tag = "Selected";
+        //}
 
         // Инициализация сетки
         private void InitializeGrid()

@@ -124,5 +124,23 @@
   <ItemGroup>
     <Resource Include="Icons\КнСк.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\Cursor.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\Pencil.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\Rectangle.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\Writing.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\Com.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\dash.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
