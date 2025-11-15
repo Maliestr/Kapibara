@@ -210,7 +210,16 @@ namespace Graphic_Editor
 
                 double newLeft = currentPosition.X - offset.X;
                 double newTop = currentPosition.Y - offset.Y;
+                // ОГРАНИЧИВАЕМ ПЕРЕМЕЩЕНИЕ РАБОЧЕЙ ОБЛАСТЬЮ
+                double elementWidth = GetElementWidth(element);
+                double elementHeight = GetElementHeight(element);
 
+                // Вычисляем границы рабочей области
+                
+                double maxTop = MainCanvas.ActualHeight - elementHeight - WorkAreaBottom;
+
+                // Ограничиваем координаты
+                newLeft = Math.Max(0, Math.Min(newLeft, MainCanvas.ActualWidth - elementWidth)); newTop = Math.Max(WorkAreaTop, Math.Min(newTop, maxTop));
                 Canvas.SetLeft(element, newLeft);
                 Canvas.SetTop(element, newTop);
             }
@@ -897,6 +906,8 @@ namespace Graphic_Editor
             StrokeColorPreview.Background = Brushes.Transparent;
         }
         // Визуальное выделение элемента
+        private const double WorkAreaTop = 50;    // Отступ сверху (под меню)
+        private const double WorkAreaBottom = 100; // Отступ снизу (над панелью инструментов)
         private void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
         {
             // делаем фул ширину константной 
@@ -1522,6 +1533,8 @@ namespace Graphic_Editor
 
                 if (elementWidth == 0 || double.IsNaN(elementWidth)) elementWidth = 100;
                 if (elementHeight == 0 || double.IsNaN(elementHeight)) elementHeight = 30;
+                
+                double maxTop = MainCanvas.ActualHeight - elementHeight - WorkAreaBottom;
 
                 // Определяем рабочую область 
                 double workAreaLeft = 300;
@@ -1700,11 +1713,17 @@ namespace Graphic_Editor
             {
                 // Перемещаем копию фигуры за курсором
                 Point currentPosition = e.GetPosition(MainCanvas);
-                if (currentPosition.Y > 50)
+                if (currentPosition.Y > WorkAreaTop && currentPosition.Y < MainCanvas.ActualHeight - WorkAreaBottom)
                 {
                     double newLeft = currentPosition.X - (GetElementWidth(shapeCopy) / 2);
                     double newTop = currentPosition.Y - (GetElementHeight(shapeCopy) / 2);
+                    // Дополнительные ограничения для копии
+                    double elementWidth = GetElementWidth(shapeCopy);
+                    double elementHeight = GetElementHeight(shapeCopy);
+                    
+                    double maxTop = MainCanvas.ActualHeight - elementHeight - WorkAreaBottom;
 
+                    newLeft = Math.Max(0, Math.Min(newLeft, MainCanvas.ActualWidth - elementWidth)); newTop = Math.Max(WorkAreaTop, Math.Min(newTop, maxTop));
                     Canvas.SetLeft(shapeCopy, newLeft);
                     Canvas.SetTop(shapeCopy, newTop);
                 }
@@ -1727,7 +1746,8 @@ namespace Graphic_Editor
                     Point dropPosition = e.GetPosition(MainCanvas);
 
                     // ЕСЛИ БРОСИЛИ ФИГУРУ НАД МЕНЮ - УДАЛЯЕМ ЕЕ
-                    if (dropPosition.Y <= 50)
+                    if (dropPosition.Y <= WorkAreaTop ||
+                dropPosition.Y >= MainCanvas.ActualHeight - WorkAreaBottom)
                     {
                         MainCanvas.Children.Remove(shapeCopy);
                     }
@@ -1759,6 +1779,7 @@ namespace Graphic_Editor
                 e.Handled = true;
             }
         }
+
         private bool IsShapeFromNotation(UIElement element)
         {
             // Проверяем, находится ли фигура в панели нотации
