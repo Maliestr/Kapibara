@@ -922,7 +922,7 @@ namespace Graphic_Editor
             UpdateColorComboBoxesFromShape(element);
 
             // Обновляем панель текста, если элемент является текстовым
-
+            UpdateTextPanelForSelectedElement(element);
         }
 
         // Снятие выделения со всех элементов
@@ -1851,7 +1851,29 @@ namespace Graphic_Editor
                 SaveCurrentTextFormatting(textBlock);
             }
         }
+        // Обновление панели текста для выбранного элемента
+        private void UpdateTextPanelForSelectedElement(FrameworkElement element)
+        {
+            if (element is TextBlock textBlock)
+            {
+                // Показываем панель текста
+                TextPanel.Visibility = Visibility.Visible;
 
+                // Обновляем комбо-боксы значениями из текстового элемента
+                UpdateTextComboBoxes(textBlock);
+
+                // Сохраняем текущие настройки для применения изменений
+                SaveCurrentTextFormatting(textBlock);
+            }
+            else
+            {
+                // Скрываем панель текста для не-текстовых элементов
+                TextPanel.Visibility = Visibility.Collapsed;
+
+                // Сбрасываем комбо-боксы к пустым значениям
+                ResetTextComboBoxesToEmpty();
+            }
+        }
         // Обновление комбо-боксов текста значениями из TextBlock
         private void UpdateTextComboBoxes(TextBlock textBlock)
         {
