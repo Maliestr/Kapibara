@@ -71,6 +71,9 @@ namespace Graphic_Editor
 
             // Добавляем обработчик клика по канвасу для сброса выделения
             MainCanvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
+
+            // Очищаем комбо-боксы при запуске
+            ClearColorComboBoxesOnStartup();
         }
 
         // Обработчик клика по пустой области канваса
@@ -2351,6 +2354,14 @@ namespace Graphic_Editor
                     break;
                 }
             }
+        }
+        // Метод для очистки комбо-боксов при запуске программы
+        private void ClearColorComboBoxesOnStartup()
+        {
+            FillColorComboBox.SelectedIndex = -1;
+            StrokeColorComboBox.SelectedIndex = -1;
+            FillColorPreview.Background = Brushes.Transparent;
+            StrokeColorPreview.Background = Brushes.Transparent;
         }
 
         // Вспомогательный метод для применения цвета заливки
