@@ -697,7 +697,7 @@
                     VerticalAlignment="Center"
                     Margin="0,0,10,0"
                     BorderThickness="1"
-                    BorderBrush="#FF666666"/>
+                    BorderBrush="#FF666666" RenderTransformOrigin="0.512,0.527"/>
 
                         <!-- Выпадающий список цветов обводки -->
                         <ComboBox x:Name="StrokeColorComboBox"
