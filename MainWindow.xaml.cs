@@ -1756,6 +1756,22 @@ namespace Graphic_Editor
                 currentFontWeight = FontWeights.Normal;
             }
         }
+        // Обработчик изменения размера шрифта
+        private void FontSizeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (FontSizeComboBox.SelectedItem is ComboBoxItem selectedItem)
+            {
+                if (double.TryParse(selectedItem.Content.ToString(), out double size))
+                {
+                    currentFontSize = size;
+                    ApplyTextFormattingToSelected();
+                }
+            }
+            else
+            {
+                currentFontSize = 0;
+            }
+        }
 
 
 
