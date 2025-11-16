@@ -1848,6 +1848,47 @@ namespace Graphic_Editor
             textFormatting[textBlock].FontStyle = textBlock.FontStyle;
             textFormatting[textBlock].FontWeight = textBlock.FontWeight;
         }
+        // Сброс комбо-боксов текста к пустым значениям
+        private void ResetTextComboBoxesToEmpty()
+        {
+            // Сбрасываем выбранные элементы
+            FontComboBox.SelectedItem = null;
+            FontStyleComboBox.SelectedItem = null;
+            FontSizeComboBox.SelectedItem = null;
+
+            // Очищаем текущие значения
+            currentFontFamily = null;
+            currentFontSize = 0;
+            currentFontStyle = FontStyles.Normal;
+            currentFontWeight = FontWeights.Normal;
+
+            // Скрываем панель текста
+            TextPanel.Visibility = Visibility.Collapsed;
+        }
+        // Обновление панели текста для выбранного элемента
+        private void UpdateTextPanelForSelectedElement(FrameworkElement element)
+        {
+            if (element is TextBlock textBlock)
+            {
+                // Показываем панель текста
+                TextPanel.Visibility = Visibility.Visible;
+
+                // Обновляем комбо-боксы значениями из текстового элемента
+                UpdateTextComboBoxes(textBlock);
+
+                // Сохраняем текущие настройки для применения изменений
+                SaveCurrentTextFormatting(textBlock);
+            }
+            else
+            {
+                // Скрываем панель текста для не-текстовых элементов
+                TextPanel.Visibility = Visibility.Collapsed;
+
+                // Сбрасываем комбо-боксы к пустым значениям
+                ResetTextComboBoxesToEmpty();
+            }
+        }
+
 
 
 
