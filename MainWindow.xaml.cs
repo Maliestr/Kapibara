@@ -2655,7 +2655,7 @@ namespace Graphic_Editor
 
                 if (string.IsNullOrEmpty(newText))
                 {
-
+                    DeleteComment(comment);
                 }
                 else
                 {
@@ -2696,7 +2696,7 @@ namespace Graphic_Editor
                     // При отмене проверяем, был ли текст изначально
                     if (string.IsNullOrEmpty(comment.Text))
                     {
-
+                        DeleteComment(comment);
                     }
                     MainCanvas.Children.Remove(editTextBox);
                     e.Handled = true;
@@ -2714,6 +2714,20 @@ namespace Graphic_Editor
                 }));
             };
         }
+        // Удаление комментария
+        private void DeleteComment(Comment comment)
+        {
+            if (comment.VisualElement != null)
+            {
+                MainCanvas.Children.Remove(comment.VisualElement);
+            }
+            if (comment.TextElement != null)
+            {
+                MainCanvas.Children.Remove(comment.TextElement);
+            }
+            comments.Remove(comment);
+        }
+
 
 
 
