@@ -107,7 +107,7 @@ namespace Graphic_Editor
             CommentModeButton.Click += CommentModeButton_Click;
 
             // Сбрасываем комбо-боксы текста при запуске
-
+            ResetTextComboBoxesToEmpty();
         }
 
         // Обработчик клика по пустой области канваса
@@ -264,7 +264,7 @@ namespace Graphic_Editor
                 double elementHeight = GetElementHeight(element);
 
                 // Вычисляем границы рабочей области
-                
+
                 double maxTop = MainCanvas.ActualHeight - elementHeight - WorkAreaBottom;
 
                 // Ограничиваем координаты
@@ -950,7 +950,7 @@ namespace Graphic_Editor
             }
             ClearColorComboBoxes();
             // Сбрасываем комбо-боксы текста при снятии выделения
-
+            ResetTextComboBoxesToEmpty();
         }
         private void ClearColorComboBoxes()
         {
@@ -970,17 +970,17 @@ namespace Graphic_Editor
                 if (element is Ellipse ellipse)
                 {
                     ellipse.Stroke = Brushes.Blue;
-                    
+
                 }
                 else if (element is Border border)
                 {
                     border.BorderBrush = Brushes.Blue;
-                    
+
                 }
                 else if (element is Line line)
                 {
                     line.Stroke = Brushes.Blue;
-                    
+
                 }
                 else if (element is TextBlock textBlock)
                 {
@@ -1202,7 +1202,7 @@ namespace Graphic_Editor
                     canvasElements.Remove(element);
                     redoStack.Push(element);
 
-                    
+
                 }
                 else
                 {
@@ -1233,8 +1233,8 @@ namespace Graphic_Editor
                     MainCanvas.Children.Remove(element);
                     canvasElements.Remove(element);
                     undoStack.Push(element);
-                    
-                    
+
+
                 }
                 else
                 {
@@ -1492,7 +1492,7 @@ namespace Graphic_Editor
             isTextModeActive = false;
 
             // Сбрасываем комбо-боксы текста после создания текстового элемента
-
+            ResetTextComboBoxesToEmpty();
         }
 
         // Создание текстового элемента с цветом по умолчанию
@@ -1529,7 +1529,7 @@ namespace Graphic_Editor
 
             // Сохраняем оригинальные настройки
             originalStrokeColors[textBlock] = color;
-
+            SaveTextFormatting(textBlock);
 
             // Добавляем текстовый элемент на холст
             MainCanvas.Children.Add(textBlock);
@@ -1538,7 +1538,20 @@ namespace Graphic_Editor
             SelectElement(textBlock);
         }
 
-
+        // Сохранение форматирования текстового элемента
+        private void SaveTextFormatting(TextBlock textBlock)
+        {
+            if (!textFormatting.ContainsKey(textBlock))
+            {
+                textFormatting[textBlock] = new TextFormatting
+                {
+                    FontFamily = textBlock.FontFamily,
+                    FontSize = textBlock.FontSize,
+                    FontStyle = textBlock.FontStyle,
+                    FontWeight = textBlock.FontWeight
+                };
+            }
+        }
         // Обработчик нажатия левой кнопки мыши на текстовом элементе
         private void TextElement_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
@@ -1600,7 +1613,7 @@ namespace Graphic_Editor
 
                 if (elementWidth == 0 || double.IsNaN(elementWidth)) elementWidth = 100;
                 if (elementHeight == 0 || double.IsNaN(elementHeight)) elementHeight = 30;
-                
+
                 double maxTop = MainCanvas.ActualHeight - elementHeight - WorkAreaBottom;
 
                 // Определяем рабочую область 
@@ -1680,9 +1693,70 @@ namespace Graphic_Editor
                 editTextBox.Focus();
                 editTextBox.SelectAll();
 
+                // Обработчик клавиш при редактировании
+                editTextBox.KeyDown += (s, e) =>
+                {
+                    if (e.Key == Key.Enter)
+                    {
+                        FinishEditWithFormatting(editTextBox, left, top, originalStrokeColor);
+                        e.Handled = true;
+                    }
+                    else if (e.Key == Key.Escape)
+                    {
+                        CancelTextEditing(editTextBox, textBlock.Text, left, top, originalStrokeColor);
+                        e.Handled = true;
+                    }
+                };
 
+                // Обработчик потери фокуса - сохраняем изменения
+                editTextBox.LostFocus += (s, e) => FinishEditWithFormatting(editTextBox, left, top, originalStrokeColor);
             }
         }
+        // Завершение редактирования с сохранением форматирования
+        private void FinishEditWithFormatting(TextBox editTextBox, double left, double top, Brush originalColor)
+        {
+            if (MainCanvas.Children.Contains(editTextBox))
+            {
+                string newText = string.IsNullOrWhiteSpace(editTextBox.Text) ? "Текст" : editTextBox.Text;
+                MainCanvas.Children.Remove(editTextBox);
+
+                // Создаем новый текстовый элемент с форматированием из TextBox
+                var textBlock = new TextBlock
+                {
+                    Text = newText,
+                    Foreground = originalColor,
+                    FontFamily = editTextBox.FontFamily,
+                    FontSize = editTextBox.FontSize,
+                    FontStyle = editTextBox.FontStyle,
+                    FontWeight = editTextBox.FontWeight,
+                    Cursor = Cursors.Hand,
+                    FocusVisualStyle = null,
+                    Background = Brushes.Transparent
+                };
+
+                Canvas.SetLeft(textBlock, left);
+                Canvas.SetTop(textBlock, top);
+                Canvas.SetZIndex(textBlock, 1000);
+
+                originalStrokeColors[textBlock] = originalColor;
+                SaveTextFormatting(textBlock);
+
+                MainCanvas.Children.Add(textBlock);
+                textBlock.MouseLeftButtonDown += TextElement_MouseLeftButtonDown;
+                SelectElement(textBlock);
+            }
+        }
+
+        // Отмена редактирования
+        private void CancelTextEditing(TextBox editTextBox, string originalText, double left, double top, Brush originalColor)
+        {
+            if (MainCanvas.Children.Contains(editTextBox))
+            {
+                MainCanvas.Children.Remove(editTextBox);
+                CreateTextElementWithColor(originalText, left, top, originalColor);
+            }
+        }
+
         // Завершение редактирования текстового элемента
         private void FinishEdit(TextBox editTextBox, double left, double top, Brush originalColor)
         {
@@ -1693,24 +1767,8 @@ namespace Graphic_Editor
                 CreateTextElementWithColor(newText, left, top, originalColor);
             }
         }
-        // Применение форматирования к выбранному текстовому элементу
-        private void ApplyTextFormattingToSelected()
-        {
-            // Применяем изменения только если есть выбранный текстовый элемент
-            // и все комбо-боксы имеют выбранные значения
-            if (selectedElement is TextBlock textBlock &&
-                !string.IsNullOrEmpty(currentFontFamily) &&
-                currentFontSize > 0)
-            {
-                textBlock.FontFamily = new FontFamily(currentFontFamily);
-                textBlock.FontSize = currentFontSize;
-                textBlock.FontStyle = currentFontStyle;
-                textBlock.FontWeight = currentFontWeight;
 
-                // Сохраняем новые настройки
 
-            }
-        }
         // Обработчик изменения шрифта
         private void FontComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -1724,6 +1782,7 @@ namespace Graphic_Editor
                 currentFontFamily = null;
             }
         }
+
         // Обработчик изменения стиля шрифта
         private void FontStyleComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -1756,6 +1815,7 @@ namespace Graphic_Editor
                 currentFontWeight = FontWeights.Normal;
             }
         }
+
         // Обработчик изменения размера шрифта
         private void FontSizeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -1772,6 +1832,26 @@ namespace Graphic_Editor
                 currentFontSize = 0;
             }
         }
+
+        // Применение форматирования к выбранному текстовому элементу
+        private void ApplyTextFormattingToSelected()
+        {
+            // Применяем изменения только если есть выбранный текстовый элемент
+            // и все комбо-боксы имеют выбранные значения
+            if (selectedElement is TextBlock textBlock &&
+                !string.IsNullOrEmpty(currentFontFamily) &&
+                currentFontSize > 0)
+            {
+                textBlock.FontFamily = new FontFamily(currentFontFamily);
+                textBlock.FontSize = currentFontSize;
+                textBlock.FontStyle = currentFontStyle;
+                textBlock.FontWeight = currentFontWeight;
+
+                // Сохраняем новые настройки
+                SaveCurrentTextFormatting(textBlock);
+            }
+        }
+
         // Обновление комбо-боксов текста значениями из TextBlock
         private void UpdateTextComboBoxes(TextBlock textBlock)
         {
@@ -1822,6 +1902,7 @@ namespace Graphic_Editor
                 }
             }
         }
+
         // Получение имени стиля для комбо-бокса
         private string GetFontStyleName(FontStyle style, FontWeight weight)
         {
@@ -1834,7 +1915,6 @@ namespace Graphic_Editor
             else
                 return "Regular";
         }
-
         // Сохранение текущего форматирования текстового элемента
         private void SaveCurrentTextFormatting(TextBlock textBlock)
         {
@@ -1848,6 +1928,7 @@ namespace Graphic_Editor
             textFormatting[textBlock].FontStyle = textBlock.FontStyle;
             textFormatting[textBlock].FontWeight = textBlock.FontWeight;
         }
+
         // Сброс комбо-боксов текста к пустым значениям
         private void ResetTextComboBoxesToEmpty()
         {
@@ -1865,31 +1946,6 @@ namespace Graphic_Editor
             // Скрываем панель текста
             TextPanel.Visibility = Visibility.Collapsed;
         }
-        // Обновление панели текста для выбранного элемента
-        private void UpdateTextPanelForSelectedElement(FrameworkElement element)
-        {
-            if (element is TextBlock textBlock)
-            {
-                // Показываем панель текста
-                TextPanel.Visibility = Visibility.Visible;
-
-                // Обновляем комбо-боксы значениями из текстового элемента
-                UpdateTextComboBoxes(textBlock);
-
-                // Сохраняем текущие настройки для применения изменений
-                SaveCurrentTextFormatting(textBlock);
-            }
-            else
-            {
-                // Скрываем панель текста для не-текстовых элементов
-                TextPanel.Visibility = Visibility.Collapsed;
-
-                // Сбрасываем комбо-боксы к пустым значениям
-                ResetTextComboBoxesToEmpty();
-            }
-        }
-
-
 
 
         private void MakeAllShapesDraggable()
@@ -1972,7 +2028,7 @@ namespace Graphic_Editor
                     // Дополнительные ограничения для копии
                     double elementWidth = GetElementWidth(shapeCopy);
                     double elementHeight = GetElementHeight(shapeCopy);
-                    
+
                     double maxTop = MainCanvas.ActualHeight - elementHeight - WorkAreaBottom;
 
                     newLeft = Math.Max(0, Math.Min(newLeft, MainCanvas.ActualWidth - elementWidth)); newTop = Math.Max(WorkAreaTop, Math.Min(newTop, maxTop));
@@ -2254,7 +2310,7 @@ namespace Graphic_Editor
             if (element != null)
             {
                 // ВЫДЕЛЯЕМ фигуру при клике (но не начинаем новое перетаскивание)
-                
+
 
                 isDragging = false;
                 element.ReleaseMouseCapture();
