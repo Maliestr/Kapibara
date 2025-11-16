@@ -1724,6 +1724,40 @@ namespace Graphic_Editor
                 currentFontFamily = null;
             }
         }
+        // Обработчик изменения стиля шрифта
+        private void FontStyleComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (FontStyleComboBox.SelectedItem is ComboBoxItem selectedItem)
+            {
+                switch (selectedItem.Content.ToString())
+                {
+                    case "Regular":
+                        currentFontStyle = FontStyles.Normal;
+                        currentFontWeight = FontWeights.Normal;
+                        break;
+                    case "Bold":
+                        currentFontStyle = FontStyles.Normal;
+                        currentFontWeight = FontWeights.Bold;
+                        break;
+                    case "Italic":
+                        currentFontStyle = FontStyles.Italic;
+                        currentFontWeight = FontWeights.Normal;
+                        break;
+                    case "Bold Italic":
+                        currentFontStyle = FontStyles.Italic;
+                        currentFontWeight = FontWeights.Bold;
+                        break;
+                }
+                ApplyTextFormattingToSelected();
+            }
+            else
+            {
+                currentFontStyle = FontStyles.Normal;
+                currentFontWeight = FontWeights.Normal;
+            }
+        }
+
+
 
 
 
