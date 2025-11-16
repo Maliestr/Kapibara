@@ -1835,7 +1835,19 @@ namespace Graphic_Editor
                 return "Regular";
         }
 
+        // Сохранение текущего форматирования текстового элемента
+        private void SaveCurrentTextFormatting(TextBlock textBlock)
+        {
+            if (!textFormatting.ContainsKey(textBlock))
+            {
+                textFormatting[textBlock] = new TextFormatting();
+            }
 
+            textFormatting[textBlock].FontFamily = textBlock.FontFamily;
+            textFormatting[textBlock].FontSize = textBlock.FontSize;
+            textFormatting[textBlock].FontStyle = textBlock.FontStyle;
+            textFormatting[textBlock].FontWeight = textBlock.FontWeight;
+        }
 
 
 
