@@ -102,7 +102,7 @@ namespace Graphic_Editor
                 // Проверяем, что клик не по другим элементам
                 if (e.OriginalSource is System.Windows.Controls.Canvas)
                 {
-                    
+                    CreateCommentAtPosition(clickPosition);
                     e.Handled = true;
                     return; // Выходим, чтобы не выполнять остальной код
                 }
@@ -2524,10 +2524,104 @@ namespace Graphic_Editor
             // Проверяем, что клик не по другим элементам
             if (e.OriginalSource is System.Windows.Controls.Canvas)
             {
-
+                CreateCommentAtPosition(clickPosition);
                 e.Handled = true;
             }
         }
+        // Создание комментария в указанной позиции
+        private void CreateCommentAtPosition(Point position)
+        {
+            // Создаем визуальный элемент комментария
+            var commentIcon = new Border
+            {
+                Width = 12,
+                Height = 12,
+                Background = Brushes.Red,
+                BorderBrush = Brushes.Red,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Cursor = Cursors.Hand
+            };
+
+            // Создаем TextBlock для отображения текста
+            var commentTextBlock = new Border
+            {
+                Background = Brushes.White,
+                BorderBrush = Brushes.Gray,
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(8),
+                CornerRadius = new CornerRadius(4),
+                Child = new TextBlock
+                {
+                    Text = "",
+                    Foreground = Brushes.Black,
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxWidth = 250
+                },
+                Visibility = Visibility.Collapsed,
+                IsHitTestVisible = false // Чтобы не мешал взаимодействию
+            };
+
+            // Устанавливаем позицию
+            Canvas.SetLeft(commentIcon, position.X - 6);
+            Canvas.SetTop(commentIcon, position.Y - 6);
+
+            // Позиционируем TextBlock рядом с иконкой
+            Canvas.SetLeft(commentTextBlock, position.X + 15);
+            Canvas.SetTop(commentTextBlock, position.Y - 10);
+
+            // Добавляем на холст
+            MainCanvas.Children.Add(commentIcon);
+            MainCanvas.Children.Add(commentTextBlock);
+
+            // Создаем комментарий
+            var comment = new Comment
+            {
+                VisualElement = commentIcon,
+                TextElement = commentTextBlock,
+                Position = position,
+                Text = ""
+            };
+
+            comments.Add(comment);
+
+            // Обработчик двойного клика
+            commentIcon.MouseLeftButtonDown += (s, e) =>
+            {
+                if (e.ClickCount == 2)
+                {
+
+                    e.Handled = true;
+                }
+            };
+
+            // Показ текста при наведении
+            commentIcon.MouseEnter += (s, e) =>
+            {
+                commentIcon.Opacity = 0.7;
+
+                if (!string.IsNullOrEmpty(comment.Text))
+                {
+                    if (commentTextBlock.Child is TextBlock textBlock)
+                    {
+                        textBlock.Text = comment.Text;
+                    }
+                    commentTextBlock.Visibility = Visibility.Visible;
+                    Canvas.SetZIndex(commentTextBlock, 1000); // Поверх других элементов
+                }
+            };
+
+            commentIcon.MouseLeave += (s, e) =>
+            {
+                commentIcon.Opacity = 1.0;
+                commentTextBlock.Visibility = Visibility.Collapsed;
+            };
+
+            // Сразу открываем редактор
+
+        }
+
 
 
         private double GetElementWidth(UIElement element)
