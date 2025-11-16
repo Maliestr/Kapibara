@@ -51,6 +51,8 @@ namespace Graphic_Editor
         private bool isTextModeActive = false;
         private TextBox textBox;
 
+        private Dictionary<UIElement, TextFormatting> textFormatting = new Dictionary<UIElement, TextFormatting>();
+
         private Dictionary<UIElement, Brush> originalStrokeColors = new Dictionary<UIElement, Brush>();
         private Dictionary<UIElement, Brush> originalFillColors = new Dictionary<UIElement, Brush>();
         private UIElement selectedShape;
@@ -62,6 +64,19 @@ namespace Graphic_Editor
 
         private bool isCommentModeActive = false;
         private List<Comment> comments = new List<Comment>();
+
+        private string currentFontFamily = "Gotham Pro";
+        private double currentFontSize = 14;
+        private FontStyle currentFontStyle = FontStyles.Normal;
+        private FontWeight currentFontWeight = FontWeights.Normal;
+
+        public class TextFormatting
+        {
+            public FontFamily FontFamily { get; set; }
+            public double FontSize { get; set; }
+            public FontStyle FontStyle { get; set; }
+            public FontWeight FontWeight { get; set; }
+        }
 
         public class Comment
         {
@@ -90,6 +105,9 @@ namespace Graphic_Editor
 
             // Добавляем обработчики для комментариев
             CommentModeButton.Click += CommentModeButton_Click;
+
+            // Сбрасываем комбо-боксы текста при запуске
+
         }
 
         // Обработчик клика по пустой области канваса
@@ -902,6 +920,9 @@ namespace Graphic_Editor
 
             // Обновляем комбо-боксы в соответствии с цветами фигуры
             UpdateColorComboBoxesFromShape(element);
+
+            // Обновляем панель текста, если элемент является текстовым
+
         }
 
         // Снятие выделения со всех элементов
@@ -928,6 +949,8 @@ namespace Graphic_Editor
                 selectedShape = null;
             }
             ClearColorComboBoxes();
+            // Сбрасываем комбо-боксы текста при снятии выделения
+
         }
         private void ClearColorComboBoxes()
         {
@@ -1467,6 +1490,9 @@ namespace Graphic_Editor
             MainCanvas.Children.Remove(textBox);
             textBox = null;
             isTextModeActive = false;
+
+            // Сбрасываем комбо-боксы текста после создания текстового элемента
+
         }
 
         // Создание текстового элемента с цветом по умолчанию
@@ -1474,27 +1500,36 @@ namespace Graphic_Editor
         {
             CreateTextElementWithColor(text, left, top, Brushes.White);
         }
-
         // Создание текстового элемента с указанным цветом
         private void CreateTextElementWithColor(string text, double left, double top, Brush color)
         {
+            // Используем значения по умолчанию если текущие не установлены
+            string fontFamily = string.IsNullOrEmpty(currentFontFamily) ? "Gotham Pro" : currentFontFamily;
+            double fontSize = currentFontSize == 0 ? 14 : currentFontSize;
+            FontStyle fontStyle = currentFontStyle;
+            FontWeight fontWeight = currentFontWeight;
 
             var textBlock = new TextBlock
             {
                 Text = text,
                 Foreground = color,
-                FontSize = 14,
+                FontFamily = new FontFamily(fontFamily),
+                FontSize = fontSize,
+                FontStyle = fontStyle,
+                FontWeight = fontWeight,
                 Cursor = Cursors.Hand,
                 FocusVisualStyle = null,
-                Background = Brushes.Transparent // Явно указываем прозрачный фон
+                Background = Brushes.Transparent
             };
+
             // Устанавливаем позицию на холсте
             Canvas.SetLeft(textBlock, left);
             Canvas.SetTop(textBlock, top);
             Canvas.SetZIndex(textBlock, 1000);
 
-            // Сохраняем оригинальный цвет для возможного восстановления
+            // Сохраняем оригинальные настройки
             originalStrokeColors[textBlock] = color;
+
 
             // Добавляем текстовый элемент на холст
             MainCanvas.Children.Add(textBlock);
@@ -1502,6 +1537,7 @@ namespace Graphic_Editor
             textBlock.MouseLeftButtonDown += TextElement_MouseLeftButtonDown;
             SelectElement(textBlock);
         }
+
 
         // Обработчик нажатия левой кнопки мыши на текстовом элементе
         private void TextElement_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1599,7 +1635,6 @@ namespace Graphic_Editor
             draggedElement?.ReleaseMouseCapture();
             draggedElement = null;
         }
-
         // Редактирование существующего текстового элемента
         private void EditTextElement(TextBlock textBlock)
         {
@@ -1617,18 +1652,22 @@ namespace Graphic_Editor
                     originalStrokeColor = textBlock.Foreground;
                 }
 
-                // Создаем TextBox для редактирования с видимым фоном
+                // Создаем TextBox для редактирования с сохранением форматирования
                 var editTextBox = new TextBox
                 {
-                    Width = 200,
-                    Height = 30,
-                    Background = Brushes.Transparent, // Белый фон для видимости при редактировании
-                    Foreground = originalStrokeColor, // Черный текст для контраста
+                    Width = Math.Max(textBlock.ActualWidth, 200),
+                    Height = Math.Max(textBlock.ActualHeight, 30),
+                    Background = Brushes.White,
+                    Foreground = Brushes.Black,
                     BorderBrush = Brushes.Gray,
-                    FontSize = 14,
+                    FontFamily = textBlock.FontFamily,
+                    FontSize = textBlock.FontSize,
+                    FontStyle = textBlock.FontStyle,
+                    FontWeight = textBlock.FontWeight,
                     Text = textBlock.Text,
-                    CaretBrush = Brushes.White, // Черный курсор для видимости
-                    FocusVisualStyle = null
+                    CaretBrush = Brushes.Black,
+                    FocusVisualStyle = null,
+                    TextWrapping = TextWrapping.Wrap
                 };
 
                 double left = Canvas.GetLeft(textBlock);
@@ -1641,26 +1680,9 @@ namespace Graphic_Editor
                 editTextBox.Focus();
                 editTextBox.SelectAll();
 
-                // Обработчик клавиш при редактировании
-                editTextBox.KeyDown += (s, e) =>
-                {
-                    if (e.Key == Key.Enter)
-                    {
-                        FinishEdit(editTextBox, left, top, originalStrokeColor); // Передаем оригинальный цвет
-                        e.Handled = true;
-                    }
-                    else if (e.Key == Key.Escape)
-                    {
-                        MainCanvas.Children.Remove(editTextBox);
-                        CreateTextElementWithColor(textBlock.Text, left, top, originalStrokeColor); // Передаем оригинальный цвет
-                        e.Handled = true;
-                    }
-                };
-                // Обработчик потери фокуса - сохраняем изменения
-                editTextBox.LostFocus += (s, e) => FinishEdit(editTextBox, left, top, originalStrokeColor); // Передаем оригинальный цвет
+
             }
         }
-
         // Завершение редактирования текстового элемента
         private void FinishEdit(TextBox editTextBox, double left, double top, Brush originalColor)
         {
@@ -1671,6 +1693,9 @@ namespace Graphic_Editor
                 CreateTextElementWithColor(newText, left, top, originalColor);
             }
         }
+
+
+
         private void MakeAllShapesDraggable()
         {
             // Добавляем обработчики для всех фигур в нотации

@@ -763,72 +763,77 @@
 
             <!-- Панель с текстом -->
             <Border x:Name="TextPanel" CornerRadius="10"
-                            Grid.Column="2"
-                    BorderBrush="#CCCCCC"
-                    BorderThickness="1"
-            Background="#FF343434" 
-            Width="270" 
-            Height="120"
-            Margin="0,332,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
+        Grid.Column="2"
+        BorderBrush="#CCCCCC"
+        BorderThickness="1"
+        Background="#FF343434" 
+        Width="270" 
+        Height="120"
+        Margin="0,332,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
                 <StackPanel Orientation="Vertical" 
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Width="200">
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Width="200">
 
                     <TextBlock Text="Текст" 
-                        Foreground="White" 
-                        FontSize="14"
-                        FontWeight="Bold"
-                        HorizontalAlignment="Center"
-                        Margin="0,0,0,15"/>
+                   Foreground="White" 
+                   FontSize="14"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,15"/>
 
                     <!-- Шрифт -->
                     <StackPanel Orientation="Horizontal" 
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Margin="0,0,0,10">
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Margin="0,0,0,10">
 
                         <Border CornerRadius="5"
-                        Width="150" 
-                        Height="22"
-                        Background="#D9D9D9"
-                        VerticalAlignment="Center">
+                    Width="150" 
+                    Height="22"
+                    Background="#D9D9D9"
+                    VerticalAlignment="Center">
                             <ComboBox x:Name="FontComboBox"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                FontSize="11"
-                                VerticalContentAlignment="Center"
-                                Padding="5,0">
+                          Background="Transparent"
+                          BorderThickness="0"
+                          FontSize="11"
+                          VerticalContentAlignment="Center"
+                          Padding="5,0"
+                          SelectionChanged="FontComboBox_SelectionChanged">
                                 <ComboBoxItem Content="Gotham Pro" IsSelected="True"/>
                                 <ComboBoxItem Content="Arial"/>
                                 <ComboBoxItem Content="Times New Roman"/>
                                 <ComboBoxItem Content="Calibri"/>
+                                <ComboBoxItem Content="Verdana"/>
+                                <ComboBoxItem Content="Tahoma"/>
                             </ComboBox>
                         </Border>
                     </StackPanel>
 
                     <!-- Стиль и размер -->
                     <StackPanel Orientation="Horizontal" 
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
 
                         <!-- Стиль -->
                         <StackPanel Orientation="Horizontal" 
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Margin="0,0,10,0">
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Margin="0,0,10,0">
 
                             <Border CornerRadius="5"
-                            Width="60" 
-                            Height="22"
-                            Background="#D9D9D9"
-                            VerticalAlignment="Center">
+                        Width="60" 
+                        Height="22"
+                        Background="#D9D9D9"
+                        VerticalAlignment="Center">
                                 <ComboBox x:Name="FontStyleComboBox"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    FontSize="11"
-                                    VerticalContentAlignment="Center"
-                                    Padding="5,0" Margin="0,0,-8,0">
+                              Background="Transparent"
+                              BorderThickness="0"
+                              FontSize="11"
+                              VerticalContentAlignment="Center"
+                              Padding="5,0" 
+                              Margin="0,0,-8,0"
+                              SelectionChanged="FontStyleComboBox_SelectionChanged">
                                     <ComboBoxItem Content="Regular" IsSelected="True"/>
                                     <ComboBoxItem Content="Bold"/>
                                     <ComboBoxItem Content="Italic"/>
@@ -839,20 +844,22 @@
 
                         <!-- Размер -->
                         <StackPanel Orientation="Horizontal"
-                            VerticalAlignment="Center"
-                            Margin="10,0,0,0" Width="53">
+                        VerticalAlignment="Center"
+                        Margin="10,0,0,0" 
+                        Width="53">
 
                             <Border CornerRadius="5"
-                            Width="50" 
-                            Height="22"
-                            Background="#D9D9D9"
-                            VerticalAlignment="Center">
+                        Width="50" 
+                        Height="22"
+                        Background="#D9D9D9"
+                        VerticalAlignment="Center">
                                 <ComboBox x:Name="FontSizeComboBox"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    FontSize="11"
-                                    VerticalContentAlignment="Center"
-                                    Padding="5,0">
+                              Background="Transparent"
+                              BorderThickness="0"
+                              FontSize="11"
+                              VerticalContentAlignment="Center"
+                              Padding="5,0"
+                              SelectionChanged="FontSizeComboBox_SelectionChanged">
                                     <ComboBoxItem Content="8"/>
                                     <ComboBoxItem Content="9"/>
                                     <ComboBoxItem Content="10" IsSelected="True"/>
@@ -863,6 +870,8 @@
                                     <ComboBoxItem Content="18"/>
                                     <ComboBoxItem Content="20"/>
                                     <ComboBoxItem Content="24"/>
+                                    <ComboBoxItem Content="28"/>
+                                    <ComboBoxItem Content="32"/>
                                 </ComboBox>
                             </Border>
                         </StackPanel>
