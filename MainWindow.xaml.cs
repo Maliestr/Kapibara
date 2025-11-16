@@ -871,6 +871,7 @@ namespace Graphic_Editor
 
             // Обновляем комбо-боксы в соответствии с цветами фигуры
             UpdateColorComboBoxesFromShape(element);
+            
         }
 
         // Снятие выделения со всех элементов
@@ -887,86 +888,19 @@ namespace Graphic_Editor
                 selectedElement = null;
             }
 
-            if (selectedShape != null)
-            {
-                RemoveSelectionVisual(selectedShape);
-                if (selectedShape is FrameworkElement shapeFrameworkElement)
-                {
-                    Canvas.SetZIndex(shapeFrameworkElement, 1);
-                }
-                selectedShape = null;
-            }
-            ClearColorComboBoxes();
-        }
-        private void ClearColorComboBoxes()
-        {
+            
             FillColorComboBox.SelectedIndex = -1;
             StrokeColorComboBox.SelectedIndex = -1;
             FillColorPreview.Background = Brushes.Transparent;
             StrokeColorPreview.Background = Brushes.Transparent;
         }
+        
+            
+        
         // Визуальное выделение элемента
         private const double WorkAreaTop = 50;    // Отступ сверху (под меню)
         private const double WorkAreaBottom = 100; // Отступ снизу (над панелью инструментов)
-        private void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
-        {
-            // делаем фул ширину константной 
-            if (isSelected)
-            {
-                if (element is Ellipse ellipse)
-                {
-                    ellipse.Stroke = Brushes.Blue;
-                    
-                }
-                else if (element is Border border)
-                {
-                    border.BorderBrush = Brushes.Blue;
-                    
-                }
-                else if (element is Line line)
-                {
-                    line.Stroke = Brushes.Blue;
-                    
-                }
-                else if (element is TextBlock textBlock)
-                {
-                    textBlock.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 255));
-                }
-            }
-            else
-            {
-                // Возвращаем оригинальные цвета
-                if (element is Ellipse ellipse)
-                {
-                    if (ellipse.Fill == Brushes.Transparent) // Кольцо
-                    {
-                        ellipse.Stroke = Brushes.White;
-                        ellipse.StrokeThickness = 5;
-                    }
-                    else // Круг
-                    {
-                        ellipse.Stroke = Brushes.Black;
-                        ellipse.StrokeThickness = 3;
-                    }
-                    ellipse.StrokeThickness = Math.Max(ellipse.StrokeThickness - 2, 1);
-                }
-                else if (element is Border border)
-                {
-                    border.BorderBrush = Brushes.White;
-                    border.BorderThickness = new Thickness(2);
-
-                }
-                else if (element is Line line)
-                {
-                    line.Stroke = Brushes.White;
-                    line.StrokeThickness = 3;
-                }
-                else if (element is TextBlock textBlock)
-                {
-                    textBlock.Background = Brushes.Transparent;
-                }
-            }
-        }
+       
 
         // Копирование выделенного элемента
         private void CopySelectedElement()
@@ -1196,45 +1130,66 @@ namespace Graphic_Editor
                 MessageBox.Show("Нет действий для повтора", "Повтор", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
+        // Восстановление оригинального вида элемента (без выделения)
         private void RestoreOriginalAppearance(UIElement element)
         {
             if (element is Ellipse ellipse)
             {
-                // Возвращаем фиксированную толщину обводки
-                if (element == SimpleRing)
+                // Возвращаем сохраненный цвет обводки
+                if (originalStrokeColors.ContainsKey(element))
                 {
-                    ellipse.StrokeThickness = 5; // ФИКСИРОВАННАЯ для кольца
+                    ellipse.Stroke = originalStrokeColors[element];
                 }
                 else
                 {
-                    ellipse.StrokeThickness = 3; // ФИКСИРОВАННАЯ для круга и овала
+                    // Если цвет не сохранен, используем логику по умолчанию
+                    if (ellipse.Fill == Brushes.Transparent) // Кольцо
+                    {
+                        ellipse.Stroke = Brushes.White;
+                    }
+                    else // Круг
+                    {
+                        ellipse.Stroke = Brushes.Black;
+                    }
                 }
-
-                // Возвращаем оригинальные цвета
-                if (ellipse.Fill == Brushes.Transparent) // Кольцо
-                {
-                    ellipse.Stroke = Brushes.White;
-                }
-                else // Круг
-                {
-                    ellipse.Stroke = Brushes.Black;
-                }
+                ellipse.StrokeThickness = ellipse == SimpleRing ? 5 : 3;
                 ellipse.Opacity = 1.0;
             }
             else if (element is Border border)
             {
-                border.BorderBrush = Brushes.White;
-                border.BorderThickness = new Thickness(2); // ФИКСИРОВАННАЯ толщина
+                // Возвращаем сохраненный цвет обводки
+                if (originalStrokeColors.ContainsKey(element))
+                {
+                    border.BorderBrush = originalStrokeColors[element];
+                }
+                else
+                {
+                    border.BorderBrush = Brushes.White;
+                }
+                border.BorderThickness = new Thickness(2);
                 border.Opacity = 1.0;
             }
             else if (element is Line line)
             {
-                line.Stroke = Brushes.White;
-                line.StrokeThickness = 3; // ФИКСИРОВАННАЯ толщина
+                // Возвращаем сохраненный цвет обводки
+                if (originalStrokeColors.ContainsKey(element))
+                {
+                    line.Stroke = originalStrokeColors[element];
+                }
+                else
+                {
+                    line.Stroke = Brushes.White;
+                }
+                line.StrokeThickness = 3;
                 line.Opacity = 1.0;
             }
             else if (element is TextBlock textBlock)
             {
+                // Возвращаем сохраненный цвет текста
+                if (originalStrokeColors.ContainsKey(element))
+                {
+                    textBlock.Foreground = originalStrokeColors[element];
+                }
                 textBlock.Background = Brushes.Transparent;
                 textBlock.Opacity = 1.0;
             }
@@ -1477,6 +1432,7 @@ namespace Graphic_Editor
         {
             var textBlock = sender as TextBlock;
             if (textBlock == null) return;
+            DeselectAll();
             // Сохраняем оригинальный цвет если он еще не сохранен
             if (!originalStrokeColors.ContainsKey(textBlock))
             {
@@ -1675,8 +1631,9 @@ namespace Graphic_Editor
             var element = sender as UIElement;
             if (element != null)
             {
+               
                 // Выделяем фигуру в нотации
-                SelectShape(element);
+                SelectElement(element as FrameworkElement);
 
                 isDragging = true;
                 draggedElement = element;
@@ -1729,7 +1686,91 @@ namespace Graphic_Editor
                 }
             }
         }
-
+        // Визуальное выделение элемента
+        // Визуальное выделение элемента
+        // Визуальное выделение элемента
+        private void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
+        {
+            if (isSelected)
+            {
+                // ВСЕГДА ВЫДЕЛЯЕМ СИНИМ ЦВЕТОМ
+                if (element is Ellipse ellipse)
+                {
+                    ellipse.Stroke = Brushes.Blue;
+                    ellipse.StrokeThickness += 2;
+                }
+                else if (element is Border border)
+                {
+                    border.BorderBrush = Brushes.Blue;
+                    border.BorderThickness = new Thickness(4);
+                }
+                else if (element is Line line)
+                {
+                    line.Stroke = Brushes.Blue;
+                    line.StrokeThickness += 2;
+                }
+                else if (element is TextBlock textBlock)
+                {
+                    textBlock.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 255));
+                }
+            }
+            else
+            {
+                // ВОЗВРАЩАЕМ ОРИГИНАЛЬНЫЕ ЦВЕТА
+                if (element is Ellipse ellipse)
+                {
+                    if (originalStrokeColors.ContainsKey(element))
+                    {
+                        ellipse.Stroke = originalStrokeColors[element];
+                    }
+                    else
+                    {
+                        // Если цвет не сохранен, используем логику по умолчанию
+                        if (ellipse.Fill == Brushes.Transparent) // Кольцо
+                        {
+                            ellipse.Stroke = Brushes.White;
+                        }
+                        else // Круг
+                        {
+                            ellipse.Stroke = Brushes.Black;
+                        }
+                    }
+                    ellipse.StrokeThickness = Math.Max(ellipse.StrokeThickness - 2, 1);
+                }
+                else if (element is Border border)
+                {
+                    if (originalStrokeColors.ContainsKey(element))
+                    {
+                        border.BorderBrush = originalStrokeColors[element];
+                    }
+                    else
+                    {
+                        border.BorderBrush = Brushes.White;
+                    }
+                    border.BorderThickness = new Thickness(2);
+                }
+                else if (element is Line line)
+                {
+                    if (originalStrokeColors.ContainsKey(element))
+                    {
+                        line.Stroke = originalStrokeColors[element];
+                    }
+                    else
+                    {
+                        line.Stroke = Brushes.White;
+                    }
+                    line.StrokeThickness = Math.Max(line.StrokeThickness - 2, 1);
+                }
+                else if (element is TextBlock textBlock)
+                {
+                    if (originalStrokeColors.ContainsKey(element))
+                    {
+                        textBlock.Foreground = originalStrokeColors[element];
+                    }
+                    textBlock.Background = Brushes.Transparent;
+                }
+            }
+        }
         private void Shape_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             var element = sender as UIElement;
@@ -1767,13 +1808,10 @@ namespace Graphic_Editor
                         // ВЫДЕЛЯЕМ НОВУЮ ФИГУРУ ПОСЛЕ ПЕРЕТАСКИВАНИЯ
                         SelectElement(shapeCopy as FrameworkElement);
 
-                        if (IsShapeFromNotation(element))
-                        {
-                            string shapeType = GetShapeType(element);
-                        }
+                        
                     }
                 }
-
+                ApplySelectionVisualFeedback(element, false);
                 draggedElement = null;
                 shapeCopy = null;
                 e.Handled = true;
@@ -1975,6 +2013,7 @@ namespace Graphic_Editor
             var element = sender as UIElement;
             if (element != null)
             {
+                
                 // Выделяем элемент при щелчке лкм
                 SelectElement(element as FrameworkElement);
                 isDragging = true;
@@ -1991,7 +2030,7 @@ namespace Graphic_Editor
                 Canvas.SetZIndex(element, 1000);
 
                 // Визуальный фидбэк
-                ApplyCanvasDragVisualFeedback(element, true);
+                
                 e.Handled = true;
             }
         }
@@ -2041,25 +2080,8 @@ namespace Graphic_Editor
             }
         }
 
-        // Метод для выделения фигуры из нотации
-        public void SelectShape(UIElement shape)
-        {
-            // Снимаем выделение с предыдущей фигуры
-            if (selectedShape != null)
-            {
-                RemoveSelectionVisual(selectedShape);
-            }
-
-            // Сохраняем оригинальные цвета перед выделением
-            SaveOriginalColors(shape);
-
-            // Выделяем новую фигуру
-            selectedShape = shape;
-            ApplySelectionVisual(selectedShape);
-
-            // Обновляем комбо-боксы в соответствии с цветами фигуры
-            UpdateColorComboBoxesFromShape(selectedShape);
-        }
+       
+        
 
         // Сохранение оригинальных цветов
         private void SaveOriginalColors(UIElement shape)
@@ -2186,44 +2208,8 @@ namespace Graphic_Editor
             }
         }
 
-        // Удаление визуального выделения
-        private void RemoveSelectionVisual(UIElement element)
-        {
-            if (element is Ellipse ellipse)
-            {
-                ellipse.StrokeThickness -= 2;
-                ellipse.Opacity = 1.0;
-                // Возвращаем оригинальный цвет
-                if (originalStrokeColors.ContainsKey(element))
-                {
-                    ellipse.Stroke = originalStrokeColors[element];
-                }
-            }
-            else if (element is Border border)
-            {
-                border.BorderThickness = new Thickness(2);
-                border.Opacity = 1.0;
-                // Возвращаем оригинальный цвет
-                if (originalStrokeColors.ContainsKey(element))
-                {
-                    border.BorderBrush = originalStrokeColors[element];
-                }
-            }
-            else if (element is Line line)
-            {
-                line.StrokeThickness -= 2;
-                line.Opacity = 1.0;
-                // Возвращаем оригинальный цвет
-                if (originalStrokeColors.ContainsKey(element))
-                {
-                    line.Stroke = originalStrokeColors[element];
-                }
-            }
-            else if (element is TextBlock textBlock)
-            {
-                textBlock.Effect = null;
-            }
-        }
+        
+        
 
         // ОБРАБОТЧИК СОБЫТИЯ ДЛЯ COMBOBOX
         private void FillColorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -2306,12 +2292,8 @@ namespace Graphic_Editor
                 Brush newBrush = new SolidColorBrush(newColor);
 
                 ApplyStrokeColorToShape(selectedElement, newBrush);
-
-                // Сохраняем новый цвет как оригинальный
-                if (originalStrokeColors.ContainsKey(selectedElement))
-                {
-                    originalStrokeColors[selectedElement] = newBrush;
-                }
+                originalStrokeColors[selectedElement] = newBrush;
+                
             }
         }
 
@@ -2338,6 +2320,7 @@ namespace Graphic_Editor
                 // Для текста меняем Foreground (цвет текста)
                 textBlock.Foreground = brush;
             }
+            originalStrokeColors[shape] = brush;
         }
 
         // Вспомогательный метод для обновления комбо-бокса
