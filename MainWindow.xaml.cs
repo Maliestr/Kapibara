@@ -2514,6 +2514,20 @@ namespace Graphic_Editor
                 MainCanvas.Cursor = Cursors.Arrow;
             }
         }
+        // Обработчик клика по холсту в режиме комментариев
+        private void MainCanvas_MouseLeftButtonDown_Comment(object sender, MouseButtonEventArgs e)
+        {
+            if (!isCommentModeActive) return;
+
+            Point clickPosition = e.GetPosition(MainCanvas);
+
+            // Проверяем, что клик не по другим элементам
+            if (e.OriginalSource is System.Windows.Controls.Canvas)
+            {
+
+                e.Handled = true;
+            }
+        }
 
 
         private double GetElementWidth(UIElement element)
