@@ -1772,6 +1772,68 @@ namespace Graphic_Editor
                 currentFontSize = 0;
             }
         }
+        // Обновление комбо-боксов текста значениями из TextBlock
+        private void UpdateTextComboBoxes(TextBlock textBlock)
+        {
+            // Обновляем шрифт
+            foreach (ComboBoxItem item in FontComboBox.Items)
+            {
+                if (item.Content.ToString() == textBlock.FontFamily.Source)
+                {
+                    FontComboBox.SelectedItem = item;
+                    currentFontFamily = textBlock.FontFamily.Source;
+                    break;
+                }
+            }
+
+            // Обновляем размер шрифта
+            bool fontSizeFound = false;
+            foreach (ComboBoxItem item in FontSizeComboBox.Items)
+            {
+                if (double.TryParse(item.Content.ToString(), out double size) &&
+                    Math.Abs(size - textBlock.FontSize) < 0.1)
+                {
+                    FontSizeComboBox.SelectedItem = item;
+                    currentFontSize = textBlock.FontSize;
+                    fontSizeFound = true;
+                    break;
+                }
+            }
+
+            // Если размер не найден в списке, добавляем его
+            if (!fontSizeFound)
+            {
+                var newItem = new ComboBoxItem { Content = textBlock.FontSize.ToString("0") };
+                FontSizeComboBox.Items.Add(newItem);
+                FontSizeComboBox.SelectedItem = newItem;
+                currentFontSize = textBlock.FontSize;
+            }
+
+            // Обновляем стиль шрифта
+            string styleName = GetFontStyleName(textBlock.FontStyle, textBlock.FontWeight);
+            foreach (ComboBoxItem item in FontStyleComboBox.Items)
+            {
+                if (item.Content.ToString() == styleName)
+                {
+                    FontStyleComboBox.SelectedItem = item;
+                    currentFontStyle = textBlock.FontStyle;
+                    currentFontWeight = textBlock.FontWeight;
+                    break;
+                }
+            }
+        }
+        // Получение имени стиля для комбо-бокса
+        private string GetFontStyleName(FontStyle style, FontWeight weight)
+        {
+            if (style == FontStyles.Italic && weight == FontWeights.Bold)
+                return "Bold Italic";
+            else if (weight == FontWeights.Bold)
+                return "Bold";
+            else if (style == FontStyles.Italic)
+                return "Italic";
+            else
+                return "Regular";
+        }
 
 
 
