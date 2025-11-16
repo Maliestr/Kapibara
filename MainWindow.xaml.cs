@@ -1693,6 +1693,37 @@ namespace Graphic_Editor
                 CreateTextElementWithColor(newText, left, top, originalColor);
             }
         }
+        // Применение форматирования к выбранному текстовому элементу
+        private void ApplyTextFormattingToSelected()
+        {
+            // Применяем изменения только если есть выбранный текстовый элемент
+            // и все комбо-боксы имеют выбранные значения
+            if (selectedElement is TextBlock textBlock &&
+                !string.IsNullOrEmpty(currentFontFamily) &&
+                currentFontSize > 0)
+            {
+                textBlock.FontFamily = new FontFamily(currentFontFamily);
+                textBlock.FontSize = currentFontSize;
+                textBlock.FontStyle = currentFontStyle;
+                textBlock.FontWeight = currentFontWeight;
+
+                // Сохраняем новые настройки
+
+            }
+        }
+        // Обработчик изменения шрифта
+        private void FontComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (FontComboBox.SelectedItem is ComboBoxItem selectedItem)
+            {
+                currentFontFamily = selectedItem.Content.ToString();
+                ApplyTextFormattingToSelected();
+            }
+            else
+            {
+                currentFontFamily = null;
+            }
+        }
 
 
 
