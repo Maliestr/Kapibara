@@ -858,11 +858,288 @@ namespace Graphic_Editor
         }
 
         // Выделение элемента
+        
+
+        // Снятие выделения со всех элементов
+        
+        
+            
+        
+        // Визуальное выделение элемента
+        private const double WorkAreaTop = 50;    // Отступ сверху (под меню)
+        private const double WorkAreaBottom = 100; // Отступ снизу (над панелью инструментов)
+
+
+        // Словарь для хранения оригинальной толщины обводки
+        private Dictionary<UIElement, double> originalStrokeThickness = new Dictionary<UIElement, double>();
+
+        // Метод для показа/скрытия панели толщины обводки
+        private void UpdateStrokeWidthPanelVisibility()
+        {
+            if (selectedElement != null)
+            {
+                // Показываем панель толщины только для элементов, у которых есть обводка
+                bool hasStroke = selectedElement is Ellipse || selectedElement is Line ||
+                                selectedElement is Border || selectedElement is TextBlock;
+                StrokeWidthPanel.Visibility = hasStroke ? Visibility.Visible : Visibility.Collapsed;
+
+                // Обновляем комбо-бокс толщины текущим значением
+                UpdateStrokeWidthComboBoxFromShape(selectedElement);
+            }
+            else
+            {
+                StrokeWidthPanel.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        // Обработчик изменения толщины обводки
+        private void StrokeWidthComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (StrokeWidthComboBox.SelectedItem is ComboBoxItem selectedItem)
+            {
+                string thicknessValue = selectedItem.Tag as string;
+                if (!string.IsNullOrEmpty(thicknessValue))
+                {
+                    try
+                    {
+                        double thickness = double.Parse(thicknessValue);
+                        ApplyStrokeThicknessToSelectedShape(thickness);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Ошибка применения толщины: {ex.Message}");
+                    }
+                }
+            }
+        }
+
+        // Метод применения толщины обводки к выделенной фигуре
+        private void ApplyStrokeThicknessToSelectedShape(double thickness)
+        {
+            if (selectedElement != null)
+            {
+                ApplyStrokeThicknessToShape(selectedElement, thickness);
+
+                // Сохраняем новую толщину как оригинальную
+                originalStrokeThickness[selectedElement] = thickness;
+                if (selectedShape != null)
+                {
+                    originalStrokeThickness[selectedShape] = thickness;
+                }
+            }
+        }
+
+        // Вспомогательный метод для применения толщины обводки к конкретной фигуре
+        private void ApplyStrokeThicknessToShape(UIElement shape, double thickness)
+        {
+            UpdateStrokeThicknessInAllReferences(shape, thickness);
+            if (shape is Ellipse ellipse)
+            {
+                ellipse.StrokeThickness = thickness;
+            }
+            else if (shape is Border border)
+            {
+                border.BorderThickness = new Thickness(thickness);
+            }
+            else if (shape is Line line)
+            {
+                line.StrokeThickness = thickness;
+            }
+            else if (shape is TextBlock textBlock)
+            {
+                // Для текста толщина не применяется
+            }
+
+            // Сохраняем толщину в словарь оригинальных толщин
+            originalStrokeThickness[shape] = thickness;
+        }
+
+        // Метод обновления комбо-бокса толщины на основе фигуры
+        private void UpdateStrokeWidthComboBoxFromShape(UIElement shape)
+        {
+            if (shape == null) return;
+
+            double currentThickness = 0;
+
+            if (shape is Ellipse ellipse)
+            {
+                currentThickness = ellipse.StrokeThickness;
+            }
+            else if (shape is Border border)
+            {
+                currentThickness = border.BorderThickness.Left;
+            }
+            else if (shape is Line line)
+            {
+                currentThickness = line.StrokeThickness;
+            }
+
+            // Обновляем комбо-бокс
+            UpdateStrokeWidthComboBoxSelection(currentThickness);
+        }
+
+        // Вспомогательный метод для обновления комбо-бокса толщины
+        private void UpdateStrokeWidthComboBoxSelection(double thickness)
+        {
+            foreach (ComboBoxItem item in StrokeWidthComboBox.Items)
+            {
+                if (item.Tag != null && double.Parse(item.Tag as string) == thickness)
+                {
+                    StrokeWidthComboBox.SelectedItem = item;
+                    return;
+                }
+            }
+
+            // Если точное значение не найдено, выбираем ближайшее
+            StrokeWidthComboBox.SelectedIndex = 0;
+        }
+
+        // Сохранение оригинальных цветов и толщины
+        private void SaveOriginalColors(UIElement shape)
+        {
+            if (shape is Ellipse ellipse)
+            {
+                if (!originalStrokeColors.ContainsKey(shape))
+                {
+                    originalStrokeColors[shape] = ellipse.Stroke;
+                }
+                if (!originalFillColors.ContainsKey(shape))
+                {
+                    originalFillColors[shape] = ellipse.Fill;
+                }
+                if (!originalStrokeThickness.ContainsKey(shape))
+                {
+                    originalStrokeThickness[shape] = ellipse.StrokeThickness;
+                }
+            }
+            else if (shape is Border border)
+            {
+                if (!originalStrokeColors.ContainsKey(shape))
+                {
+                    originalStrokeColors[shape] = border.BorderBrush;
+                }
+                if (!originalFillColors.ContainsKey(shape))
+                {
+                    originalFillColors[shape] = border.Background;
+                }
+                if (!originalStrokeThickness.ContainsKey(shape))
+                {
+                    originalStrokeThickness[shape] = border.BorderThickness.Left;
+                }
+            }
+            else if (shape is Line line)
+            {
+                if (!originalStrokeColors.ContainsKey(shape))
+                {
+                    originalStrokeColors[shape] = line.Stroke;
+                }
+                if (!originalStrokeThickness.ContainsKey(shape))
+                {
+                    originalStrokeThickness[shape] = line.StrokeThickness;
+                }
+            }
+            else if (shape is TextBlock textBlock)
+            {
+                if (!originalStrokeColors.ContainsKey(shape))
+                {
+                    originalStrokeColors[shape] = textBlock.Foreground;
+                }
+            }
+        }
+
+        // Обновите метод RestoreOriginalAppearance для восстановления толщины
+        private void RestoreOriginalAppearance(UIElement element)
+        {
+            if (element is Ellipse ellipse)
+            {
+                // Возвращаем сохраненный цвет обводки
+                if (originalStrokeColors.ContainsKey(element))
+                {
+                    ellipse.Stroke = originalStrokeColors[element];
+                }
+                else
+                {
+                    if (ellipse.Fill == Brushes.Transparent)
+                    {
+                        ellipse.Stroke = Brushes.White;
+                    }
+                    else
+                    {
+                        ellipse.Stroke = Brushes.Black;
+                    }
+                }
+                // Возвращаем сохраненную толщину
+                if (originalStrokeThickness.ContainsKey(element))
+                {
+                    ellipse.StrokeThickness = originalStrokeThickness[element];
+                }
+                else
+                {
+                    ellipse.StrokeThickness = ellipse == SimpleRing ? 5 : 3;
+                }
+                ellipse.Opacity = 1.0;
+            }
+            else if (element is Border border)
+            {
+                if (originalStrokeColors.ContainsKey(element))
+                {
+                    border.BorderBrush = originalStrokeColors[element];
+                }
+                else
+                {
+                    border.BorderBrush = Brushes.White;
+                }
+                // Возвращаем сохраненную толщину
+                if (originalStrokeThickness.ContainsKey(element))
+                {
+                    border.BorderThickness = new Thickness(originalStrokeThickness[element]);
+                }
+                else
+                {
+                    border.BorderThickness = new Thickness(2);
+                }
+                border.Opacity = 1.0;
+            }
+            else if (element is Line line)
+            {
+                if (originalStrokeColors.ContainsKey(element))
+                {
+                    line.Stroke = originalStrokeColors[element];
+                }
+                else
+                {
+                    line.Stroke = Brushes.White;
+                }
+                // Возвращаем сохраненную толщину
+                if (originalStrokeThickness.ContainsKey(element))
+                {
+                    line.StrokeThickness = originalStrokeThickness[element];
+                }
+                else
+                {
+                    line.StrokeThickness = 3;
+                }
+                line.Opacity = 1.0;
+            }
+            else if (element is TextBlock textBlock)
+            {
+                if (originalStrokeColors.ContainsKey(element))
+                {
+                    textBlock.Foreground = originalStrokeColors[element];
+                }
+                textBlock.Background = Brushes.Transparent;
+                textBlock.Opacity = 1.0;
+            }
+
+            Canvas.SetZIndex(element, 1);
+        }
+
+        // Обновите метод SelectElement для показа панели толщины
         private void SelectElement(FrameworkElement element)
         {
             // Снимаем выделение с предыдущего элемента
             DeselectAll();
-
+            SaveOriginalColors(element);
             selectedElement = element;
             ApplySelectionVisualFeedback(element, true);
 
@@ -871,10 +1148,12 @@ namespace Graphic_Editor
 
             // Обновляем комбо-боксы в соответствии с цветами фигуры
             UpdateColorComboBoxesFromShape(element);
-            
+
+            // ПОКАЗЫВАЕМ ПАНЕЛЬ ТОЛЩИНЫ ОБВОДКИ
+            UpdateStrokeWidthPanelVisibility();
         }
 
-        // Снятие выделения со всех элементов
+        // Обновите метод DeselectAll для скрытия панели толщины
         private void DeselectAll()
         {
             if (selectedElement != null)
@@ -888,19 +1167,15 @@ namespace Graphic_Editor
                 selectedElement = null;
             }
 
-            
+            // СКРЫВАЕМ ПАНЕЛЬ ТОЛЩИНЫ ОБВОДКИ
+            StrokeWidthPanel.Visibility = Visibility.Collapsed;
+
+            // Очищаем комбо-боксы
             FillColorComboBox.SelectedIndex = -1;
             StrokeColorComboBox.SelectedIndex = -1;
             FillColorPreview.Background = Brushes.Transparent;
             StrokeColorPreview.Background = Brushes.Transparent;
         }
-        
-            
-        
-        // Визуальное выделение элемента
-        private const double WorkAreaTop = 50;    // Отступ сверху (под меню)
-        private const double WorkAreaBottom = 100; // Отступ снизу (над панелью инструментов)
-       
 
         // Копирование выделенного элемента
         private void CopySelectedElement()
@@ -1131,72 +1406,7 @@ namespace Graphic_Editor
             }
         }
         // Восстановление оригинального вида элемента (без выделения)
-        private void RestoreOriginalAppearance(UIElement element)
-        {
-            if (element is Ellipse ellipse)
-            {
-                // Возвращаем сохраненный цвет обводки
-                if (originalStrokeColors.ContainsKey(element))
-                {
-                    ellipse.Stroke = originalStrokeColors[element];
-                }
-                else
-                {
-                    // Если цвет не сохранен, используем логику по умолчанию
-                    if (ellipse.Fill == Brushes.Transparent) // Кольцо
-                    {
-                        ellipse.Stroke = Brushes.White;
-                    }
-                    else // Круг
-                    {
-                        ellipse.Stroke = Brushes.Black;
-                    }
-                }
-                ellipse.StrokeThickness = ellipse == SimpleRing ? 5 : 3;
-                ellipse.Opacity = 1.0;
-            }
-            else if (element is Border border)
-            {
-                // Возвращаем сохраненный цвет обводки
-                if (originalStrokeColors.ContainsKey(element))
-                {
-                    border.BorderBrush = originalStrokeColors[element];
-                }
-                else
-                {
-                    border.BorderBrush = Brushes.White;
-                }
-                border.BorderThickness = new Thickness(2);
-                border.Opacity = 1.0;
-            }
-            else if (element is Line line)
-            {
-                // Возвращаем сохраненный цвет обводки
-                if (originalStrokeColors.ContainsKey(element))
-                {
-                    line.Stroke = originalStrokeColors[element];
-                }
-                else
-                {
-                    line.Stroke = Brushes.White;
-                }
-                line.StrokeThickness = 3;
-                line.Opacity = 1.0;
-            }
-            else if (element is TextBlock textBlock)
-            {
-                // Возвращаем сохраненный цвет текста
-                if (originalStrokeColors.ContainsKey(element))
-                {
-                    textBlock.Foreground = originalStrokeColors[element];
-                }
-                textBlock.Background = Brushes.Transparent;
-                textBlock.Opacity = 1.0;
-            }
-
-            // Возвращаем нормальный ZIndex
-            Canvas.SetZIndex(element, 1);
-        }
+        
         // Сохранение в стек отмены
         private void SaveToUndoStack(UIElement element)
         {
@@ -1689,89 +1899,87 @@ namespace Graphic_Editor
         // Визуальное выделение элемента
         // Визуальное выделение элемента
         // Визуальное выделение элемента
+        // Визуальное выделение элемента
+        // Визуальное выделение элемента
+        // Визуальное выделение элемента
+        // Визуальное выделение элемента
         private void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
         {
             if (isSelected)
             {
-                // ВСЕГДА ВЫДЕЛЯЕМ СИНИМ ЦВЕТОМ
-                if (element is Ellipse ellipse)
+                // ВЫДЕЛЕНИЕ СИНИМ ЦВЕТОМ
+                if (element is Ellipse ellipseElement)
                 {
-                    ellipse.Stroke = Brushes.Blue;
-                    ellipse.StrokeThickness += 2;
+                    ellipseElement.Stroke = Brushes.Blue;
                 }
-                else if (element is Border border)
+                else if (element is Border borderElement)
                 {
-                    border.BorderBrush = Brushes.Blue;
-                    border.BorderThickness = new Thickness(4);
+                    borderElement.BorderBrush = Brushes.Blue;
                 }
-                else if (element is Line line)
+                else if (element is Line lineElement)
                 {
-                    line.Stroke = Brushes.Blue;
-                    line.StrokeThickness += 2;
+                    lineElement.Stroke = Brushes.Blue;
                 }
-                else if (element is TextBlock textBlock)
+                else if (element is TextBlock textBlockElement)
                 {
-                    textBlock.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 255));
+                    textBlockElement.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 255));
                 }
             }
             else
             {
-                // ВОЗВРАЩАЕМ ОРИГИНАЛЬНЫЕ ЦВЕТА
-                if (element is Ellipse ellipse)
+                // ВОЗВРАЩАЕМ ОРИГИНАЛЬНЫЕ ЗНАЧЕНИЯ ИЗ СОХРАНЕННЫХ
+                if (element is Ellipse ellipseElement)
                 {
                     if (originalStrokeColors.ContainsKey(element))
                     {
-                        ellipse.Stroke = originalStrokeColors[element];
+                        ellipseElement.Stroke = originalStrokeColors[element];
                     }
                     else
                     {
                         // Если цвет не сохранен, используем логику по умолчанию
-                        if (ellipse.Fill == Brushes.Transparent) // Кольцо
+                        if (ellipseElement.Fill == Brushes.Transparent) // Кольцо
                         {
-                            ellipse.Stroke = Brushes.White;
+                            ellipseElement.Stroke = Brushes.White;
                         }
                         else // Круг
                         {
-                            ellipse.Stroke = Brushes.Black;
+                            ellipseElement.Stroke = Brushes.Black;
                         }
                     }
-                    ellipse.StrokeThickness = Math.Max(ellipse.StrokeThickness - 2, 1);
                 }
-                else if (element is Border border)
+                else if (element is Border borderElement)
                 {
                     if (originalStrokeColors.ContainsKey(element))
                     {
-                        border.BorderBrush = originalStrokeColors[element];
+                        borderElement.BorderBrush = originalStrokeColors[element];
                     }
                     else
                     {
-                        border.BorderBrush = Brushes.White;
+                        borderElement.BorderBrush = Brushes.White;
                     }
-                    border.BorderThickness = new Thickness(2);
                 }
-                else if (element is Line line)
+                else if (element is Line lineElement)
                 {
                     if (originalStrokeColors.ContainsKey(element))
                     {
-                        line.Stroke = originalStrokeColors[element];
+                        lineElement.Stroke = originalStrokeColors[element];
                     }
                     else
                     {
-                        line.Stroke = Brushes.White;
+                        lineElement.Stroke = Brushes.White;
                     }
-                    line.StrokeThickness = Math.Max(line.StrokeThickness - 2, 1);
                 }
-                else if (element is TextBlock textBlock)
+                else if (element is TextBlock textBlockElement)
                 {
                     if (originalStrokeColors.ContainsKey(element))
                     {
-                        textBlock.Foreground = originalStrokeColors[element];
+                        textBlockElement.Foreground = originalStrokeColors[element];
                     }
-                    textBlock.Background = Brushes.Transparent;
+                    textBlockElement.Background = Brushes.Transparent;
                 }
             }
         }
-        private void Shape_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        private void Shape_MouseLeftButtonUp(object sender, MouseEventArgs e)
         {
             var element = sender as UIElement;
             if (element != null)
@@ -1786,15 +1994,15 @@ namespace Graphic_Editor
                 {
                     Point dropPosition = e.GetPosition(MainCanvas);
 
-                    // ЕСЛИ БРОСИЛИ ФИГУРУ НАД МЕНЮ - УДАЛЯЕМ ЕЕ
+                    // ЕСЛИ БРОСИЛИ ФИГУРУ ВНЕ РАБОЧЕЙ ОБЛАСТИ - УДАЛЯЕМ ЕЕ
                     if (dropPosition.Y <= WorkAreaTop ||
-                dropPosition.Y >= MainCanvas.ActualHeight - WorkAreaBottom)
+                        dropPosition.Y >= MainCanvas.ActualHeight - WorkAreaBottom)
                     {
                         MainCanvas.Children.Remove(shapeCopy);
                     }
                     else
                     {
-                        // Если копия была создана, делаем ее полностью видимой и добавляем функционал перетаскивания
+                        // Если копия была создана в рабочей области, делаем ее полностью видимой
                         shapeCopy.Opacity = 1.0;
 
                         // ВОЗВРАЩАЕМ НОРМАЛЬНЫЙ ZIndex ДЛЯ ФИГУРЫ НА ХОЛСТЕ
@@ -1807,17 +2015,43 @@ namespace Graphic_Editor
 
                         // ВЫДЕЛЯЕМ НОВУЮ ФИГУРУ ПОСЛЕ ПЕРЕТАСКИВАНИЯ
                         SelectElement(shapeCopy as FrameworkElement);
-
-                        
                     }
                 }
+
+                // СНИМАЕМ ВЫДЕЛЕНИЕ С ФИГУРЫ В НОТАЦИИ
                 ApplySelectionVisualFeedback(element, false);
+
                 draggedElement = null;
                 shapeCopy = null;
                 e.Handled = true;
             }
         }
+        // Метод для принудительного обновления толщины во всех связанных элементах
+        private void UpdateStrokeThicknessInAllReferences(UIElement element, double thickness)
+        {
+            // Обновляем толщину в основном элементе
+            if (element is Ellipse ellipse)
+            {
+                ellipse.StrokeThickness = thickness;
+            }
+            else if (element is Border border)
+            {
+                border.BorderThickness = new Thickness(thickness);
+            }
+            else if (element is Line line)
+            {
+                line.StrokeThickness = thickness;
+            }
 
+            // Сохраняем в словарь
+            originalStrokeThickness[element] = thickness;
+
+            // Если это selectedElement, обновляем и в selectedShape
+            if (selectedElement == element && selectedShape != null)
+            {
+                originalStrokeThickness[selectedShape] = thickness;
+            }
+        }
         private bool IsShapeFromNotation(UIElement element)
         {
             // Проверяем, находится ли фигура в панели нотации
@@ -1841,155 +2075,154 @@ namespace Graphic_Editor
 
         private UIElement CreateShapeCopy(UIElement original)
         {
-            // Создаем копию фигуры в зависимости от типа оригинала
+            // Создаем копию фигуры в зависимости от типа оригинала с фиксированными размерами и толщиной
             if (original == Circle)
             {
-                return new Ellipse
+                var copy = new Ellipse
                 {
-                    Width = GetElementWidth(Circle),
-                    Height = GetElementHeight(Circle),
+                    Width = 110,
+                    Height = 110,
                     Fill = (Circle as Ellipse).Fill,
                     Stroke = (Circle as Ellipse).Stroke,
-                    StrokeThickness = 3,
+                    StrokeThickness = 3, // ФИКСИРОВАННАЯ толщина
                     Cursor = Cursors.Hand
                 };
+                originalStrokeThickness[copy] = 3;
+                return copy;
             }
             else if (original == UmlInitialNode)
             {
-                var originalBorder = UmlInitialNode as Border;
-                var innerCircle = originalBorder.Child as Ellipse;
-
-                // Получаем размеры из оригинала
-                double containerWidth = GetElementWidth(UmlInitialNode);
-                double containerHeight = GetElementHeight(UmlInitialNode);
-
-                // Создаем внешний Border (кольцо)
                 var border = new Border
                 {
-                    Width = containerWidth,
-                    Height = containerHeight,
+                    Width = 110,
+                    Height = 110,
                     Background = Brushes.Transparent,
                     BorderBrush = Brushes.White,
-                    BorderThickness = new Thickness(3),
-                    CornerRadius = new CornerRadius(containerWidth / 2), // Делаем круглым
+                    BorderThickness = new Thickness(3), // ФИКСИРОВАННАЯ толщина
+                    CornerRadius = new CornerRadius(55),
                     Cursor = Cursors.Hand
                 };
 
-                // Создаем внутренний круг
                 var circle = new Ellipse
                 {
-                    Width = GetElementWidth(innerCircle),
-                    Height = GetElementHeight(innerCircle),
+                    Width = 80,
+                    Height = 80,
                     Fill = Brushes.White,
                     Stroke = Brushes.Black,
-                    StrokeThickness = 1,
+                    StrokeThickness = 1, // ФИКСИРОВАННАЯ толщина
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center
                 };
 
-                // Добавляем круг внутрь Border'а
                 border.Child = circle;
+                originalStrokeThickness[border] = 3;
+                originalStrokeThickness[circle] = 1;
                 return border;
             }
-
             else if (original == SimpleRing)
             {
-                return new Ellipse
+                var copy = new Ellipse
                 {
-                    Width = GetElementWidth(SimpleRing),
-                    Height = GetElementHeight(SimpleRing),
+                    Width = 110,
+                    Height = 110,
                     Stroke = (SimpleRing as Ellipse).Stroke,
-                    StrokeThickness = 5,
+                    StrokeThickness = 5, // ФИКСИРОВАННАЯ толщина
                     Fill = Brushes.Transparent,
                     Cursor = Cursors.Hand
                 };
+                originalStrokeThickness[copy] = 5;
+                return copy;
             }
             else if (original == Ellipse)
             {
-                return new Ellipse
+                var copy = new Ellipse
                 {
-                    Width = GetElementWidth(Ellipse),
-                    Height = GetElementHeight(Ellipse),
+                    Width = 130,
+                    Height = 80,
                     Stroke = (Ellipse as Ellipse).Stroke,
-                    StrokeThickness = 3,
+                    StrokeThickness = 3, // ФИКСИРОВАННАЯ толщина
                     Fill = Brushes.Transparent,
                     Cursor = Cursors.Hand
                 };
+                originalStrokeThickness[copy] = 3;
+                return copy;
             }
-
             else if (original == Square)
             {
-                var originalBorder = Square as Border;
-                return new Border
+                var copy = new Border
                 {
-                    Width = GetElementWidth(originalBorder),
-                    Height = GetElementHeight(originalBorder),
-                    Background = originalBorder.Background,
-                    BorderBrush = originalBorder.BorderBrush,
-                    BorderThickness = new Thickness(2),
-                    CornerRadius = originalBorder.CornerRadius,
+                    Width = 100,
+                    Height = 100,
+                    Background = (Square as Border).Background,
+                    BorderBrush = (Square as Border).BorderBrush,
+                    BorderThickness = new Thickness(2), // ФИКСИРОВАННАЯ толщина
+                    CornerRadius = (Square as Border).CornerRadius,
                     Cursor = Cursors.Hand
                 };
+                originalStrokeThickness[copy] = 2;
+                return copy;
             }
             else if (original == ResizableSquare)
             {
-                var originalDiamond = ResizableSquare as Border;
-                var diamond = new Border
+                var copy = new Border
                 {
-                    Width = GetElementWidth(originalDiamond),
-                    Height = GetElementHeight(originalDiamond),
-                    Background = originalDiamond.Background,
-                    BorderBrush = originalDiamond.BorderBrush,
-                    BorderThickness = new Thickness(2),
-                    CornerRadius = originalDiamond.CornerRadius,
+                    Width = 70,
+                    Height = 71,
+                    Background = (ResizableSquare as Border).Background,
+                    BorderBrush = (ResizableSquare as Border).BorderBrush,
+                    BorderThickness = new Thickness(2), // ФИКСИРОВАННАЯ толщина
+                    CornerRadius = (ResizableSquare as Border).CornerRadius,
                     Cursor = Cursors.Hand,
                     RenderTransformOrigin = new Point(0.5, 0.5)
                 };
-                // Применяем ТОЛЬКО поворот на 45 градусов как у оригинала
-                diamond.RenderTransform = new RotateTransform(45);
-                return diamond;
+                copy.RenderTransform = new RotateTransform(45);
+                originalStrokeThickness[copy] = 2;
+                return copy;
             }
             else if (original == Rectangle)
             {
-                var originalBorder = Rectangle as Border;
-                return new Border
+                var copy = new Border
                 {
-                    Width = GetElementWidth(originalBorder),
-                    Height = GetElementHeight(originalBorder),
-                    Background = originalBorder.Background,
-                    BorderBrush = originalBorder.BorderBrush,
-                    BorderThickness = new Thickness(2),
-                    CornerRadius = originalBorder.CornerRadius,
+                    Width = 150,
+                    Height = 80,
+                    Background = (Rectangle as Border).Background,
+                    BorderBrush = (Rectangle as Border).BorderBrush,
+                    BorderThickness = new Thickness(2), // ФИКСИРОВАННАЯ толщина
+                    CornerRadius = (Rectangle as Border).CornerRadius,
                     Cursor = Cursors.Hand
                 };
+                originalStrokeThickness[copy] = 2;
+                return copy;
             }
             else if (original == stick)
             {
-                var originalBorder = stick as Border;
-                return new Border
+                var copy = new Border
                 {
-                    Width = GetElementWidth(originalBorder),
-                    Height = GetElementHeight(originalBorder),
-                    Background = originalBorder.Background,
-                    BorderBrush = originalBorder.BorderBrush,
-                    BorderThickness = new Thickness(2),
-                    CornerRadius = originalBorder.CornerRadius,
+                    Width = 200,
+                    Height = 30,
+                    Background = (stick as Border).Background,
+                    BorderBrush = (stick as Border).BorderBrush,
+                    BorderThickness = new Thickness(2), // ФИКСИРОВАННАЯ толщина
+                    CornerRadius = (stick as Border).CornerRadius,
                     Cursor = Cursors.Hand
                 };
+                originalStrokeThickness[copy] = 2;
+                return copy;
             }
             else if (original == SuperEllipse)
             {
-                var originalBorder = SuperEllipse as Border;
-                return new Border
+                var copy = new Border
                 {
-                    Width = GetElementWidth(originalBorder),
-                    Height = GetElementHeight(originalBorder),
-                    Background = originalBorder.Background,
-                    BorderBrush = originalBorder.BorderBrush,
-                    BorderThickness = new Thickness(2),
-                    CornerRadius = originalBorder.CornerRadius,
+                    Width = 120,
+                    Height = 80,
+                    Background = (SuperEllipse as Border).Background,
+                    BorderBrush = (SuperEllipse as Border).BorderBrush,
+                    BorderThickness = new Thickness(2), // ФИКСИРОВАННАЯ толщина
+                    CornerRadius = (SuperEllipse as Border).CornerRadius,
                     Cursor = Cursors.Hand
                 };
+                originalStrokeThickness[copy] = 2;
+                return copy;
             }
             return null;
         }
@@ -2013,7 +2246,9 @@ namespace Graphic_Editor
             var element = sender as UIElement;
             if (element != null)
             {
-                
+                // Сохраняем текущую толщину ПЕРЕД выделением
+                SaveOriginalColors(element);
+
                 // Выделяем элемент при щелчке лкм
                 SelectElement(element as FrameworkElement);
                 isDragging = true;
@@ -2029,8 +2264,6 @@ namespace Graphic_Editor
                 // ПОДНИМАЕМ ЭЛЕМЕНТ НАВЕРХ ПРИ ЗАХВАТЕ (ZIndex = 1000)
                 Canvas.SetZIndex(element, 1000);
 
-                // Визуальный фидбэк
-                
                 e.Handled = true;
             }
         }
@@ -2040,8 +2273,23 @@ namespace Graphic_Editor
             var element = sender as UIElement;
             if (element != null)
             {
-                // ВЫДЕЛЯЕМ фигуру при клике (но не начинаем новое перетаскивание)
-                
+                // Сохраняем текущую толщину ПОСЛЕ перетаскивания
+                if (originalStrokeThickness.ContainsKey(element))
+                {
+                    // Обновляем сохраненную толщину текущим значением
+                    if (element is Ellipse ellipseElement)
+                    {
+                        originalStrokeThickness[element] = ellipseElement.StrokeThickness;
+                    }
+                    else if (element is Border borderElement)
+                    {
+                        originalStrokeThickness[element] = borderElement.BorderThickness.Left;
+                    }
+                    else if (element is Line lineElement)
+                    {
+                        originalStrokeThickness[element] = lineElement.StrokeThickness;
+                    }
+                }
 
                 isDragging = false;
                 element.ReleaseMouseCapture();
@@ -2049,15 +2297,11 @@ namespace Graphic_Editor
                 // ФИКСИРУЕМ ТРАНСФОРМАЦИЮ ДЛЯ РОМБА
                 if (element is Border border && border.RenderTransform is RotateTransform rotateTransform)
                 {
-                    // Убеждаемся что ромб сохраняет поворот на 45 градусов
                     rotateTransform.Angle = 45;
                 }
 
                 // ВОЗВРАЩАЕМ НОРМАЛЬНЫЙ ZIndex ПОСЛЕ ПЕРЕТАСКИВАНИЯ
-                Canvas.SetZIndex(element, 1000); // Оставляем выделенный элемент поверх других
-
-                // Возвращаем исходный вид
-                ApplyCanvasDragVisualFeedback(element, false);
+                Canvas.SetZIndex(element, 1000);
 
                 draggedElement = null;
                 e.Handled = true;
@@ -2084,45 +2328,7 @@ namespace Graphic_Editor
         
 
         // Сохранение оригинальных цветов
-        private void SaveOriginalColors(UIElement shape)
-        {
-            if (shape is Ellipse ellipse)
-            {
-                if (!originalStrokeColors.ContainsKey(shape))
-                {
-                    originalStrokeColors[shape] = ellipse.Stroke;
-                }
-                if (!originalFillColors.ContainsKey(shape))
-                {
-                    originalFillColors[shape] = ellipse.Fill;
-                }
-            }
-            else if (shape is Border border)
-            {
-                if (!originalStrokeColors.ContainsKey(shape))
-                {
-                    originalStrokeColors[shape] = border.BorderBrush;
-                }
-                if (!originalFillColors.ContainsKey(shape))
-                {
-                    originalFillColors[shape] = border.Background;
-                }
-            }
-            else if (shape is Line line)
-            {
-                if (!originalStrokeColors.ContainsKey(shape))
-                {
-                    originalStrokeColors[shape] = line.Stroke;
-                }
-            }
-            else if (shape is TextBlock textBlock)
-            {
-                if (!originalStrokeColors.ContainsKey(shape))
-                {
-                    originalStrokeColors[shape] = textBlock.Foreground;
-                }
-            }
-        }
+        
 
         // Метод применения цвета к выделенной фигуре
         private void ApplyColorToSelectedShape(string hexColor)
