@@ -446,7 +446,7 @@
                             HorizontalAlignment="Center"/>
                     </Button>
                     <!-- Комментарий -->
-                    <Button      
+                    <ToggleButton x:Name="CommentModeButton"      
                         Width="32" 
                         Height="32"
                         Cursor="Hand"
@@ -459,7 +459,7 @@
                             Height="30"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Center"/>
-                    </Button>
+                    </ToggleButton>
                     <!-- Квадратики -->
                     <Button      
                         Width="32" 

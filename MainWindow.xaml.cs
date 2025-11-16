@@ -1,27 +1,29 @@
-﻿using System;
-using Microsoft.Win32;
-using System.IO;
-using System.Windows.Media.Imaging;
-using System.Diagnostics;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
+using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Shapes;
-using System.Xml;
-using System.Windows.Shell;
-using System.Windows.Ink;
-using System.Globalization;
+using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
+using System.Windows.Shapes;
+using System.Windows.Shell;
+using System.Xml;
+using System.Xml.Linq;
 
 namespace Graphic_Editor
 {
@@ -58,6 +60,17 @@ namespace Graphic_Editor
         // Список всех плашек для управления видимостью
         private List<Border> panels = new List<Border>();
 
+        private bool isCommentModeActive = false;
+        private List<Comment> comments = new List<Comment>();
+
+        public class Comment
+        {
+            public UIElement VisualElement { get; set; }
+            public UIElement TextElement { get; set; }
+            public string Text { get; set; }
+            public Point Position { get; set; }
+        }
+
         public MainWindow()
         {
             InitializeComponent();
@@ -74,11 +87,26 @@ namespace Graphic_Editor
 
             // Очищаем комбо-боксы при запуске
             ClearColorComboBoxesOnStartup();
+
+            // Добавляем обработчики для комментариев
+            CommentModeButton.Click += CommentModeButton_Click;
         }
 
         // Обработчик клика по пустой области канваса
         private void MainCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (isCommentModeActive)
+            {
+                Point clickPosition = e.GetPosition(MainCanvas);
+
+                // Проверяем, что клик не по другим элементам
+                if (e.OriginalSource is System.Windows.Controls.Canvas)
+                {
+                    
+                    e.Handled = true;
+                    return; // Выходим, чтобы не выполнять остальной код
+                }
+            }
             // Проверяем, был ли клик непосредственно по канвасу, а не по дочернему элементу
             if (e.OriginalSource is System.Windows.Controls.Canvas)
             {
@@ -2472,6 +2500,21 @@ namespace Graphic_Editor
             transformGroup.Children[1].BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnimation);
             transformGroup.Children[1].BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnimation);
         }
+        // Обработчик кнопки комментариев
+        private void CommentModeButton_Click(object sender, RoutedEventArgs e)
+        {
+            isCommentModeActive = CommentModeButton.IsChecked == true;
+
+            if (isCommentModeActive)
+            {
+                MainCanvas.Cursor = Cursors.Hand;
+            }
+            else
+            {
+                MainCanvas.Cursor = Cursors.Arrow;
+            }
+        }
+
 
         private double GetElementWidth(UIElement element)
         {
