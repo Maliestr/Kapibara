@@ -2591,7 +2591,7 @@ namespace Graphic_Editor
             {
                 if (e.ClickCount == 2)
                 {
-
+                    EditComment(comment);
                     e.Handled = true;
                 }
             };
@@ -2619,7 +2619,100 @@ namespace Graphic_Editor
             };
 
             // Сразу открываем редактор
+            EditComment(comment);
+        }
+        // Редактирование комментария
+        private void EditComment(Comment comment)
+        {
+            var editTextBox = new TextBox
+            {
+                Width = 200,
+                Height = 100,
+                Background = Brushes.White,
+                Foreground = Brushes.Black,
+                BorderBrush = Brushes.Gray,
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
+                AcceptsReturn = false,
+                Text = comment.Text,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+            };
 
+            // Позиционируем рядом с комментарием
+            double left = Canvas.GetLeft(comment.VisualElement) + 20;
+            double top = Canvas.GetTop(comment.VisualElement);
+            Canvas.SetLeft(editTextBox, left);
+            Canvas.SetTop(editTextBox, top);
+
+            MainCanvas.Children.Add(editTextBox);
+            editTextBox.Focus();
+            editTextBox.SelectAll();
+
+            // Завершение редактирования
+            void FinishEditing()
+            {
+                string newText = editTextBox.Text.Trim();
+
+                if (string.IsNullOrEmpty(newText))
+                {
+
+                }
+                else
+                {
+                    comment.Text = newText;
+
+                    if (comment.VisualElement is Border border)
+                    {
+                        border.Background = Brushes.Red;
+                    }
+
+                    // Обновляем TextBlock
+                    if (comment.TextElement is Border textBorder && textBorder.Child is TextBlock textBlock)
+                    {
+                        textBlock.Text = newText;
+                    }
+                }
+
+                MainCanvas.Children.Remove(editTextBox);
+            }
+
+            editTextBox.KeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Enter)
+                {
+                    // Если нажат Ctrl+Enter - добавляем новую строку
+                    if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+                    {
+                        // Разрешаем обычное поведение TextBox (добавление новой строки)
+                        return;
+                    }
+
+                    // Обычный Enter - завершаем редактирование
+                    FinishEditing();
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.Escape)
+                {
+                    // При отмене проверяем, был ли текст изначально
+                    if (string.IsNullOrEmpty(comment.Text))
+                    {
+
+                    }
+                    MainCanvas.Children.Remove(editTextBox);
+                    e.Handled = true;
+                }
+            };
+
+            editTextBox.LostFocus += (s, e) =>
+            {
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (MainCanvas.Children.Contains(editTextBox))
+                    {
+                        FinishEditing();
+                    }
+                }));
+            };
         }
 
 
