@@ -3080,10 +3080,9 @@ namespace Graphic_Editor
 
         private void CompleteArrow()
         {
-
             if (currentArrow != null && currentArrow.Points.Count >= 2)
             {
-                // Удаляем последнюю точку если она совпадает с предыдущей (для чистоты)
+                // Удаляем последнюю точку если она совпадает с предыдущей
                 if (currentArrow.Points.Count > 2)
                 {
                     Point lastPoint = currentArrow.Points[currentArrow.Points.Count - 1];
@@ -3095,19 +3094,12 @@ namespace Graphic_Editor
                     }
                 }
 
-                // Получаем точки для наконечника (последний сегмент)
+                // Получаем точки для наконечника
                 Point lineStart = currentArrow.Points[currentArrow.Points.Count - 2];
                 Point lineEnd = currentArrow.Points[currentArrow.Points.Count - 1];
 
-                // Создаем наконечник только для последнего сегмента
-                Polygon arrowhead = CreateArrowhead(lineStart, lineEnd, currentArrow.Stroke);
-
-                if (arrowhead != null)
-                {
-                    MainCanvas.Children.Add(arrowhead);
-                    MakeArrowheadDraggable(arrowhead, currentArrow);
-                    arrows.Add(arrowhead);
-                }
+                // Создаем и прикрепляем наконечник
+                CreateAndAttachArrowhead(currentArrow, lineStart, lineEnd);
 
                 // Добавляем саму ломаную линию
                 arrows.Add(currentArrow);
@@ -3115,24 +3107,22 @@ namespace Graphic_Editor
                 SaveToUndoStack(currentArrow);
 
                 currentArrow = null;
-
-                // Автоматически выходим из режима рисования
                 ToggleArrowMode();
-
-                /*currentArrow.StrokeThickness = 4;
-                currentArrow.StrokeEndLineCap = PenLineCap.Triangle;
-
-                // Добавляем стрелку в список для управления
-                arrows.Add(currentArrow);
-
-                // Делаем стрелку перетаскиваемой
-                MakeArrowDraggable(currentArrow);
-
-                // Сохраняем в стек отмены
-                SaveToUndoStack(currentArrow);
-
-                currentArrow = null;*/
             }
+
+            /*currentArrow.StrokeThickness = 4;
+            currentArrow.StrokeEndLineCap = PenLineCap.Triangle;
+
+            // Добавляем стрелку в список для управления
+            arrows.Add(currentArrow);
+
+            // Делаем стрелку перетаскиваемой
+            MakeArrowDraggable(currentArrow);
+
+            // Сохраняем в стек отмены
+            SaveToUndoStack(currentArrow);
+
+            currentArrow = null;*/
         }
         // Создание стрелки с наконечником
         private void CreateArrowWithArrowhead(Point startPoint, Point endPoint)
@@ -3169,7 +3159,7 @@ namespace Graphic_Editor
         // Обработчики событий для перетаскивания стрелок
         private void Arrow_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (isArrowModeActive) return; // Не перетаскиваем в режиме рисования
+            if (isArrowModeActive) return;
 
             var arrow = sender as Polyline;
             if (arrow != null)
@@ -3180,7 +3170,12 @@ namespace Graphic_Editor
                 isDragging = true;
                 draggedElement = arrow;
                 arrow.CaptureMouse();
-                offset = e.GetPosition(arrow);
+
+                // Сохраняем начальную позицию мыши
+                dragStartPoint = e.GetPosition(MainCanvas);
+
+                // Сохраняем оригинальные точки стрелки
+                originalArrowPoints = new PointCollection(arrow.Points);
 
                 // Визуальный фидбэк
                 arrow.Stroke = Brushes.Red;
@@ -3189,29 +3184,37 @@ namespace Graphic_Editor
                 e.Handled = true;
             }
         }
+
+        //поле для хранения перетаскиваемого наконечника
+        private Polygon draggedArrowhead;
+
+        //поле для хранения оригинальных точек
+        private PointCollection originalArrowPoints;
+
         private void Arrow_MouseMove(object sender, MouseEventArgs e)
         {
             if (isDragging && draggedElement != null && e.LeftButton == MouseButtonState.Pressed)
             {
                 var arrow = draggedElement as Polyline;
-                if (arrow != null)
+                if (arrow != null && originalArrowPoints != null)
                 {
                     Point currentPosition = e.GetPosition(MainCanvas);
 
-                    // Вычисляем смещение для всех точек стрелки
-                    double deltaX = currentPosition.X - offset.X - arrowStartPoint.X;
-                    double deltaY = currentPosition.Y - offset.Y - arrowStartPoint.Y;
+                    // Вычисляем смещение от начальной точки
+                    double deltaX = currentPosition.X - dragStartPoint.X;
+                    double deltaY = currentPosition.Y - dragStartPoint.Y;
 
-                    // Создаем новую коллекцию точек со смещением
+                    // Создаем новую коллекцию точек с применением смещения
                     var newPoints = new PointCollection();
-                    foreach (Point point in arrow.Points)
+                    foreach (Point point in originalArrowPoints)
                     {
                         newPoints.Add(new Point(point.X + deltaX, point.Y + deltaY));
                     }
 
+                    // Обновляем точки стрелки
                     arrow.Points = newPoints;
-                    arrowStartPoint = currentPosition;
-                    // Находим и перемещаем соответствующий наконечник
+
+                    // Обновляем позицию наконечника
                     UpdateArrowheadPosition(arrow);
                 }
             }
@@ -3228,10 +3231,14 @@ namespace Graphic_Editor
                 arrow.Stroke = Brushes.Black;
                 arrow.StrokeThickness = Math.Max(arrow.StrokeThickness - 1, 2);
 
+                // Очищаем временные данные
+                originalArrowPoints = null;
                 draggedElement = null;
                 e.Handled = true;
             }
         }
+
+
         // Выделение стрелки
         private void SelectArrow(Polyline arrow)
         {
@@ -3424,6 +3431,14 @@ namespace Graphic_Editor
                 MainCanvas.Children.Add(arrow);
                 arrows.Add(arrow);
                 MakeArrowDraggable(arrow);
+
+                // Создаем наконечник для загруженной стрелки
+                if (arrow.Points.Count >= 2)
+                {
+                    Point lineStart = arrow.Points[arrow.Points.Count - 2];
+                    Point lineEnd = arrow.Points[arrow.Points.Count - 1];
+                    CreateAndAttachArrowhead(arrow, lineStart, lineEnd);
+                }
             }
         }
         // Обработчик для кнопки пера на панели инструментов
@@ -3446,12 +3461,15 @@ namespace Graphic_Editor
             dx /= length;
             dy /= length;
 
-            // Размеры наконечника
-            double arrowLength = 12;
-            double arrowWidth = 8;
+            // Размеры наконечника (должны совпадать с UpdateArrowheadPoints)
+            double arrowLength = 15;
+            double arrowWidth = 10;
 
             // Вычисляем точки треугольника
+            // Острие наконечника должно быть точно в конце стрелки
             Point arrowTip = endPoint;
+
+            // Боковые точки наконечника
             Point arrowLeft = new Point(
                 endPoint.X - dx * arrowLength + dy * arrowWidth,
                 endPoint.Y - dy * arrowLength - dx * arrowWidth
@@ -3489,27 +3507,24 @@ namespace Graphic_Editor
         {
             if (arrow.Points.Count < 2) return;
 
-            // Находим наконечник для этой стрелки (можно хранить связь в Dictionary)
-            Point lineStart = arrow.Points[0];
+            // Находим последний сегмент стрелки
+            Point lineStart = arrow.Points[arrow.Points.Count - 2];
             Point lineEnd = arrow.Points[arrow.Points.Count - 1];
 
             // Ищем наконечник для этой стрелки
-            for (int i = 0; i < arrows.Count; i++)
+            Polygon arrowhead = FindArrowheadForArrow(arrow);
+
+            if (arrowhead != null)
             {
-                if (arrows[i] is Polygon arrowhead && IsArrowheadForLine(arrowhead, arrow))
-                {
-                    // Пересоздаем наконечник на новой позиции
-                    MainCanvas.Children.Remove(arrowhead);
-                    arrows.RemoveAt(i);
-
-                    Polygon newArrowhead = CreateArrowhead(lineStart, lineEnd, arrow.Stroke);
-                    MainCanvas.Children.Add(newArrowhead);
-                    arrows.Add(newArrowhead);
-                    MakeArrowheadDraggable(newArrowhead, arrow);
-                    break;
-                }
+                // Прямо обновляем позицию наконечника
+                UpdateArrowheadGeometry(arrowhead, lineStart, lineEnd, arrow.Stroke);
             }
-
+            else
+            {
+                // Создаем новый наконечник если его нет
+                CreateAndAttachArrowhead(arrow, lineStart, lineEnd);
+            }
+    
             // Ищем наконечник по позиции (упрощенный способ)
             /*foreach (var element in arrows)
             {
@@ -3528,17 +3543,121 @@ namespace Graphic_Editor
             }*/
 
         }
+
+        // Метод для создания и прикрепления наконечника
+        private void CreateAndAttachArrowhead(Polyline arrow, Point lineStart, Point lineEnd)
+        {
+            Polygon arrowhead = CreateArrowhead(lineStart, lineEnd, arrow.Stroke);
+            if (arrowhead != null)
+            {
+                MainCanvas.Children.Add(arrowhead);
+                arrows.Add(arrowhead);
+                MakeArrowheadDraggable(arrowhead, arrow);
+
+                // Сохраняем связь
+                StoreArrowheadRelation(arrow, arrowhead);
+            }
+        }
+
+        // Словарь для хранения связей стрелок и наконечников
+        private Dictionary<Polyline, Polygon> arrowToArrowheadMap = new Dictionary<Polyline, Polygon>();
+
+        // Метод для сохранения связи между стрелкой и наконечником
+        private void StoreArrowheadRelation(Polyline arrow, Polygon arrowhead)
+        {
+            arrowToArrowheadMap[arrow] = arrowhead;
+        }
+
+
+        // Метод для обновления геометрии наконечника
+        private void UpdateArrowheadGeometry(Polygon arrowhead, Point lineStart, Point lineEnd, Brush color)
+        {
+            // Вычисляем направление стрелки
+            double dx = lineEnd.X - lineStart.X;
+            double dy = lineEnd.Y - lineStart.Y;
+            double length = Math.Sqrt(dx * dx + dy * dy);
+
+            if (length == 0) return;
+
+            // Нормализуем вектор направления
+            dx /= length;
+            dy /= length;
+
+            // Размеры наконечника
+            double arrowLength = 20;
+            double arrowWidth = 12;
+
+            // Вычисляем точки треугольника
+            // Острие наконечника должно быть точно в конце стрелки
+            Point arrowTip = lineEnd;
+
+            // Боковые точки наконечника
+            Point arrowLeft = new Point(
+                lineEnd.X - dx * arrowLength + dy * arrowWidth,
+                lineEnd.Y - dy * arrowLength - dx * arrowWidth
+            );
+            Point arrowRight = new Point(
+                lineEnd.X - dx * arrowLength - dy * arrowWidth,
+                lineEnd.Y - dy * arrowLength + dx * arrowWidth
+            );
+
+            // Обновляем точки наконечника
+            arrowhead.Points = new PointCollection { arrowTip, arrowLeft, arrowRight };
+            arrowhead.Fill = color;
+            arrowhead.Stroke = color;
+        }
+
+        // Метод для обновления точек существующего наконечника
+        private void UpdateArrowheadPoints(Polygon arrowhead, Point lineStart, Point lineEnd, Brush color)
+        {
+            // Вычисляем направление стрелки
+            double dx = lineEnd.X - lineStart.X;
+            double dy = lineEnd.Y - lineStart.Y;
+            double length = Math.Sqrt(dx * dx + dy * dy);
+
+            if (length == 0) return;
+
+            // Нормализуем вектор направления
+            dx /= length;
+            dy /= length;
+
+            // Размеры наконечника
+            double arrowLength = 15; // Увеличим для лучшей видимости
+            double arrowWidth = 10;
+
+            // Вычисляем новые точки треугольника
+            // Острие наконечника должно быть точно в конце стрелки
+            Point arrowTip = lineEnd;
+
+            // Боковые точки наконечника
+            Point arrowLeft = new Point(
+                lineEnd.X - dx * arrowLength + dy * arrowWidth,
+                lineEnd.Y - dy * arrowLength - dx * arrowWidth
+            );
+            Point arrowRight = new Point(
+                lineEnd.X - dx * arrowLength - dy * arrowWidth,
+                lineEnd.Y - dy * arrowLength + dx * arrowWidth
+            );
+
+            // Обновляем точки наконечника
+            arrowhead.Points = new PointCollection { arrowTip, arrowLeft, arrowRight };
+            arrowhead.Fill = color;
+            arrowhead.Stroke = color;
+        }
+
+
         // Проверка, принадлежит ли наконечник стрелке
+        // Улучшенный метод проверки принадлежности наконечника
         private bool IsArrowheadForLine(Polygon arrowhead, Polyline arrow)
         {
-            if (arrow.Points.Count < 2) return false;
+            if (arrow.Points.Count < 2 || arrowhead.Points.Count == 0) return false;
 
             Point lineEnd = arrow.Points[arrow.Points.Count - 1];
-            Point arrowheadCenter = GetPolygonCenter(arrowhead);
+            Point arrowheadTip = arrowhead.Points[0]; // Первая точка - острие наконечника
 
-            // Проверяем близость позиций
-            return Math.Abs(arrowheadCenter.X - lineEnd.X) < 5 &&
-                   Math.Abs(arrowheadCenter.Y - lineEnd.Y) < 5;
+            // Проверяем близость острия наконечника к концу стрелки
+            double distance = Math.Sqrt(Math.Pow(arrowheadTip.X - lineEnd.X, 2) + Math.Pow(arrowheadTip.Y - lineEnd.Y, 2));
+            return distance < 15; // Увеличиваем допуск для лучшего определения
         }
 
         // Получение центра полигона
@@ -3561,6 +3680,28 @@ namespace Graphic_Editor
                 CompleteArrow();
                 e.Handled = true;
             }
+        }
+
+        // Метод для поиска наконечника по стрелке
+        private Polygon FindArrowheadForArrow(Polyline arrow)
+        {
+            // Сначала ищем в словаре
+            if (arrowToArrowheadMap.ContainsKey(arrow))
+            {
+                return arrowToArrowheadMap[arrow];
+            }
+
+            // Если нет в словаре, ищем по геометрической близости
+            foreach (var element in arrows)
+            {
+                if (element is Polygon arrowhead && IsArrowheadForLine(arrowhead, arrow))
+                {
+                    // Сохраняем связь для будущего использования
+                    StoreArrowheadRelation(arrow, arrowhead);
+                    return arrowhead;
+                }
+            }
+            return null;
         }
 
     }
