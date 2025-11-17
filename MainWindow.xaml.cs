@@ -41,9 +41,310 @@ namespace Graphic_Editor
         {
             InitializeComponent();
             MakeAllShapesDraggable();
+<<<<<<< Updated upstream
         }
 
         // Меню "Файл" - Обновленные
+=======
+
+            InitializeGrid(); // Инициализируем сетку
+            InitializePanels();
+
+            // Обработка горячих клавиш
+            this.KeyDown += MainWindow_KeyDown;
+
+
+
+        }
+
+        // Переменные для масштабирования
+        private double _currentZoom = 1.0;
+        private const double ZoomStep = 0.1;
+        private const double MinZoom = 0.1;
+        private const double MaxZoom = 5.0;
+
+        private void ZoomCanvas(double delta)
+        {
+            double newZoom = _currentZoom + delta;
+
+            // Ограничиваем масштаб
+            if (newZoom < MinZoom) newZoom = MinZoom;
+            if (newZoom > MaxZoom) newZoom = MaxZoom;
+
+            if (newZoom != _currentZoom)
+            {
+                _currentZoom = newZoom;
+                ApplyZoom();
+            }
+        }
+
+        private void ApplyZoom()
+        {
+            if (CanvasScaleTransform != null)
+            {
+                CanvasScaleTransform.ScaleX = _currentZoom;
+                CanvasScaleTransform.ScaleY = _currentZoom;
+
+                // Обновляем отображение масштаба
+                UpdateZoomText();
+            }
+        }
+
+        private void ResetZoom()
+        {
+            _currentZoom = 1.0;
+            ApplyZoom();
+        }
+
+        private void UpdateZoomText()
+        {
+            if (ZoomTextBlock != null)
+            {
+                ZoomTextBlock.Text = $"{_currentZoom * 100:0}%";
+            }
+        }
+
+        // Масштабирование колесиком мыши
+        private void MainCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                double delta = e.Delta > 0 ? ZoomStep : -ZoomStep;
+                ZoomCanvas(delta);
+                e.Handled = true;
+
+                // Показываем текст масштаба временно
+                ShowZoomTextTemporarily();
+            }
+        }
+
+        private void ShowZoomTextTemporarily()
+        {
+            if (ZoomTextBlock != null)
+            {
+                ZoomTextBlock.Visibility = Visibility.Visible;
+
+                // Скрываем через 2 секунды
+                var timer = new System.Windows.Threading.DispatcherTimer();
+                timer.Interval = TimeSpan.FromSeconds(2);
+                timer.Tick += (s, e) =>
+                {
+                    ZoomTextBlock.Visibility = Visibility.Collapsed;
+                    timer.Stop();
+                };
+                timer.Start();
+            }
+        }
+
+        
+
+        // Инициализация сетки
+        private void InitializeGrid()
+        {
+            gridPath = new System.Windows.Shapes.Path
+            {
+                Stroke = new SolidColorBrush(Color.FromArgb(60, 128, 128, 128)), // Полупрозрачный серый
+                StrokeThickness = 0.5,
+                IsHitTestVisible = false // Сетка не должна мешать взаимодействию
+            };
+
+            // Добавляем сетку на канвас, но скрываем
+            MainCanvas.Children.Add(gridPath);
+            gridPath.Visibility = Visibility.Collapsed;
+        }
+
+        // Создание сетки
+        private void CreateGrid()
+        {
+            if (MainCanvas.ActualWidth == 0 || MainCanvas.ActualHeight == 0)
+                return;
+
+            var geometryGroup = new GeometryGroup();
+
+            // Вертикальные линии
+            for (double x = 0; x < MainCanvas.ActualWidth; x += GridSize)
+            {
+                geometryGroup.Children.Add(new LineGeometry(
+                    new Point(x, 0),
+                    new Point(x, MainCanvas.ActualHeight)));
+            }
+
+            // Горизонтальные линии
+            for (double y = 0; y < MainCanvas.ActualHeight; y += GridSize)
+            {
+                geometryGroup.Children.Add(new LineGeometry(
+                    new Point(0, y),
+                    new Point(MainCanvas.ActualWidth, y)));
+            }
+
+            gridPath.Data = geometryGroup;
+        }
+
+        // Обработчик переключения сетки из меню
+        private void GridToggleMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleGridVisibility();
+        }
+
+        // Обработчик переключения привязки к сетке
+        private void SnapToGridMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleSnapToGrid();
+        }
+
+        // Метод переключения сетки
+        private void ToggleGridVisibility()
+        {
+            isGridEnabled = !isGridEnabled;
+
+            if (isGridEnabled)
+            {
+                // Создаем и показываем сетку
+                CreateGrid();
+                gridPath.Visibility = Visibility.Visible;
+                GridToggleMenuItem.IsChecked = true;
+                GridToggleMenuItem.Header = "Скрыть сетку";
+            }
+            else
+            {
+                // Скрываем сетку
+                gridPath.Visibility = Visibility.Collapsed;
+                GridToggleMenuItem.IsChecked = false;
+                GridToggleMenuItem.Header = "Показать сетку";
+            }
+        }
+
+        // Метод переключения привязки к сетке
+        private void ToggleSnapToGrid()
+        {
+            isSnapToGridEnabled = !isSnapToGridEnabled;
+
+            if (isSnapToGridEnabled)
+            {
+                SnapToGridMenuItem.IsChecked = true;
+                SnapToGridMenuItem.Header = "Отключить привязку";
+
+                // Автоматически включаем сетку если она выключена
+                if (!isGridEnabled)
+                {
+                    ToggleGridVisibility();
+                }
+            }
+            else
+            {
+                SnapToGridMenuItem.IsChecked = false;
+                SnapToGridMenuItem.Header = "Привязка к сетке";
+            }
+        }
+
+        // Метод для привязки точки к сетке
+        private Point SnapToGrid(Point originalPoint)
+        {
+            if (!isSnapToGridEnabled) return originalPoint;
+
+            double snappedX = Math.Round(originalPoint.X / GridSize) * GridSize;
+            double snappedY = Math.Round(originalPoint.Y / GridSize) * GridSize;
+
+            return new Point(snappedX, snappedY);
+        }
+
+        // Обновите метод перемещения фигур на канвасе
+        private void CanvasShape_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (isDragging && draggedElement != null && e.LeftButton == MouseButtonState.Pressed)
+            {
+                var element = draggedElement;
+                Point currentPosition = e.GetPosition(MainCanvas);
+
+                // Применяем привязку к сетке если включена
+                if (isSnapToGridEnabled)
+                {
+                    currentPosition = SnapToGrid(currentPosition);
+                }
+
+                double newLeft = currentPosition.X - offset.X;
+                double newTop = currentPosition.Y - offset.Y;
+
+                Canvas.SetLeft(element, newLeft);
+                Canvas.SetTop(element, newTop);
+            }
+        }
+
+        // Обновляем сетку при изменении размера окна
+        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+        {
+            base.OnRenderSizeChanged(sizeInfo);
+
+            if (isGridEnabled && gridPath != null)
+            {
+                // Небольшая задержка для корректного обновления размеров
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    CreateGrid();
+                }), System.Windows.Threading.DispatcherPriority.Background);
+            }
+        }
+
+        // Обновляем сетку когда канвас полностью загружен и проинициализирован
+        private void MainCanvas_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (isGridEnabled)
+            {
+                CreateGrid();
+            }
+            MainCanvas.MouseWheel += MainCanvas_MouseWheel;
+            UpdateZoomText();
+
+        }
+
+        // Добавьте горячие клавиши для удобства (опционально)
+        private void MainWindow_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.G && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                ToggleGridVisibility();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.S && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                ToggleSnapToGrid();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.F12)
+            {
+                TogglePanelsVisibility();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.H && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                // Ctrl+H - альтернативная горячая клавиша
+                TogglePanelsVisibility();
+                e.Handled = true;
+            }
+            if (Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                switch (e.Key)
+                {
+                    case Key.Add:
+                    case Key.OemPlus:
+                        ZoomCanvas(ZoomStep);
+                        e.Handled = true;
+                        break;
+                    case Key.Subtract:
+                    case Key.OemMinus:
+                        ZoomCanvas(-ZoomStep);
+                        e.Handled = true;
+                        break;
+                    case Key.D0:
+                        ResetZoom();
+                        e.Handled = true;
+                        break;
+                }
+            }
+        }
+
+        // Меню "Файл"
+>>>>>>> Stashed changes
         private void NewFile_Click(object sender, RoutedEventArgs e)
         {
             // Очищаем холст
@@ -365,17 +666,21 @@ namespace Graphic_Editor
         private void ZoomIn_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show("Увеличить");
+            ZoomCanvas(ZoomStep);
         }
 
         private void ZoomOut_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show("Уменьшить");
+            ZoomCanvas(-ZoomStep);
         }
 
         private void ResetZoom_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show("Сбросить масштаб");
+            ResetZoom();
         }
+
 
         // Меню "Правка" - Обновленные
         private void Undo_Click(object sender, RoutedEventArgs e)
@@ -388,7 +693,7 @@ namespace Graphic_Editor
             RedoLastAction();
         }
 
-        private void Cut_Click(object sender, RoutedEventArgs e)
+        /*private void Cut_Click(object sender, RoutedEventArgs e)
         {
             CutSelectedElement();
         }
@@ -401,7 +706,7 @@ namespace Graphic_Editor
         private void Paste_Click(object sender, RoutedEventArgs e)
         {
             PasteElement();
-        }
+        }*/
 
         // Меню "Справка"
         private void Help_Click(object sender, RoutedEventArgs e)

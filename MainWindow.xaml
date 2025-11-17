@@ -88,9 +88,15 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Background="Transparent">
                     <Image Source="/Icons/L.png" Width="25.82" Height="25.82" Margin="15,11,15,3"/>
 
+<<<<<<< Updated upstream
                     <Menu Background="Transparent" FontSize="12" Foreground="#FFEEEEEE" 
                           WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Center" Margin="0,8,0,0">
                         <MenuItem Header="Файл" VerticalAlignment="Center" Margin="0,0,18,0">
+=======
+                    <Menu Background="Transparent" FontSize="12" Foreground="Black" 
+                          WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom" Height="34">
+                        <MenuItem Header="Файл" Margin="0,2,18,0" Height="32" Click="MenuItem_Click_1">
+>>>>>>> Stashed changes
                             <MenuItem Header="Новый" Click="NewFile_Click"/>
                             <MenuItem Header="Открыть..." Click="OpenFile_Click"/>
                             <MenuItem Header="Сохранить" Click="SaveFile_Click"/>
@@ -107,13 +113,17 @@
                             <MenuItem Header="Сбросить масштаб" Click="ResetZoom_Click"/>
                         </MenuItem>
 
+<<<<<<< Updated upstream
                         <MenuItem Header="Правка" Margin="0,0,18,0">
+=======
+                        <MenuItem Header="Правка" Margin="0,2,18,0" Height="32">
+>>>>>>> Stashed changes
                             <MenuItem Header="Отменить" InputGestureText="Ctrl+Z" Click="Undo_Click"/>
                             <MenuItem Header="Повторить" InputGestureText="Ctrl+Y" Click="Redo_Click"/>
                             <Separator/>
-                            <MenuItem Header="Вырезать" InputGestureText="Ctrl+X" Click="Cut_Click"/>
-                            <MenuItem Header="Копировать" InputGestureText="Ctrl+C" Click="Copy_Click"/>
-                            <MenuItem Header="Вставить" InputGestureText="Ctrl+V" Click="Paste_Click"/>
+                            <MenuItem Header="Вырезать" InputGestureText="Ctrl+X"/>
+                            <MenuItem Header="Копировать" InputGestureText="Ctrl+C"/>
+                            <MenuItem Header="Вставить" InputGestureText="Ctrl+V"/>
                             <Separator/>
                             <MenuItem Header="Выделить все" InputGestureText="Ctrl+A"/>
                             <MenuItem Header="Удалить" InputGestureText="Delete"/>
@@ -157,9 +167,32 @@
         <!-- Content Area -->
         <Border Grid.Row="1" Background="#FF1E1E1E"/>
 
+<<<<<<< Updated upstream
         <Border Grid.Row="1" Grid.ColumnSpan="2">
             <!--мои изменения тут -->
             <Grid>
+=======
+            <!-- Основной Canvas для всех элементов -->
+            <Canvas x:Name="MainCanvas" Background="#252525" 
+        Grid.Row="1" Grid.ColumnSpan="3" Loaded="MainCanvas_Loaded">
+                <Canvas.LayoutTransform>
+                    <ScaleTransform x:Name="CanvasScaleTransform" ScaleX="1" ScaleY="1"/>
+                </Canvas.LayoutTransform>
+            </Canvas>
+
+            <!-- Элемент для отображения текущего масштаба -->
+            <TextBlock x:Name="ZoomTextBlock" 
+           Grid.Row="1" Grid.Column="1"
+           Text="100%"
+           Foreground="White"
+           FontSize="12"
+           HorizontalAlignment="Right"
+           VerticalAlignment="Top"
+           Margin="0,10,10,0"
+           Background="#80000000"
+           Padding="5,2"
+           Visibility="Collapsed"/>
+>>>>>>> Stashed changes
 
                 <!-- Основная рабочая область -->
                 <Canvas x:Name="MainCanvas"
