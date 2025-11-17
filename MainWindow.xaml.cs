@@ -77,6 +77,9 @@ namespace Graphic_Editor
             HeightTextBox.LostFocus += DimensionTextBox_LostFocus;
             WidthTextBox.KeyDown += DimensionTextBox_KeyDown;
             HeightTextBox.KeyDown += DimensionTextBox_KeyDown;
+
+            // Обработчик клика на пустую область канваса для снятия выделения
+            MainCanvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
         }
 
         // Обработчики для ручного ввода размеров
@@ -1865,6 +1868,7 @@ namespace Graphic_Editor
             return null;
         }
 
+
         private Ellipse CreateCircleCopy(Point position)
         {
             var circle = new Ellipse
@@ -2060,29 +2064,79 @@ namespace Graphic_Editor
         private void MainCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             // Если кликнули на пустую область канваса - снимаем выделение
-            if (e.OriginalSource is Canvas)
+            if (e.OriginalSource == MainCanvas) //
             {
                 DeselectAll();
                 e.Handled = true;
             }
         }
 
-        // Метод для полного снятия выделения
+        // Метод для полного снятия выделения со всех элементов
         private void DeselectAll()
         {
-            DeselectElement();
+            // Снимаем выделение с selectedElement
+            if (selectedElement != null)
+            {
+                ApplySelectionVisualFeedback(selectedElement, false);
+                if (selectedElement is FrameworkElement frameworkElement)
+                {
+                    frameworkElement.ContextMenu = null;
+                }
+                selectedElement = null;
+            }
 
+            // Снимаем выделение с selectedShape
             if (selectedShape != null)
             {
                 RemoveSelectionVisual(selectedShape);
-                if (resizableElements.ContainsKey(selectedShape))
-                {
-                    resizableElements[selectedShape].HideResizeHandles();
-                }
                 selectedShape = null;
             }
 
-            currentResizableElement = null;
+            // Скрываем все ручки изменения размера
+            if (currentResizableElement != null)
+            {
+                currentResizableElement.HideResizeHandles();
+                currentResizableElement = null;
+            }
+
+            // Скрываем ручки у всех элементов в словаре
+            foreach (var resizableElement in resizableElements.Values)
+            {
+                resizableElement.HideResizeHandles();
+            }
+
+            // Очищаем текстовые поля размеров
+            ClearDimensionTextboxes();
+
+            // Сбрасываем комбо-боксы цветов
+            ResetColorComboBoxes();
+        }
+
+        // Метод для очистки текстовых полей размеров
+        private void ClearDimensionTextboxes()
+        {
+            if (WidthTextBox != null)
+                WidthTextBox.Text = "";
+
+            if (HeightTextBox != null)
+                HeightTextBox.Text = "";
+        }
+
+        // Метод для сброса комбо-боксов цветов
+        private void ResetColorComboBoxes()
+        {
+            if (FillColorComboBox != null)
+                FillColorComboBox.SelectedIndex = -1;
+
+            if (StrokeColorComboBox != null)
+                StrokeColorComboBox.SelectedIndex = -1;
+
+            // Сбрасываем превью цветов к значениям по умолчанию
+            if (FillColorPreview != null)
+                FillColorPreview.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFC44141"));
+
+            if (StrokeColorPreview != null)
+                StrokeColorPreview.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF000000"));
         }
 
         private void ApplyCanvasDragVisualFeedback(UIElement element, bool isDragging)
@@ -2132,6 +2186,7 @@ namespace Graphic_Editor
         }
 
         // Метод для выделения фигуры
+        // Метод для выделения фигуры
         public void SelectShape(UIElement shape)
         {
             // Проверяем, находится ли элемент в панели нотации
@@ -2141,21 +2196,8 @@ namespace Graphic_Editor
                 return;
             }
 
-            // Снимаем выделение с предыдущей фигуры
-            if (selectedShape != null && selectedShape != shape)
-            {
-                RemoveSelectionVisual(selectedShape);
-                if (resizableElements.ContainsKey(selectedShape))
-                {
-                    resizableElements[selectedShape].HideResizeHandles();
-                }
-            }
-
-            // Снимаем выделение с selectedElement если он есть
-            if (selectedElement != null && selectedElement != shape)
-            {
-                DeselectElement();
-            }
+            // Снимаем выделение со всех элементов перед выделением нового
+            //DeselectAll();
 
             // Сохраняем оригинальные цвета перед выделением
             SaveOriginalColors(shape);
@@ -2163,9 +2205,11 @@ namespace Graphic_Editor
             // Выделяем новую фигуру
             selectedShape = shape;
             selectedElement = shape as FrameworkElement;
+
+            // Применяем визуальное выделение
             ApplySelectionVisual(selectedShape);
 
-            // ПОКАЗЫВАЕМ РУЧКИ ИЗМЕНЕНИЯ РАЗМЕРА
+            // Показываем ручки изменения размера
             ShowResizeHandlesForElement(shape);
 
             // Обновляем комбо-боксы в соответствии с цветами фигуры
