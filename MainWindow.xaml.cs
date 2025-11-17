@@ -23,6 +23,7 @@ using System.Windows.Ink;
 using System.Globalization;
 using System.Windows.Navigation;
 
+
 namespace Graphic_Editor
 {
     public partial class MainWindow : Window
@@ -68,7 +69,25 @@ namespace Graphic_Editor
         private bool isArrowModeActive = false;
         private Polyline currentArrow;
         private Point arrowStartPoint;
-        private List<UIElement> arrows = new List<UIElement>();
+        //private List<UIElement> arrows = new List<UIElement>();
+        private List<ArrowContainer> arrows = new List<ArrowContainer>();
+
+        private Polygon draggedArrowhead;
+        private PointCollection originalArrowPoints;
+        private Dictionary<Polyline, Polygon> arrowToArrowheadMap = new Dictionary<Polyline, Polygon>();
+
+        private List<Polyline> lines = new List<Polyline>();
+        private List<Polygon> arrowheads = new List<Polygon>();
+
+        // Класс для хранения стрелки и её наконечника вместе
+        public class ArrowContainer
+        {
+            public Polyline Line { get; set; }
+            public Polygon Arrowhead { get; set; }
+            public PointCollection OriginalPoints { get; set; }
+        }
+
+
 
         public MainWindow()
         {
@@ -82,6 +101,8 @@ namespace Graphic_Editor
             // Обработка горячих клавиш
             this.KeyDown += MainWindow_KeyDown;
         }
+
+
 
         // Инициализация сетки
         private void InitializeGrid()
@@ -1079,6 +1100,8 @@ namespace Graphic_Editor
 
                 return newArrow;
             }
+
+
 
             if (original is Ellipse originalEllipse)
             {
@@ -3009,12 +3032,12 @@ namespace Graphic_Editor
             {
                 // Активируем режим рисования
                 MainCanvas.Cursor = Cursors.Cross;
-                PenButton.Background = Brushes.LightBlue; // Визуальная индикация активного режима
+                PenButton.Background = Brushes.LightBlue;
                 MessageBox.Show("Режим рисования ломаных стрелок активирован.\n\n" +
-               "ЛКМ - добавить точку/сегмент\n" +
-               "ПКМ или Escape - завершить стрелку\n" +
-               "перемещение мыши - рисовать плавно",
-               "Режим пера", MessageBoxButton.OK, MessageBoxImage.Information);
+                               "ЛКМ - добавить точку/сегмент\n" +
+                               "ПКМ или Escape - завершить стрелку\n" +
+                               "перемещение мыши - рисовать плавно",
+                               "Режим пера", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
@@ -3024,7 +3047,6 @@ namespace Graphic_Editor
 
                 if (currentArrow != null)
                 {
-                    // Завершаем текущую стрелку если она есть
                     CompleteArrow();
                 }
             }
@@ -3046,8 +3068,9 @@ namespace Graphic_Editor
             };
 
             MainCanvas.Children.Add(currentArrow);
-            Canvas.SetZIndex(currentArrow, 500); // Стрелки поверх фигур, но под выделением
+            Canvas.SetZIndex(currentArrow, 500);
         }
+
         // Метод обновления рисования ломаной стрелки
         private void UpdateArrowDrawing(Point currentPoint)
         {
@@ -3098,12 +3121,26 @@ namespace Graphic_Editor
                 Point lineStart = currentArrow.Points[currentArrow.Points.Count - 2];
                 Point lineEnd = currentArrow.Points[currentArrow.Points.Count - 1];
 
-                // Создаем и прикрепляем наконечник
-                CreateAndAttachArrowhead(currentArrow, lineStart, lineEnd);
+                // Создаем контейнер стрелки с наконечником
+                var arrowContainer = new ArrowContainer
+                {
+                    Line = currentArrow,
+                    Arrowhead = CreateArrowhead(lineStart, lineEnd, currentArrow.Stroke)
+                };
 
-                // Добавляем саму ломаную линию
-                arrows.Add(currentArrow);
-                MakeArrowDraggable(currentArrow);
+                // Добавляем наконечник на холст
+                if (arrowContainer.Arrowhead != null)
+                {
+                    MainCanvas.Children.Add(arrowContainer.Arrowhead);
+                }
+
+                // Добавляем в список стрелок
+                arrows.Add(arrowContainer);
+
+                // Делаем перетаскиваемой
+                MakeArrowDraggable(arrowContainer);
+
+                // Сохраняем в стек отмены
                 SaveToUndoStack(currentArrow);
 
                 currentArrow = null;
@@ -3125,37 +3162,65 @@ namespace Graphic_Editor
             currentArrow = null;*/
         }
         // Создание стрелки с наконечником
-        private void CreateArrowWithArrowhead(Point startPoint, Point endPoint)
+        private ArrowContainer CreateArrowWithArrowhead(Point startPoint, Point endPoint, Brush color, double thickness)
         {
+            var arrowContainer = new ArrowContainer();
+
+            // Создаем линию стрелки
             var arrow = new Polyline
             {
-                Stroke = Brushes.Black,
-                StrokeThickness = 2,
+                Stroke = color,
+                StrokeThickness = thickness,
                 StrokeLineJoin = PenLineJoin.Round,
                 StrokeStartLineCap = PenLineCap.Round,
                 StrokeEndLineCap = PenLineCap.Triangle,
-                Points = new PointCollection { startPoint, endPoint }
+                Points = new PointCollection { startPoint, endPoint },
+                Cursor = Cursors.Hand
             };
 
+            // Создаем наконечник
+            var arrowhead = CreateArrowhead(startPoint, endPoint, color);
+
+            arrowContainer.Line = arrow;
+            arrowContainer.Arrowhead = arrowhead;
+
+            // Добавляем на холст
             MainCanvas.Children.Add(arrow);
-            arrows.Add(arrow);
-            MakeArrowDraggable(arrow);
+            if (arrowhead != null)
+            {
+                MainCanvas.Children.Add(arrowhead);
+            }
+
+            // Делаем перетаскиваемыми
+            MakeArrowDraggable(arrowContainer);
+
+            return arrowContainer;
         }
         // Делаем стрелку перетаскиваемой
-        private void MakeArrowDraggable(Polyline arrow)
+        private void MakeArrowDraggable(ArrowContainer arrowContainer)
         {
-            arrow.MouseLeftButtonDown += Arrow_MouseLeftButtonDown;
-            arrow.MouseMove += Arrow_MouseMove;
-            arrow.MouseLeftButtonUp += Arrow_MouseLeftButtonUp;
-            arrow.Cursor = Cursors.Hand;
+            arrowContainer.Line.MouseLeftButtonDown += Arrow_MouseLeftButtonDown;
+            arrowContainer.Line.MouseMove += Arrow_MouseMove;
+            arrowContainer.Line.MouseLeftButtonUp += Arrow_MouseLeftButtonUp;
 
-            // Добавляем контекстное меню для стрелки
-            arrow.MouseRightButtonDown += (s, e) =>
+            if (arrowContainer.Arrowhead != null)
             {
-                CreateArrowContextMenu(arrow);
+                arrowContainer.Arrowhead.MouseLeftButtonDown += (s, e) =>
+                {
+                    // При клике на наконечник выделяем всю стрелку
+                    SelectArrow(arrowContainer.Line);
+                    e.Handled = true;
+                };
+            }
+
+            // Добавляем контекстное меню - ИСПРАВЛЕННЫЙ ВЫЗОВ
+            arrowContainer.Line.MouseRightButtonDown += (s, e) =>
+            {
+                CreateArrowContextMenu(arrowContainer); // Убраны лишние параметры
                 e.Handled = true;
             };
         }
+
         // Обработчики событий для перетаскивания стрелок
         private void Arrow_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
@@ -3164,6 +3229,10 @@ namespace Graphic_Editor
             var arrow = sender as Polyline;
             if (arrow != null)
             {
+                // Находим контейнер стрелки
+                var arrowContainer = arrows.FirstOrDefault(a => a.Line == arrow);
+                if (arrowContainer == null) return;
+
                 // Выделяем стрелку
                 SelectArrow(arrow);
 
@@ -3175,29 +3244,34 @@ namespace Graphic_Editor
                 dragStartPoint = e.GetPosition(MainCanvas);
 
                 // Сохраняем оригинальные точки стрелки
-                originalArrowPoints = new PointCollection(arrow.Points);
+                arrowContainer.OriginalPoints = new PointCollection(arrow.Points);
 
                 // Визуальный фидбэк
                 arrow.Stroke = Brushes.Red;
                 arrow.StrokeThickness += 1;
 
+                // Также выделяем наконечник
+                if (arrowContainer.Arrowhead != null)
+                {
+                    arrowContainer.Arrowhead.Fill = Brushes.Red;
+                    arrowContainer.Arrowhead.Stroke = Brushes.Red;
+                }
+
                 e.Handled = true;
             }
         }
-
-        //поле для хранения перетаскиваемого наконечника
-        private Polygon draggedArrowhead;
-
-        //поле для хранения оригинальных точек
-        private PointCollection originalArrowPoints;
 
         private void Arrow_MouseMove(object sender, MouseEventArgs e)
         {
             if (isDragging && draggedElement != null && e.LeftButton == MouseButtonState.Pressed)
             {
                 var arrow = draggedElement as Polyline;
-                if (arrow != null && originalArrowPoints != null)
+                if (arrow != null)
                 {
+                    // Находим контейнер стрелки
+                    var arrowContainer = arrows.FirstOrDefault(a => a.Line == arrow);
+                    if (arrowContainer == null || arrowContainer.OriginalPoints == null) return;
+
                     Point currentPosition = e.GetPosition(MainCanvas);
 
                     // Вычисляем смещение от начальной точки
@@ -3206,7 +3280,7 @@ namespace Graphic_Editor
 
                     // Создаем новую коллекцию точек с применением смещения
                     var newPoints = new PointCollection();
-                    foreach (Point point in originalArrowPoints)
+                    foreach (Point point in arrowContainer.OriginalPoints)
                     {
                         newPoints.Add(new Point(point.X + deltaX, point.Y + deltaY));
                     }
@@ -3215,7 +3289,7 @@ namespace Graphic_Editor
                     arrow.Points = newPoints;
 
                     // Обновляем позицию наконечника
-                    UpdateArrowheadPosition(arrow);
+                    UpdateArrowheadPosition(arrowContainer);
                 }
             }
         }
@@ -3224,16 +3298,28 @@ namespace Graphic_Editor
             var arrow = sender as Polyline;
             if (arrow != null)
             {
-                isDragging = false;
-                arrow.ReleaseMouseCapture();
+                // Находим контейнер стрелки
+                var arrowContainer = arrows.FirstOrDefault(a => a.Line == arrow);
+                if (arrowContainer != null)
+                {
+                    isDragging = false;
+                    arrow.ReleaseMouseCapture();
 
-                // Возвращаем оригинальный вид
-                arrow.Stroke = Brushes.Black;
-                arrow.StrokeThickness = Math.Max(arrow.StrokeThickness - 1, 2);
+                    // Возвращаем оригинальный вид
+                    arrow.Stroke = Brushes.Black;
+                    arrow.StrokeThickness = Math.Max(arrow.StrokeThickness - 1, 2);
 
-                // Очищаем временные данные
-                originalArrowPoints = null;
-                draggedElement = null;
+                    // Возвращаем оригинальный вид наконечнику
+                    if (arrowContainer.Arrowhead != null)
+                    {
+                        arrowContainer.Arrowhead.Fill = Brushes.Black;
+                        arrowContainer.Arrowhead.Stroke = Brushes.Black;
+                    }
+
+                    // Очищаем временные данные
+                    arrowContainer.OriginalPoints = null;
+                    draggedElement = null;
+                }
                 e.Handled = true;
             }
         }
@@ -3245,15 +3331,27 @@ namespace Graphic_Editor
             // Снимаем выделение с других элементов
             ClearSelection();
 
+            // Находим контейнер стрелки
+            var arrowContainer = arrows.FirstOrDefault(a => a.Line == arrow);
+            if (arrowContainer == null) return;
+
             // Визуальное выделение стрелки
             arrow.Stroke = Brushes.Blue;
             arrow.StrokeThickness += 1;
 
+            // Также выделяем наконечник
+            if (arrowContainer.Arrowhead != null)
+            {
+                arrowContainer.Arrowhead.Fill = Brushes.Blue;
+                arrowContainer.Arrowhead.Stroke = Brushes.Blue;
+            }
+
             // Создаем контекстное меню
-            CreateArrowContextMenu(arrow);
+            CreateArrowContextMenu(arrowContainer);
         }
+
         // Контекстное меню для стрелки
-        private void CreateArrowContextMenu(Polyline arrow)
+        private void CreateArrowContextMenu(ArrowContainer arrowContainer)
         {
             ContextMenu contextMenu = new ContextMenu
             {
@@ -3269,7 +3367,7 @@ namespace Graphic_Editor
                 Header = "Изменить цвет",
                 Icon = new TextBlock { Text = "🎨", FontSize = 14 }
             };
-            colorMenuItem.Click += (s, e) => ChangeArrowColor(arrow);
+            colorMenuItem.Click += (s, e) => ChangeArrowColor(arrowContainer);
             contextMenu.Items.Add(colorMenuItem);
 
             // Пункт "Изменить толщину"
@@ -3278,7 +3376,7 @@ namespace Graphic_Editor
                 Header = "Изменить толщину",
                 Icon = new TextBlock { Text = "📏", FontSize = 14 }
             };
-            thicknessMenuItem.Click += (s, e) => ChangeArrowThickness(arrow);
+            thicknessMenuItem.Click += (s, e) => ChangeArrowThickness(arrowContainer);
             contextMenu.Items.Add(thicknessMenuItem);
 
             contextMenu.Items.Add(new Separator());
@@ -3289,13 +3387,14 @@ namespace Graphic_Editor
                 Header = "Удалить",
                 Icon = new TextBlock { Text = "🗑", FontSize = 14 }
             };
-            deleteMenuItem.Click += (s, e) => DeleteArrow(arrow);
+            deleteMenuItem.Click += (s, e) => DeleteArrow(arrowContainer.Line);
             contextMenu.Items.Add(deleteMenuItem);
 
-            arrow.ContextMenu = contextMenu;
+            arrowContainer.Line.ContextMenu = contextMenu;
         }
+
         // Изменение цвета стрелки
-        private void ChangeArrowColor(Polyline arrow)
+        private void ChangeArrowColor(ArrowContainer arrowContainer)
         {
             var dialog = new Window
             {
@@ -3313,12 +3412,12 @@ namespace Graphic_Editor
                 Margin = new Thickness(10),
                 ItemsSource = new[]
                 {
-            new { Name = "Красный", Color = Colors.Red },
-            new { Name = "Синий", Color = Colors.Blue },
-            new { Name = "Зеленый", Color = Colors.Green },
-            new { Name = "Черный", Color = Colors.Black },
-            new { Name = "Белый", Color = Colors.White }
-        },
+                    new { Name = "Красный", Color = Colors.Red },
+                    new { Name = "Синий", Color = Colors.Blue },
+                    new { Name = "Зеленый", Color = Colors.Green },
+                    new { Name = "Черный", Color = Colors.Black },
+                    new { Name = "Белый", Color = Colors.White }
+                },
                 DisplayMemberPath = "Name"
             };
 
@@ -3344,7 +3443,17 @@ namespace Graphic_Editor
                 if (colorComboBox.SelectedValue != null)
                 {
                     var selectedColor = (colorComboBox.SelectedValue as dynamic)?.Color;
-                    arrow.Stroke = new SolidColorBrush(selectedColor);
+                    Brush newBrush = new SolidColorBrush(selectedColor);
+
+                    // Применяем цвет к линии
+                    arrowContainer.Line.Stroke = newBrush;
+
+                    // Применяем цвет к наконечнику
+                    if (arrowContainer.Arrowhead != null)
+                    {
+                        arrowContainer.Arrowhead.Fill = newBrush;
+                        arrowContainer.Arrowhead.Stroke = newBrush;
+                    }
                 }
                 dialog.DialogResult = true;
             };
@@ -3353,43 +3462,55 @@ namespace Graphic_Editor
 
             dialog.ShowDialog();
         }
+
         // Изменение толщины стрелки
-        private void ChangeArrowThickness(Polyline arrow)
+        private void ChangeArrowThickness(ArrowContainer arrowContainer)
         {
-            var inputDialog = new InputDialog("Толщина стрелки", "Введите толщину:", arrow.StrokeThickness.ToString());
+            var inputDialog = new InputDialog("Толщина стрелки", "Введите толщину:", arrowContainer.Line.StrokeThickness.ToString());
             if (inputDialog.ShowDialog() == true)
             {
                 if (double.TryParse(inputDialog.Answer, out double thickness) && thickness > 0)
                 {
-                    arrow.StrokeThickness = thickness;
+                    arrowContainer.Line.StrokeThickness = thickness;
                 }
             }
         }
+
         // Удаление стрелки
         private void DeleteArrow(Polyline arrow)
         {
-            if (MainCanvas.Children.Contains(arrow))
+            // Находим контейнер стрелки
+            var arrowContainer = arrows.FirstOrDefault(a => a.Line == arrow);
+            if (arrowContainer != null)
             {
-                // Удаляем саму линию
-                SaveToUndoStack(arrow);
-                MainCanvas.Children.Remove(arrow);
-                arrows.Remove(arrow);
+                // Удаляем линию
+                if (MainCanvas.Children.Contains(arrowContainer.Line))
+                {
+                    SaveToUndoStack(arrowContainer.Line);
+                    MainCanvas.Children.Remove(arrowContainer.Line);
+                }
 
-                // Удаляем соответствующий наконечник
-                RemoveArrowhead(arrow); ;
+                // Удаляем наконечник
+                if (arrowContainer.Arrowhead != null && MainCanvas.Children.Contains(arrowContainer.Arrowhead))
+                {
+                    MainCanvas.Children.Remove(arrowContainer.Arrowhead);
+                }
+
+                // Удаляем из списка
+                arrows.Remove(arrowContainer);
             }
         }
         private void RemoveArrowhead(Polyline arrow)
         {
-            // Ищем наконечник для этой стрелки
-            for (int i = arrows.Count - 1; i >= 0; i--)
+            // Находим контейнер стрелки
+            var arrowContainer = arrows.FirstOrDefault(a => a.Line == arrow);
+            if (arrowContainer != null && arrowContainer.Arrowhead != null)
             {
-                if (arrows[i] is Polygon arrowhead && IsArrowheadForLine(arrowhead, arrow))
+                if (MainCanvas.Children.Contains(arrowContainer.Arrowhead))
                 {
-                    MainCanvas.Children.Remove(arrowhead);
-                    arrows.RemoveAt(i);
-                    break;
+                    MainCanvas.Children.Remove(arrowContainer.Arrowhead);
                 }
+                arrowContainer.Arrowhead = null;
             }
 
             /* var arrowheadToRemove = arrows.OfType<Polygon>()
@@ -3428,19 +3549,30 @@ namespace Graphic_Editor
                     }
                 }
 
-                MainCanvas.Children.Add(arrow);
-                arrows.Add(arrow);
-                MakeArrowDraggable(arrow);
+                // Создаем контейнер стрелки
+                var arrowContainer = new ArrowContainer { Line = arrow };
 
                 // Создаем наконечник для загруженной стрелки
                 if (arrow.Points.Count >= 2)
                 {
                     Point lineStart = arrow.Points[arrow.Points.Count - 2];
                     Point lineEnd = arrow.Points[arrow.Points.Count - 1];
-                    CreateAndAttachArrowhead(arrow, lineStart, lineEnd);
+                    arrowContainer.Arrowhead = CreateArrowhead(lineStart, lineEnd, arrow.Stroke);
                 }
+
+                // Добавляем на холст
+                MainCanvas.Children.Add(arrow);
+                if (arrowContainer.Arrowhead != null)
+                {
+                    MainCanvas.Children.Add(arrowContainer.Arrowhead);
+                }
+
+                // Добавляем в список и делаем перетаскиваемой
+                arrows.Add(arrowContainer);
+                MakeArrowDraggable(arrowContainer);
             }
         }
+
         // Обработчик для кнопки пера на панели инструментов
         private void PenButton_Click(object sender, RoutedEventArgs e)
         {
@@ -3461,15 +3593,12 @@ namespace Graphic_Editor
             dx /= length;
             dy /= length;
 
-            // Размеры наконечника (должны совпадать с UpdateArrowheadPoints)
-            double arrowLength = 15;
-            double arrowWidth = 10;
+            // Размеры наконечника
+            double arrowLength = 20;
+            double arrowWidth = 12;
 
             // Вычисляем точки треугольника
-            // Острие наконечника должно быть точно в конце стрелки
             Point arrowTip = endPoint;
-
-            // Боковые точки наконечника
             Point arrowLeft = new Point(
                 endPoint.X - dx * arrowLength + dy * arrowWidth,
                 endPoint.Y - dy * arrowLength - dx * arrowWidth
@@ -3503,27 +3632,17 @@ namespace Graphic_Editor
             };
         }
         // Метод для обновления позиции наконечника
-        private void UpdateArrowheadPosition(Polyline arrow)
+        private void UpdateArrowheadPosition(ArrowContainer arrowContainer)
         {
-            if (arrow.Points.Count < 2) return;
+            if (arrowContainer.Line.Points.Count < 2 || arrowContainer.Arrowhead == null) return;
 
             // Находим последний сегмент стрелки
-            Point lineStart = arrow.Points[arrow.Points.Count - 2];
-            Point lineEnd = arrow.Points[arrow.Points.Count - 1];
+            Point lineStart = arrowContainer.Line.Points[arrowContainer.Line.Points.Count - 2];
+            Point lineEnd = arrowContainer.Line.Points[arrowContainer.Line.Points.Count - 1];
 
-            // Ищем наконечник для этой стрелки
-            Polygon arrowhead = FindArrowheadForArrow(arrow);
+            // Обновляем геометрию наконечника
+            UpdateArrowheadGeometry(arrowContainer.Arrowhead, lineStart, lineEnd, arrowContainer.Line.Stroke);
 
-            if (arrowhead != null)
-            {
-                // Прямо обновляем позицию наконечника
-                UpdateArrowheadGeometry(arrowhead, lineStart, lineEnd, arrow.Stroke);
-            }
-            else
-            {
-                // Создаем новый наконечник если его нет
-                CreateAndAttachArrowhead(arrow, lineStart, lineEnd);
-            }
     
             // Ищем наконечник по позиции (упрощенный способ)
             /*foreach (var element in arrows)
@@ -3551,16 +3670,12 @@ namespace Graphic_Editor
             if (arrowhead != null)
             {
                 MainCanvas.Children.Add(arrowhead);
-                arrows.Add(arrowhead);
+                arrowheads.Add(arrowhead); // Используем правильную коллекцию
                 MakeArrowheadDraggable(arrowhead, arrow);
 
-                // Сохраняем связь
                 StoreArrowheadRelation(arrow, arrowhead);
             }
         }
-
-        // Словарь для хранения связей стрелок и наконечников
-        private Dictionary<Polyline, Polygon> arrowToArrowheadMap = new Dictionary<Polyline, Polygon>();
 
         // Метод для сохранения связи между стрелкой и наконечником
         private void StoreArrowheadRelation(Polyline arrow, Polygon arrowhead)
@@ -3685,23 +3800,8 @@ namespace Graphic_Editor
         // Метод для поиска наконечника по стрелке
         private Polygon FindArrowheadForArrow(Polyline arrow)
         {
-            // Сначала ищем в словаре
-            if (arrowToArrowheadMap.ContainsKey(arrow))
-            {
-                return arrowToArrowheadMap[arrow];
-            }
-
-            // Если нет в словаре, ищем по геометрической близости
-            foreach (var element in arrows)
-            {
-                if (element is Polygon arrowhead && IsArrowheadForLine(arrowhead, arrow))
-                {
-                    // Сохраняем связь для будущего использования
-                    StoreArrowheadRelation(arrow, arrowhead);
-                    return arrowhead;
-                }
-            }
-            return null;
+            var arrowContainer = arrows.FirstOrDefault(a => a.Line == arrow);
+            return arrowContainer?.Arrowhead;
         }
 
     }
