@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Diagnostics;
 
 namespace Graphic_Editor
 {
@@ -11,7 +12,8 @@ namespace Graphic_Editor
     {
         private UIElement element;
         private Canvas canvas;
-        private Rectangle[] resizeHandles;
+        private Rectangle[] cornerHandles;
+        private Line[] edgeLines;
         private bool isResizing = false;
         private ResizeDirection resizeDirection;
         private Point startPoint;
@@ -19,8 +21,15 @@ namespace Graphic_Editor
 
         private enum ResizeDirection
         {
-            None, Top, Right, Bottom, Left,
-            TopLeft, TopRight, BottomLeft, BottomRight
+            None,
+            Top,
+            Right,
+            Bottom,
+            Left,
+            TopLeft,
+            TopRight,
+            BottomLeft,
+            BottomRight
         }
 
         public ResizableElement(UIElement element, Canvas canvas)
@@ -32,52 +41,103 @@ namespace Graphic_Editor
 
         private void InitializeResizeHandles()
         {
-            resizeHandles = new Rectangle[8];
+            cornerHandles = new Rectangle[4];
+            edgeLines = new Line[4];
 
-            // Создаем ручки для всех сторон и углов
-            for (int i = 0; i < 8; i++)
+            // Угловые маркеры
+            for (int i = 0; i < 4; i++)
             {
-                resizeHandles[i] = new Rectangle
+                cornerHandles[i] = new Rectangle
                 {
                     Fill = Brushes.Blue,
                     Stroke = Brushes.White,
                     StrokeThickness = 1,
                     Width = 8,
                     Height = 8,
-                    Visibility = Visibility.Collapsed,
-                    Cursor = GetCursorForDirection((ResizeDirection)i)
+                    Visibility = Visibility.Collapsed
                 };
 
-                resizeHandles[i].MouseLeftButtonDown += ResizeHandle_MouseLeftButtonDown;
-                resizeHandles[i].MouseLeftButtonUp += ResizeHandle_MouseLeftButtonUp;
-                resizeHandles[i].MouseMove += ResizeHandle_MouseMove;
+                cornerHandles[i].MouseLeftButtonDown += CornerHandle_MouseLeftButtonDown;
+                cornerHandles[i].MouseLeftButtonUp += ResizeHandle_MouseLeftButtonUp;
+                cornerHandles[i].MouseMove += ResizeHandle_MouseMove;
 
-                canvas.Children.Add(resizeHandles[i]);
+                // Добавляем обработчик для обновления курсора при наведении
+                cornerHandles[i].MouseEnter += Handle_MouseEnter;
+                cornerHandles[i].MouseLeave += Handle_MouseLeave;
+
+                canvas.Children.Add(cornerHandles[i]);
+            }
+
+            // Боковые линии
+            for (int i = 0; i < 4; i++)
+            {
+                edgeLines[i] = new Line
+                {
+                    Stroke = Brushes.Transparent,
+                    StrokeThickness = 6,
+                    Visibility = Visibility.Collapsed
+                };
+
+                edgeLines[i].MouseLeftButtonDown += EdgeLine_MouseLeftButtonDown;
+                edgeLines[i].MouseLeftButtonUp += ResizeHandle_MouseLeftButtonUp;
+                edgeLines[i].MouseMove += ResizeHandle_MouseMove;
+
+                // Добавляем обработчик для обновления курсора при наведении
+                edgeLines[i].MouseEnter += Handle_MouseEnter;
+                edgeLines[i].MouseLeave += Handle_MouseLeave;
+
+                canvas.Children.Add(edgeLines[i]);
             }
         }
 
-        private Cursor GetCursorForDirection(ResizeDirection direction)
+        private void Handle_MouseEnter(object sender, MouseEventArgs e)
         {
+            if (sender is FrameworkElement resizeElement && resizeElement.Tag is ResizeDirection direction)
+            {
+                UpdateCursorForDirection(direction);
+            }
+        }
+
+        // Обработчик выхода мыши с элемента - ДОБАВЛЕНО
+        private void Handle_MouseLeave(object sender, MouseEventArgs e)
+        {
+            ResetCursor();
+        }
+
+        private void UpdateCursorForDirection(ResizeDirection direction)
+        {
+            Cursor cursor = Cursors.Arrow;
+
             switch (direction)
             {
-                case ResizeDirection.Top:
-                    return Cursors.SizeNS;
-                case ResizeDirection.Bottom:
-                    return Cursors.SizeNS;
-                case ResizeDirection.Left:
-                    return Cursors.SizeWE;
-                case ResizeDirection.Right:
-                    return Cursors.SizeWE;
                 case ResizeDirection.TopLeft:
-                    return Cursors.SizeNWSE;
                 case ResizeDirection.BottomRight:
-                    return Cursors.SizeNWSE;
+                    cursor = Cursors.SizeNWSE;
+                    break;
                 case ResizeDirection.TopRight:
-                    return Cursors.SizeNESW;
                 case ResizeDirection.BottomLeft:
-                    return Cursors.SizeNESW;
-                default:
-                    return Cursors.Arrow;
+                    cursor = Cursors.SizeNESW;
+                    break;
+                case ResizeDirection.Top:
+                case ResizeDirection.Bottom:
+                    cursor = Cursors.SizeNS;
+                    break;
+                case ResizeDirection.Left:
+                case ResizeDirection.Right:
+                    cursor = Cursors.SizeWE;
+                    break;
+            }
+
+            // Принудительно устанавливаем курсор для всего приложения
+            Mouse.OverrideCursor = cursor;
+        }
+
+        private void ResetCursor()
+        {
+            // Сбрасываем OverrideCursor только если не происходит изменение размера
+            if (!isResizing)
+            {
+                Mouse.OverrideCursor = null;
             }
         }
 
@@ -87,22 +147,41 @@ namespace Graphic_Editor
 
             UpdateResizeHandlesPosition();
 
-            foreach (var handle in resizeHandles)
+            foreach (var handle in cornerHandles)
             {
                 handle.Visibility = Visibility.Visible;
                 Canvas.SetZIndex(handle, 1001);
+            }
+
+            foreach (var line in edgeLines)
+            {
+                line.Visibility = Visibility.Visible;
+                Canvas.SetZIndex(line, 1001);
             }
         }
 
         public void HideResizeHandles()
         {
-            if (resizeHandles == null) return;
-
-            foreach (var handle in resizeHandles)
+            if (cornerHandles != null)
             {
-                if (handle != null)
-                    handle.Visibility = Visibility.Collapsed;
+                foreach (var handle in cornerHandles)
+                {
+                    if (handle != null)
+                        handle.Visibility = Visibility.Collapsed;
+                }
             }
+
+            if (edgeLines != null)
+            {
+                foreach (var line in edgeLines)
+                {
+                    if (line != null)
+                        line.Visibility = Visibility.Collapsed;
+                }
+            }
+
+            // Сбрасываем курсор при скрытии ручек
+            ResetCursor();
         }
 
         private void UpdateResizeHandlesPosition()
@@ -117,22 +196,48 @@ namespace Graphic_Editor
             if (double.IsNaN(left)) left = 0;
             if (double.IsNaN(top)) top = 0;
 
-            // Угловые ручки
-            PositionHandle(resizeHandles[0], left - 4, top - 4, ResizeDirection.TopLeft);
-            PositionHandle(resizeHandles[1], left + width / 2 - 4, top - 4, ResizeDirection.Top);
-            PositionHandle(resizeHandles[2], left + width - 4, top - 4, ResizeDirection.TopRight);
-            PositionHandle(resizeHandles[3], left + width - 4, top + height / 2 - 4, ResizeDirection.Right);
-            PositionHandle(resizeHandles[4], left + width - 4, top + height - 4, ResizeDirection.BottomRight);
-            PositionHandle(resizeHandles[5], left + width / 2 - 4, top + height - 4, ResizeDirection.Bottom);
-            PositionHandle(resizeHandles[6], left - 4, top + height - 4, ResizeDirection.BottomLeft);
-            PositionHandle(resizeHandles[7], left - 4, top + height / 2 - 4, ResizeDirection.Left);
+            // Угловые маркеры
+            PositionCornerHandle(cornerHandles[0], left - 4, top - 4, ResizeDirection.TopLeft);
+            PositionCornerHandle(cornerHandles[1], left + width - 4, top - 4, ResizeDirection.TopRight);
+            PositionCornerHandle(cornerHandles[2], left + width - 4, top + height - 4, ResizeDirection.BottomRight);
+            PositionCornerHandle(cornerHandles[3], left - 4, top + height - 4, ResizeDirection.BottomLeft);
+
+            // Боковые линии
+            PositionEdgeLine(edgeLines[0],
+                left, top - 3,
+                left + width, top - 3,
+                ResizeDirection.Top);
+
+            PositionEdgeLine(edgeLines[1],
+                left + width + 3, top,
+                left + width + 3, top + height,
+                ResizeDirection.Right);
+
+            PositionEdgeLine(edgeLines[2],
+                left, top + height + 3,
+                left + width, top + height + 3,
+                ResizeDirection.Bottom);
+
+            PositionEdgeLine(edgeLines[3],
+                left - 3, top,
+                left - 3, top + height,
+                ResizeDirection.Left);
         }
 
-        private void PositionHandle(Rectangle handle, double left, double top, ResizeDirection direction)
+        private void PositionCornerHandle(Rectangle handle, double left, double top, ResizeDirection direction)
         {
             Canvas.SetLeft(handle, left);
             Canvas.SetTop(handle, top);
             handle.Tag = direction;
+        }
+
+        private void PositionEdgeLine(Line line, double x1, double y1, double x2, double y2, ResizeDirection direction)
+        {
+            line.X1 = x1;
+            line.Y1 = y1;
+            line.X2 = x2;
+            line.Y2 = y2;
+            line.Tag = direction;
         }
 
         private double GetElementWidth()
@@ -144,7 +249,7 @@ namespace Graphic_Editor
                 if (!double.IsNaN(fe.Width))
                     return fe.Width;
             }
-            return 50; // Значение по умолчанию
+            return 50;
         }
 
         private double GetElementHeight()
@@ -156,16 +261,26 @@ namespace Graphic_Editor
                 if (!double.IsNaN(fe.Height))
                     return fe.Height;
             }
-            return 50; // Значение по умолчанию
+            return 50;
         }
 
-        private void ResizeHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void CornerHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (sender is Rectangle handle)
+            StartResizing(sender, e);
+        }
+
+        private void EdgeLine_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            StartResizing(sender, e);
+        }
+
+        private void StartResizing(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement resizeElement && e is MouseButtonEventArgs mouseArgs)
             {
                 isResizing = true;
-                resizeDirection = (ResizeDirection)handle.Tag;
-                startPoint = e.GetPosition(canvas);
+                resizeDirection = (ResizeDirection)resizeElement.Tag;
+                startPoint = mouseArgs.GetPosition(canvas);
 
                 startWidth = GetElementWidth();
                 startHeight = GetElementHeight();
@@ -175,14 +290,16 @@ namespace Graphic_Editor
                 if (double.IsNaN(startLeft)) startLeft = 0;
                 if (double.IsNaN(startTop)) startTop = 0;
 
-                handle.CaptureMouse();
+                resizeElement.CaptureMouse();
                 e.Handled = true;
+
+                Debug.WriteLine($"Start resizing: {resizeDirection}");
             }
         }
 
         private void ResizeHandle_MouseMove(object sender, MouseEventArgs e)
         {
-            if (isResizing && e.LeftButton == MouseButtonState.Pressed && sender is Rectangle)
+            if (isResizing && e.LeftButton == MouseButtonState.Pressed && sender is FrameworkElement)
             {
                 Point currentPoint = e.GetPosition(canvas);
                 double deltaX = currentPoint.X - startPoint.X;
@@ -191,15 +308,17 @@ namespace Graphic_Editor
                 ResizeElement(deltaX, deltaY);
                 UpdateResizeHandlesPosition();
             }
+            
         }
 
         private void ResizeHandle_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             isResizing = false;
-            if (sender is Rectangle handle)
+            if (sender is FrameworkElement resizeElement)
             {
-                handle.ReleaseMouseCapture();
+                resizeElement.ReleaseMouseCapture();
             }
+            ResetCursor();
         }
 
         private void ResizeElement(double deltaX, double deltaY)
@@ -256,6 +375,23 @@ namespace Graphic_Editor
                     break;
             }
 
+            // Проверяем, чтобы элемент не вышел за допустимые границы
+            if (newTop < 0)
+            {
+                newHeight += newTop;
+                newTop = 0;
+            }
+
+            if (newLeft < 0)
+            {
+                newWidth += newLeft;
+                newLeft = 0;
+            }
+
+            // Гарантируем минимальный размер
+            newWidth = Math.Max(minSize, newWidth);
+            newHeight = Math.Max(minSize, newHeight);
+
             ApplyNewSize(newWidth, newHeight, newLeft, newTop);
         }
 
@@ -284,9 +420,9 @@ namespace Graphic_Editor
 
         public void Dispose()
         {
-            if (resizeHandles != null)
+            if (cornerHandles != null)
             {
-                foreach (var handle in resizeHandles)
+                foreach (var handle in cornerHandles)
                 {
                     if (handle != null && canvas.Children.Contains(handle))
                     {
@@ -294,6 +430,19 @@ namespace Graphic_Editor
                     }
                 }
             }
+
+            if (edgeLines != null)
+            {
+                foreach (var line in edgeLines)
+                {
+                    if (line != null && canvas.Children.Contains(line))
+                    {
+                        canvas.Children.Remove(line);
+                    }
+                }
+            }
+
+            ResetCursor();
         }
     }
 }

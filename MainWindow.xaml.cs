@@ -85,6 +85,27 @@ namespace Graphic_Editor
             ApplyDimensionsFromTextboxes();
         }
 
+        public bool IsElementInNotation(UIElement element)
+        {
+            if (element == null || NotationCanvas == null) return false;
+
+            // Проверяем, содержится ли элемент непосредственно в NotationCanvas
+            if (NotationCanvas.Children.Contains(element))
+                return true;
+
+            // Проверяем родителей элемента
+            DependencyObject parent = VisualTreeHelper.GetParent(element);
+            while (parent != null)
+            {
+                if (parent == NotationCanvas)
+                    return true;
+
+                parent = VisualTreeHelper.GetParent(parent);
+            }
+
+            return false;
+        }
+
         private void DimensionTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
@@ -1380,6 +1401,12 @@ namespace Graphic_Editor
             element.CaptureMouse();
             offset = e.GetPosition(element);
 
+            // СКРЫВАЕМ РУЧКИ ИЗМЕНЕНИЯ РАЗМЕРА ДЛЯ ТЕКСТА
+            if (resizableElements.ContainsKey(element))
+            {
+                resizableElements[element].HideResizeHandles();
+            }
+
             if (element is TextBlock tb)
             {
                 tb.Opacity = 0.7;
@@ -1427,6 +1454,12 @@ namespace Graphic_Editor
             if (draggedElement is TextBlock textBlock)
             {
                 textBlock.Opacity = 1.0;
+
+                // ПОКАЗЫВАЕМ РУЧКИ ИЗМЕНЕНИЯ РАЗМЕРА ДЛЯ ТЕКСТА
+                if (resizableElements.ContainsKey(draggedElement))
+                {
+                    resizableElements[draggedElement].ShowResizeHandles();
+                }
             }
             if (draggedElement != null)
             {
@@ -1955,9 +1988,16 @@ namespace Graphic_Editor
             {
                 // Выделяем элемент при щелчке лкм
                 SelectElement(element as FrameworkElement);
+                SelectShape(element);
                 isDragging = true;
                 draggedElement = element;
                 element.CaptureMouse();
+
+                // СКРЫВАЕМ РУЧКИ ИЗМЕНЕНИЯ РАЗМЕРА ПРИ НАЧАЛЕ ПЕРЕТАСКИВАНИЯ
+                if (resizableElements.ContainsKey(element))
+                {
+                    resizableElements[element].HideResizeHandles();
+                }
 
                 // Рассчитываем смещение так, чтобы центр фигуры был под курсором
                 offset = new Point(
@@ -1970,7 +2010,7 @@ namespace Graphic_Editor
 
                 // Визуальный фидбэк
                 // Выделяем фигуру при клике
-                SelectShape(element);
+                //SelectShape(element);
 
                 isDragging = true;
                 draggedElement = element;
@@ -1987,7 +2027,7 @@ namespace Graphic_Editor
             if (element != null)
             {
                 // ВЫДЕЛЯЕМ фигуру при клике (но не начинаем новое перетаскивание)
-                SelectShape(element);
+                //SelectShape(element);
 
                 isDragging = false;
                 element.ReleaseMouseCapture();
@@ -2002,12 +2042,47 @@ namespace Graphic_Editor
                 // ВОЗВРАЩАЕМ НОРМАЛЬНЫЙ ZIndex ПОСЛЕ ПЕРЕТАСКИВАНИЯ
                 Canvas.SetZIndex(element, 1);
 
+                // ПОКАЗЫВАЕМ РУЧКИ ИЗМЕНЕНИЯ РАЗМЕРА ПОСЛЕ ЗАВЕРШЕНИЯ ПЕРЕТАСКИВАНИЯ
+                if (resizableElements.ContainsKey(element))
+                {
+                    resizableElements[element].ShowResizeHandles();
+                }
+
                 // Возвращаем исходный вид
                 ApplyCanvasDragVisualFeedback(element, false);
 
                 draggedElement = null;
                 e.Handled = true;
             }
+        }
+
+        // Добавьте метод для снятия выделения при клике на пустую область канваса
+        private void MainCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Если кликнули на пустую область канваса - снимаем выделение
+            if (e.OriginalSource is Canvas)
+            {
+                DeselectAll();
+                e.Handled = true;
+            }
+        }
+
+        // Метод для полного снятия выделения
+        private void DeselectAll()
+        {
+            DeselectElement();
+
+            if (selectedShape != null)
+            {
+                RemoveSelectionVisual(selectedShape);
+                if (resizableElements.ContainsKey(selectedShape))
+                {
+                    resizableElements[selectedShape].HideResizeHandles();
+                }
+                selectedShape = null;
+            }
+
+            currentResizableElement = null;
         }
 
         private void ApplyCanvasDragVisualFeedback(UIElement element, bool isDragging)
@@ -2059,8 +2134,15 @@ namespace Graphic_Editor
         // Метод для выделения фигуры
         public void SelectShape(UIElement shape)
         {
+            // Проверяем, находится ли элемент в панели нотации
+            if (IsElementInNotation(shape))
+            {
+                // Для элементов в нотации не показываем ручки изменения размера
+                return;
+            }
+
             // Снимаем выделение с предыдущей фигуры
-            if (selectedShape != null)
+            if (selectedShape != null && selectedShape != shape)
             {
                 RemoveSelectionVisual(selectedShape);
                 if (resizableElements.ContainsKey(selectedShape))
@@ -2069,22 +2151,45 @@ namespace Graphic_Editor
                 }
             }
 
+            // Снимаем выделение с selectedElement если он есть
+            if (selectedElement != null && selectedElement != shape)
+            {
+                DeselectElement();
+            }
+
             // Сохраняем оригинальные цвета перед выделением
             SaveOriginalColors(shape);
 
             // Выделяем новую фигуру
             selectedShape = shape;
+            selectedElement = shape as FrameworkElement;
             ApplySelectionVisual(selectedShape);
 
-            // Показываем ручки изменения размера
+            // ПОКАЗЫВАЕМ РУЧКИ ИЗМЕНЕНИЯ РАЗМЕРА
             ShowResizeHandlesForElement(shape);
 
             // Обновляем комбо-боксы в соответствии с цветами фигуры
             UpdateColorComboBoxesFromShape(selectedShape);
+
+            // Создаем контекстное меню
+            if (shape is FrameworkElement frameworkElement)
+            {
+                CreateContextMenu(frameworkElement);
+            }
         }
 
         private void ShowResizeHandlesForElement(UIElement element)
         {
+            // Не показываем ручки во время перетаскивания
+            if (isDragging) return;
+
+            // Проверяем, не находится ли элемент в панели нотации
+            if (IsElementInNotation(element))
+            {
+                // Не показываем ручки изменения размера для элементов в нотации
+                return;
+            }
+
             // Скрываем предыдущие ручки
             if (currentResizableElement != null)
             {
@@ -2092,16 +2197,26 @@ namespace Graphic_Editor
                 currentResizableElement = null;
             }
 
-            // Создаем ResizableElement для текущего элемента
+            // Создаем или используем существующий ResizableElement для текущего элемента
             try
             {
-                currentResizableElement = new ResizableElement(element, MainCanvas);
-                resizableElements[element] = currentResizableElement;
+                if (!resizableElements.ContainsKey(element))
+                {
+                    // Создаем новый ResizableElement
+                    resizableElements[element] = new ResizableElement(element, MainCanvas);
+                }
+
+                currentResizableElement = resizableElements[element];
                 currentResizableElement.ShowResizeHandles();
+
+                // Обновляем текстовые поля размеров
+                if (element is FrameworkElement frameworkElement)
+                {
+                    UpdateDimensions(frameworkElement.ActualWidth, frameworkElement.ActualHeight);
+                }
             }
             catch (Exception ex)
             {
-                // Логируем ошибку, но не прерываем работу приложения
                 System.Diagnostics.Debug.WriteLine($"Ошибка создания ResizableElement: {ex.Message}");
             }
         }
