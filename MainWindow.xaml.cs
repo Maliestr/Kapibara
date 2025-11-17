@@ -58,6 +58,9 @@ namespace Graphic_Editor
         // Список всех плашек для управления видимостью
         private List<Border> panels = new List<Border>();
 
+        private Dictionary<UIElement, ResizableElement> resizableElements = new Dictionary<UIElement, ResizableElement>();
+        private ResizableElement currentResizableElement;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -68,8 +71,51 @@ namespace Graphic_Editor
 
             // Обработка горячих клавиш
             this.KeyDown += MainWindow_KeyDown;
+
+            // Обработчики для текстовых полей размеров
+            WidthTextBox.LostFocus += DimensionTextBox_LostFocus;
+            HeightTextBox.LostFocus += DimensionTextBox_LostFocus;
+            WidthTextBox.KeyDown += DimensionTextBox_KeyDown;
+            HeightTextBox.KeyDown += DimensionTextBox_KeyDown;
         }
-        
+
+        // Обработчики для ручного ввода размеров
+        private void DimensionTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            ApplyDimensionsFromTextboxes();
+        }
+
+        private void DimensionTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                ApplyDimensionsFromTextboxes();
+                e.Handled = true;
+            }
+        }
+
+        private void ApplyDimensionsFromTextboxes()
+        {
+            if (selectedShape == null) return;
+
+            if (double.TryParse(WidthTextBox.Text, out double width) &&
+                double.TryParse(HeightTextBox.Text, out double height))
+            {
+                // Применяем новые размеры
+                if (selectedShape is FrameworkElement frameworkElement)
+                {
+                    frameworkElement.Width = Math.Max(20, width);
+                    frameworkElement.Height = Math.Max(20, height);
+                }
+
+                // Обновляем позицию ручек изменения размера
+                if (resizableElements.ContainsKey(selectedShape))
+                {
+                    resizableElements[selectedShape].ShowResizeHandles();
+                }
+            }
+        }
+
         // Для выделения кнопок
         //private void Button_Click(object sender, RoutedEventArgs e)
         //{
@@ -563,6 +609,9 @@ namespace Graphic_Editor
             Canvas.SetTop(ellipse, double.Parse(data[2]));
             MainCanvas.Children.Add(ellipse);
             MakeCanvasShapeDraggable(ellipse);
+
+            // Создаем ResizableElement
+            resizableElements[ellipse] = new ResizableElement(ellipse, MainCanvas);
         }
 
         private void CreateSquareFromData(string[] data)
@@ -582,6 +631,9 @@ namespace Graphic_Editor
             Canvas.SetTop(square, double.Parse(data[2]));
             MainCanvas.Children.Add(square);
             MakeCanvasShapeDraggable(square);
+
+            // Создаем ResizableElement
+            resizableElements[square] = new ResizableElement(square, MainCanvas);
         }
 
         private void CreateDiamondFromData(string[] data)
@@ -603,6 +655,9 @@ namespace Graphic_Editor
             Canvas.SetTop(diamond, double.Parse(data[2]));
             MainCanvas.Children.Add(diamond);
             MakeCanvasShapeDraggable(diamond);
+
+            // Создаем ResizableElement
+            resizableElements[diamond] = new ResizableElement(diamond, MainCanvas);
         }
 
         private void CreateLineFromData(string[] data)
@@ -623,6 +678,9 @@ namespace Graphic_Editor
             line.RenderTransform = new RotateTransform(double.Parse(data[7]));
             MainCanvas.Children.Add(line);
             MakeCanvasShapeDraggable(line);
+
+            // Создаем ResizableElement
+            resizableElements[line] = new ResizableElement(line, MainCanvas);
         }
 
         private void ExportCanvasToImage(string filePath)
@@ -872,6 +930,13 @@ namespace Graphic_Editor
                 {
                     frameworkElement.ContextMenu = null;
                 }
+
+                // Скрываем ручки изменения размера
+                if (resizableElements.ContainsKey(selectedElement))
+                {
+                    resizableElements[selectedElement].HideResizeHandles();
+                }
+
                 selectedElement = null;
             }
         }
@@ -982,7 +1047,10 @@ namespace Graphic_Editor
                 MainCanvas.Children.Add(newElement);
                 canvasElements.Add(newElement);
                 MakeCanvasShapeDraggable(newElement);
-                
+
+                // Создаем ResizableElement для нового элемента
+                resizableElements[newElement] = new ResizableElement(newElement, MainCanvas);
+
                 // Выделяем вставленный элемент
                 SelectElement(newElement as FrameworkElement);
                 
@@ -1004,7 +1072,14 @@ namespace Graphic_Editor
             {
                 // Сохраняем в стек отмены
                 SaveToUndoStack(selectedElement);
-                
+
+                // Удаляем ResizableElement если есть
+                if (resizableElements.ContainsKey(selectedElement))
+                {
+                    resizableElements[selectedElement].Dispose();
+                    resizableElements.Remove(selectedElement);
+                }
+
                 MainCanvas.Children.Remove(selectedElement);
                 canvasElements.Remove(selectedElement);
                 
@@ -1520,6 +1595,21 @@ namespace Graphic_Editor
             }
         }
 
+        // Метод для обновления текстовых полей размеров
+        public void UpdateDimensions(double width, double height)
+        {
+            // Обновляем текстовые поля размеров если они существуют
+            if (WidthTextBox != null && !double.IsNaN(width))
+            {
+                WidthTextBox.Text = Math.Round(width).ToString();
+            }
+
+            if (HeightTextBox != null && !double.IsNaN(height))
+            {
+                HeightTextBox.Text = Math.Round(height).ToString();
+            }
+        }
+
         private void Shape_MouseLeftButtonUp(object sender, MouseEventArgs e)
         {
             var element = sender as UIElement;
@@ -1973,6 +2063,10 @@ namespace Graphic_Editor
             if (selectedShape != null)
             {
                 RemoveSelectionVisual(selectedShape);
+                if (resizableElements.ContainsKey(selectedShape))
+                {
+                    resizableElements[selectedShape].HideResizeHandles();
+                }
             }
 
             // Сохраняем оригинальные цвета перед выделением
@@ -1982,9 +2076,36 @@ namespace Graphic_Editor
             selectedShape = shape;
             ApplySelectionVisual(selectedShape);
 
+            // Показываем ручки изменения размера
+            ShowResizeHandlesForElement(shape);
+
             // Обновляем комбо-боксы в соответствии с цветами фигуры
             UpdateColorComboBoxesFromShape(selectedShape);
         }
+
+        private void ShowResizeHandlesForElement(UIElement element)
+        {
+            // Скрываем предыдущие ручки
+            if (currentResizableElement != null)
+            {
+                currentResizableElement.HideResizeHandles();
+                currentResizableElement = null;
+            }
+
+            // Создаем ResizableElement для текущего элемента
+            try
+            {
+                currentResizableElement = new ResizableElement(element, MainCanvas);
+                resizableElements[element] = currentResizableElement;
+                currentResizableElement.ShowResizeHandles();
+            }
+            catch (Exception ex)
+            {
+                // Логируем ошибку, но не прерываем работу приложения
+                System.Diagnostics.Debug.WriteLine($"Ошибка создания ResizableElement: {ex.Message}");
+            }
+        }
+
         // Сохранение оригинальных цветов
         private void SaveOriginalColors(UIElement shape)
         {
@@ -2340,8 +2461,6 @@ namespace Graphic_Editor
                 UpdateComboBoxSelection(StrokeColorComboBox, strokeHexColor);
             }
         }
-
-
 
         private void AnimateShapeAppearance(UIElement shape)
         {

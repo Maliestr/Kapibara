@@ -66,6 +66,14 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="ResizeHandleStyle" TargetType="Rectangle">
+            <Setter Property="Fill" Value="Blue"/>
+            <Setter Property="Stroke" Value="White"/>
+            <Setter Property="StrokeThickness" Value="1"/>
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Height" Value="8"/>
+        </Style>
     </Window.Resources>
 
     <WindowChrome.WindowChrome>
