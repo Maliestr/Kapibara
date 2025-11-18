@@ -1224,7 +1224,6 @@ namespace Graphic_Editor
             // Очищаем комбо-боксы
             if (selectedShape != null)
             {
-                RemoveSelectionVisual(selectedShape);
                 if (selectedShape is FrameworkElement shapeFrameworkElement)
                 {
                     Canvas.SetZIndex(shapeFrameworkElement, 1);
@@ -1241,68 +1240,6 @@ namespace Graphic_Editor
             StrokeColorComboBox.SelectedIndex = -1;
             FillColorPreview.Background = Brushes.Transparent;
             StrokeColorPreview.Background = Brushes.Transparent;
-        }
-        // Визуальное выделение элемента
-        private const double WorkAreaTop = 50;    // Отступ сверху (под меню)
-        private const double WorkAreaBottom = 100; // Отступ снизу (над панелью инструментов)
-        private void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
-        {
-            // делаем фул ширину константной 
-            if (isSelected)
-            {
-                if (element is Ellipse ellipse)
-                {
-                    ellipse.Stroke = Brushes.Blue;
-
-                }
-                else if (element is Border border)
-                {
-                    border.BorderBrush = Brushes.Blue;
-
-                }
-                else if (element is Line line)
-                {
-                    line.Stroke = Brushes.Blue;
-
-                }
-                else if (element is TextBlock textBlock)
-                {
-                    textBlock.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 255));
-                }
-            }
-            else
-            {
-                // Возвращаем оригинальные цвета
-                if (element is Ellipse ellipse)
-                {
-                    if (ellipse.Fill == Brushes.Transparent) // Кольцо
-                    {
-                        ellipse.Stroke = Brushes.White;
-                        ellipse.StrokeThickness = 5;
-                    }
-                    else // Круг
-                    {
-                        ellipse.Stroke = Brushes.Black;
-                        ellipse.StrokeThickness = 3;
-                    }
-                    ellipse.StrokeThickness = Math.Max(ellipse.StrokeThickness - 2, 1);
-                }
-                else if (element is Border border)
-                {
-                    border.BorderBrush = Brushes.White;
-                    border.BorderThickness = new Thickness(2);
-
-                }
-                else if (element is Line line)
-                {
-                    line.Stroke = Brushes.White;
-                    line.StrokeThickness = 3;
-                }
-                else if (element is TextBlock textBlock)
-                {
-                    textBlock.Background = Brushes.Transparent;
-                }
-            }
         }
 
         // Копирование выделенного элемента
