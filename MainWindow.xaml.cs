@@ -1,27 +1,29 @@
-﻿using System;
-using Microsoft.Win32;
-using System.IO;
-using System.Windows.Media.Imaging;
-using System.Diagnostics;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
+using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Shapes;
-using System.Xml;
-using System.Windows.Shell;
-using System.Windows.Ink;
-using System.Globalization;
+using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
+using System.Windows.Shapes;
+using System.Windows.Shell;
+using System.Xml;
+using System.Xml.Linq;
 
 namespace Graphic_Editor
 {
@@ -49,6 +51,8 @@ namespace Graphic_Editor
         private bool isTextModeActive = false;
         private TextBox textBox;
 
+        private Dictionary<UIElement, TextFormatting> textFormatting = new Dictionary<UIElement, TextFormatting>();
+
         private Dictionary<UIElement, Brush> originalStrokeColors = new Dictionary<UIElement, Brush>();
         private Dictionary<UIElement, Brush> originalFillColors = new Dictionary<UIElement, Brush>();
         private UIElement selectedShape;
@@ -57,6 +61,30 @@ namespace Graphic_Editor
 
         // Список всех плашек для управления видимостью
         private List<Border> panels = new List<Border>();
+
+        private bool isCommentModeActive = false;
+        private List<Comment> comments = new List<Comment>();
+
+        private string currentFontFamily = "Gotham Pro";
+        private double currentFontSize = 14;
+        private FontStyle currentFontStyle = FontStyles.Normal;
+        private FontWeight currentFontWeight = FontWeights.Normal;
+
+        public class TextFormatting
+        {
+            public FontFamily FontFamily { get; set; }
+            public double FontSize { get; set; }
+            public FontStyle FontStyle { get; set; }
+            public FontWeight FontWeight { get; set; }
+        }
+
+        public class Comment
+        {
+            public UIElement VisualElement { get; set; }
+            public UIElement TextElement { get; set; }
+            public string Text { get; set; }
+            public Point Position { get; set; }
+        }
 
         public MainWindow()
         {
@@ -71,11 +99,32 @@ namespace Graphic_Editor
 
             // Добавляем обработчик клика по канвасу для сброса выделения
             MainCanvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
+
+            // Очищаем комбо-боксы при запуске
+            ClearColorComboBoxesOnStartup();
+
+            // Добавляем обработчики для комментариев
+            CommentModeButton.Click += CommentModeButton_Click;
+
+            // Сбрасываем комбо-боксы текста при запуске
+            ResetTextComboBoxesToEmpty();
         }
 
         // Обработчик клика по пустой области канваса
         private void MainCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (isCommentModeActive)
+            {
+                Point clickPosition = e.GetPosition(MainCanvas);
+
+                // Проверяем, что клик не по другим элементам
+                if (e.OriginalSource is System.Windows.Controls.Canvas)
+                {
+                    CreateCommentAtPosition(clickPosition);
+                    e.Handled = true;
+                    return; // Выходим, чтобы не выполнять остальной код
+                }
+            }
             // Проверяем, был ли клик непосредственно по канвасу, а не по дочернему элементу
             if (e.OriginalSource is System.Windows.Controls.Canvas)
             {
@@ -215,7 +264,7 @@ namespace Graphic_Editor
                 double elementHeight = GetElementHeight(element);
 
                 // Вычисляем границы рабочей области
-                
+
                 double maxTop = MainCanvas.ActualHeight - elementHeight - WorkAreaBottom;
 
                 // Ограничиваем координаты
@@ -1151,6 +1200,8 @@ namespace Graphic_Editor
 
             // ПОКАЗЫВАЕМ ПАНЕЛЬ ТОЛЩИНЫ ОБВОДКИ
             UpdateStrokeWidthPanelVisibility();
+            // Обновляем панель текста, если элемент является текстовым
+            UpdateTextPanelForSelectedElement(element);
         }
 
         // Обновите метод DeselectAll для скрытия панели толщины
@@ -1171,10 +1222,87 @@ namespace Graphic_Editor
             StrokeWidthPanel.Visibility = Visibility.Collapsed;
 
             // Очищаем комбо-боксы
+            if (selectedShape != null)
+            {
+                RemoveSelectionVisual(selectedShape);
+                if (selectedShape is FrameworkElement shapeFrameworkElement)
+                {
+                    Canvas.SetZIndex(shapeFrameworkElement, 1);
+                }
+                selectedShape = null;
+            }
+            ClearColorComboBoxes();
+            // Сбрасываем комбо-боксы текста при снятии выделения
+            ResetTextComboBoxesToEmpty();
+        }
+        private void ClearColorComboBoxes()
+        {
             FillColorComboBox.SelectedIndex = -1;
             StrokeColorComboBox.SelectedIndex = -1;
             FillColorPreview.Background = Brushes.Transparent;
             StrokeColorPreview.Background = Brushes.Transparent;
+        }
+        // Визуальное выделение элемента
+        private const double WorkAreaTop = 50;    // Отступ сверху (под меню)
+        private const double WorkAreaBottom = 100; // Отступ снизу (над панелью инструментов)
+        private void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
+        {
+            // делаем фул ширину константной 
+            if (isSelected)
+            {
+                if (element is Ellipse ellipse)
+                {
+                    ellipse.Stroke = Brushes.Blue;
+
+                }
+                else if (element is Border border)
+                {
+                    border.BorderBrush = Brushes.Blue;
+
+                }
+                else if (element is Line line)
+                {
+                    line.Stroke = Brushes.Blue;
+
+                }
+                else if (element is TextBlock textBlock)
+                {
+                    textBlock.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 255));
+                }
+            }
+            else
+            {
+                // Возвращаем оригинальные цвета
+                if (element is Ellipse ellipse)
+                {
+                    if (ellipse.Fill == Brushes.Transparent) // Кольцо
+                    {
+                        ellipse.Stroke = Brushes.White;
+                        ellipse.StrokeThickness = 5;
+                    }
+                    else // Круг
+                    {
+                        ellipse.Stroke = Brushes.Black;
+                        ellipse.StrokeThickness = 3;
+                    }
+                    ellipse.StrokeThickness = Math.Max(ellipse.StrokeThickness - 2, 1);
+                }
+                else if (element is Border border)
+                {
+                    border.BorderBrush = Brushes.White;
+                    border.BorderThickness = new Thickness(2);
+
+                }
+                else if (element is Line line)
+                {
+                    line.Stroke = Brushes.White;
+                    line.StrokeThickness = 3;
+                }
+                else if (element is TextBlock textBlock)
+                {
+                    textBlock.Background = Brushes.Transparent;
+                }
+            }
         }
 
         // Копирование выделенного элемента
@@ -1357,7 +1485,7 @@ namespace Graphic_Editor
                     canvasElements.Remove(element);
                     redoStack.Push(element);
 
-                    
+
                 }
                 else
                 {
@@ -1388,8 +1516,8 @@ namespace Graphic_Editor
                     MainCanvas.Children.Remove(element);
                     canvasElements.Remove(element);
                     undoStack.Push(element);
-                    
-                    
+
+
                 }
                 else
                 {
@@ -1601,6 +1729,9 @@ namespace Graphic_Editor
             MainCanvas.Children.Remove(textBox);
             textBox = null;
             isTextModeActive = false;
+
+            // Сбрасываем комбо-боксы текста после создания текстового элемента
+            ResetTextComboBoxesToEmpty();
         }
 
         // Создание текстового элемента с цветом по умолчанию
@@ -1608,27 +1739,36 @@ namespace Graphic_Editor
         {
             CreateTextElementWithColor(text, left, top, Brushes.White);
         }
-
         // Создание текстового элемента с указанным цветом
         private void CreateTextElementWithColor(string text, double left, double top, Brush color)
         {
+            // Используем значения по умолчанию если текущие не установлены
+            string fontFamily = string.IsNullOrEmpty(currentFontFamily) ? "Gotham Pro" : currentFontFamily;
+            double fontSize = currentFontSize == 0 ? 14 : currentFontSize;
+            FontStyle fontStyle = currentFontStyle;
+            FontWeight fontWeight = currentFontWeight;
 
             var textBlock = new TextBlock
             {
                 Text = text,
                 Foreground = color,
-                FontSize = 14,
+                FontFamily = new FontFamily(fontFamily),
+                FontSize = fontSize,
+                FontStyle = fontStyle,
+                FontWeight = fontWeight,
                 Cursor = Cursors.Hand,
                 FocusVisualStyle = null,
-                Background = Brushes.Transparent // Явно указываем прозрачный фон
+                Background = Brushes.Transparent
             };
+
             // Устанавливаем позицию на холсте
             Canvas.SetLeft(textBlock, left);
             Canvas.SetTop(textBlock, top);
             Canvas.SetZIndex(textBlock, 1000);
 
-            // Сохраняем оригинальный цвет для возможного восстановления
+            // Сохраняем оригинальные настройки
             originalStrokeColors[textBlock] = color;
+            SaveTextFormatting(textBlock);
 
             // Добавляем текстовый элемент на холст
             MainCanvas.Children.Add(textBlock);
@@ -1637,6 +1777,20 @@ namespace Graphic_Editor
             SelectElement(textBlock);
         }
 
+        // Сохранение форматирования текстового элемента
+        private void SaveTextFormatting(TextBlock textBlock)
+        {
+            if (!textFormatting.ContainsKey(textBlock))
+            {
+                textFormatting[textBlock] = new TextFormatting
+                {
+                    FontFamily = textBlock.FontFamily,
+                    FontSize = textBlock.FontSize,
+                    FontStyle = textBlock.FontStyle,
+                    FontWeight = textBlock.FontWeight
+                };
+            }
+        }
         // Обработчик нажатия левой кнопки мыши на текстовом элементе
         private void TextElement_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
@@ -1699,7 +1853,7 @@ namespace Graphic_Editor
 
                 if (elementWidth == 0 || double.IsNaN(elementWidth)) elementWidth = 100;
                 if (elementHeight == 0 || double.IsNaN(elementHeight)) elementHeight = 30;
-                
+
                 double maxTop = MainCanvas.ActualHeight - elementHeight - WorkAreaBottom;
 
                 // Определяем рабочую область 
@@ -1734,7 +1888,6 @@ namespace Graphic_Editor
             draggedElement?.ReleaseMouseCapture();
             draggedElement = null;
         }
-
         // Редактирование существующего текстового элемента
         private void EditTextElement(TextBlock textBlock)
         {
@@ -1752,18 +1905,22 @@ namespace Graphic_Editor
                     originalStrokeColor = textBlock.Foreground;
                 }
 
-                // Создаем TextBox для редактирования с видимым фоном
+                // Создаем TextBox для редактирования с сохранением форматирования
                 var editTextBox = new TextBox
                 {
-                    Width = 200,
-                    Height = 30,
-                    Background = Brushes.Transparent, // Белый фон для видимости при редактировании
-                    Foreground = originalStrokeColor, // Черный текст для контраста
+                    Width = Math.Max(textBlock.ActualWidth, 200),
+                    Height = Math.Max(textBlock.ActualHeight, 30),
+                    Background = Brushes.White,
+                    Foreground = Brushes.Black,
                     BorderBrush = Brushes.Gray,
-                    FontSize = 14,
+                    FontFamily = textBlock.FontFamily,
+                    FontSize = textBlock.FontSize,
+                    FontStyle = textBlock.FontStyle,
+                    FontWeight = textBlock.FontWeight,
                     Text = textBlock.Text,
-                    CaretBrush = Brushes.White, // Черный курсор для видимости
-                    FocusVisualStyle = null
+                    CaretBrush = Brushes.Black,
+                    FocusVisualStyle = null,
+                    TextWrapping = TextWrapping.Wrap
                 };
 
                 double left = Canvas.GetLeft(textBlock);
@@ -1781,18 +1938,62 @@ namespace Graphic_Editor
                 {
                     if (e.Key == Key.Enter)
                     {
-                        FinishEdit(editTextBox, left, top, originalStrokeColor); // Передаем оригинальный цвет
+                        FinishEditWithFormatting(editTextBox, left, top, originalStrokeColor);
                         e.Handled = true;
                     }
                     else if (e.Key == Key.Escape)
                     {
-                        MainCanvas.Children.Remove(editTextBox);
-                        CreateTextElementWithColor(textBlock.Text, left, top, originalStrokeColor); // Передаем оригинальный цвет
+                        CancelTextEditing(editTextBox, textBlock.Text, left, top, originalStrokeColor);
                         e.Handled = true;
                     }
                 };
+
                 // Обработчик потери фокуса - сохраняем изменения
-                editTextBox.LostFocus += (s, e) => FinishEdit(editTextBox, left, top, originalStrokeColor); // Передаем оригинальный цвет
+                editTextBox.LostFocus += (s, e) => FinishEditWithFormatting(editTextBox, left, top, originalStrokeColor);
+            }
+        }
+        // Завершение редактирования с сохранением форматирования
+        private void FinishEditWithFormatting(TextBox editTextBox, double left, double top, Brush originalColor)
+        {
+            if (MainCanvas.Children.Contains(editTextBox))
+            {
+                string newText = string.IsNullOrWhiteSpace(editTextBox.Text) ? "Текст" : editTextBox.Text;
+                MainCanvas.Children.Remove(editTextBox);
+
+                // Создаем новый текстовый элемент с форматированием из TextBox
+                var textBlock = new TextBlock
+                {
+                    Text = newText,
+                    Foreground = originalColor,
+                    FontFamily = editTextBox.FontFamily,
+                    FontSize = editTextBox.FontSize,
+                    FontStyle = editTextBox.FontStyle,
+                    FontWeight = editTextBox.FontWeight,
+                    Cursor = Cursors.Hand,
+                    FocusVisualStyle = null,
+                    Background = Brushes.Transparent
+                };
+
+                Canvas.SetLeft(textBlock, left);
+                Canvas.SetTop(textBlock, top);
+                Canvas.SetZIndex(textBlock, 1000);
+
+                originalStrokeColors[textBlock] = originalColor;
+                SaveTextFormatting(textBlock);
+
+                MainCanvas.Children.Add(textBlock);
+                textBlock.MouseLeftButtonDown += TextElement_MouseLeftButtonDown;
+                SelectElement(textBlock);
+            }
+        }
+
+        // Отмена редактирования
+        private void CancelTextEditing(TextBox editTextBox, string originalText, double left, double top, Brush originalColor)
+        {
+            if (MainCanvas.Children.Contains(editTextBox))
+            {
+                MainCanvas.Children.Remove(editTextBox);
+                CreateTextElementWithColor(originalText, left, top, originalColor);
             }
         }
 
@@ -1806,6 +2007,209 @@ namespace Graphic_Editor
                 CreateTextElementWithColor(newText, left, top, originalColor);
             }
         }
+
+
+        // Обработчик изменения шрифта
+        private void FontComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (FontComboBox.SelectedItem is ComboBoxItem selectedItem)
+            {
+                currentFontFamily = selectedItem.Content.ToString();
+                ApplyTextFormattingToSelected();
+            }
+            else
+            {
+                currentFontFamily = null;
+            }
+        }
+
+        // Обработчик изменения стиля шрифта
+        private void FontStyleComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (FontStyleComboBox.SelectedItem is ComboBoxItem selectedItem)
+            {
+                switch (selectedItem.Content.ToString())
+                {
+                    case "Regular":
+                        currentFontStyle = FontStyles.Normal;
+                        currentFontWeight = FontWeights.Normal;
+                        break;
+                    case "Bold":
+                        currentFontStyle = FontStyles.Normal;
+                        currentFontWeight = FontWeights.Bold;
+                        break;
+                    case "Italic":
+                        currentFontStyle = FontStyles.Italic;
+                        currentFontWeight = FontWeights.Normal;
+                        break;
+                    case "Bold Italic":
+                        currentFontStyle = FontStyles.Italic;
+                        currentFontWeight = FontWeights.Bold;
+                        break;
+                }
+                ApplyTextFormattingToSelected();
+            }
+            else
+            {
+                currentFontStyle = FontStyles.Normal;
+                currentFontWeight = FontWeights.Normal;
+            }
+        }
+
+        // Обработчик изменения размера шрифта
+        private void FontSizeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (FontSizeComboBox.SelectedItem is ComboBoxItem selectedItem)
+            {
+                if (double.TryParse(selectedItem.Content.ToString(), out double size))
+                {
+                    currentFontSize = size;
+                    ApplyTextFormattingToSelected();
+                }
+            }
+            else
+            {
+                currentFontSize = 0;
+            }
+        }
+
+        // Применение форматирования к выбранному текстовому элементу
+        private void ApplyTextFormattingToSelected()
+        {
+            // Применяем изменения только если есть выбранный текстовый элемент
+            // и все комбо-боксы имеют выбранные значения
+            if (selectedElement is TextBlock textBlock &&
+                !string.IsNullOrEmpty(currentFontFamily) &&
+                currentFontSize > 0)
+            {
+                textBlock.FontFamily = new FontFamily(currentFontFamily);
+                textBlock.FontSize = currentFontSize;
+                textBlock.FontStyle = currentFontStyle;
+                textBlock.FontWeight = currentFontWeight;
+
+                // Сохраняем новые настройки
+                SaveCurrentTextFormatting(textBlock);
+            }
+        }
+        // Обновление панели текста для выбранного элемента
+        private void UpdateTextPanelForSelectedElement(FrameworkElement element)
+        {
+            if (element is TextBlock textBlock)
+            {
+                // Показываем панель текста
+                TextPanel.Visibility = Visibility.Visible;
+
+                // Обновляем комбо-боксы значениями из текстового элемента
+                UpdateTextComboBoxes(textBlock);
+
+                // Сохраняем текущие настройки для применения изменений
+                SaveCurrentTextFormatting(textBlock);
+            }
+            else
+            {
+                // Скрываем панель текста для не-текстовых элементов
+                TextPanel.Visibility = Visibility.Collapsed;
+
+                // Сбрасываем комбо-боксы к пустым значениям
+                ResetTextComboBoxesToEmpty();
+            }
+        }
+        // Обновление комбо-боксов текста значениями из TextBlock
+        private void UpdateTextComboBoxes(TextBlock textBlock)
+        {
+            // Обновляем шрифт
+            foreach (ComboBoxItem item in FontComboBox.Items)
+            {
+                if (item.Content.ToString() == textBlock.FontFamily.Source)
+                {
+                    FontComboBox.SelectedItem = item;
+                    currentFontFamily = textBlock.FontFamily.Source;
+                    break;
+                }
+            }
+
+            // Обновляем размер шрифта
+            bool fontSizeFound = false;
+            foreach (ComboBoxItem item in FontSizeComboBox.Items)
+            {
+                if (double.TryParse(item.Content.ToString(), out double size) &&
+                    Math.Abs(size - textBlock.FontSize) < 0.1)
+                {
+                    FontSizeComboBox.SelectedItem = item;
+                    currentFontSize = textBlock.FontSize;
+                    fontSizeFound = true;
+                    break;
+                }
+            }
+
+            // Если размер не найден в списке, добавляем его
+            if (!fontSizeFound)
+            {
+                var newItem = new ComboBoxItem { Content = textBlock.FontSize.ToString("0") };
+                FontSizeComboBox.Items.Add(newItem);
+                FontSizeComboBox.SelectedItem = newItem;
+                currentFontSize = textBlock.FontSize;
+            }
+
+            // Обновляем стиль шрифта
+            string styleName = GetFontStyleName(textBlock.FontStyle, textBlock.FontWeight);
+            foreach (ComboBoxItem item in FontStyleComboBox.Items)
+            {
+                if (item.Content.ToString() == styleName)
+                {
+                    FontStyleComboBox.SelectedItem = item;
+                    currentFontStyle = textBlock.FontStyle;
+                    currentFontWeight = textBlock.FontWeight;
+                    break;
+                }
+            }
+        }
+
+        // Получение имени стиля для комбо-бокса
+        private string GetFontStyleName(FontStyle style, FontWeight weight)
+        {
+            if (style == FontStyles.Italic && weight == FontWeights.Bold)
+                return "Bold Italic";
+            else if (weight == FontWeights.Bold)
+                return "Bold";
+            else if (style == FontStyles.Italic)
+                return "Italic";
+            else
+                return "Regular";
+        }
+        // Сохранение текущего форматирования текстового элемента
+        private void SaveCurrentTextFormatting(TextBlock textBlock)
+        {
+            if (!textFormatting.ContainsKey(textBlock))
+            {
+                textFormatting[textBlock] = new TextFormatting();
+            }
+
+            textFormatting[textBlock].FontFamily = textBlock.FontFamily;
+            textFormatting[textBlock].FontSize = textBlock.FontSize;
+            textFormatting[textBlock].FontStyle = textBlock.FontStyle;
+            textFormatting[textBlock].FontWeight = textBlock.FontWeight;
+        }
+
+        // Сброс комбо-боксов текста к пустым значениям
+        private void ResetTextComboBoxesToEmpty()
+        {
+            // Сбрасываем выбранные элементы
+            FontComboBox.SelectedItem = null;
+            FontStyleComboBox.SelectedItem = null;
+            FontSizeComboBox.SelectedItem = null;
+
+            // Очищаем текущие значения
+            currentFontFamily = null;
+            currentFontSize = 0;
+            currentFontStyle = FontStyles.Normal;
+            currentFontWeight = FontWeights.Normal;
+
+            // Скрываем панель текста
+            TextPanel.Visibility = Visibility.Collapsed;
+        }
+
+
         private void MakeAllShapesDraggable()
         {
             // Добавляем обработчики для всех фигур в нотации
@@ -1887,7 +2291,7 @@ namespace Graphic_Editor
                     // Дополнительные ограничения для копии
                     double elementWidth = GetElementWidth(shapeCopy);
                     double elementHeight = GetElementHeight(shapeCopy);
-                    
+
                     double maxTop = MainCanvas.ActualHeight - elementHeight - WorkAreaBottom;
 
                     newLeft = Math.Max(0, Math.Min(newLeft, MainCanvas.ActualWidth - elementWidth)); newTop = Math.Max(WorkAreaTop, Math.Min(newTop, maxTop));
@@ -2541,6 +2945,14 @@ namespace Graphic_Editor
                 }
             }
         }
+        // Метод для очистки комбо-боксов при запуске программы
+        private void ClearColorComboBoxesOnStartup()
+        {
+            FillColorComboBox.SelectedIndex = -1;
+            StrokeColorComboBox.SelectedIndex = -1;
+            FillColorPreview.Background = Brushes.Transparent;
+            StrokeColorPreview.Background = Brushes.Transparent;
+        }
 
         // Вспомогательный метод для применения цвета заливки
         private void ApplyFillColorToShape(UIElement shape, Brush brush)
@@ -2650,6 +3062,236 @@ namespace Graphic_Editor
             transformGroup.Children[1].BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnimation);
             transformGroup.Children[1].BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnimation);
         }
+        // Обработчик кнопки комментариев
+        private void CommentModeButton_Click(object sender, RoutedEventArgs e)
+        {
+            isCommentModeActive = CommentModeButton.IsChecked == true;
+
+            if (isCommentModeActive)
+            {
+                MainCanvas.Cursor = Cursors.Hand;
+            }
+            else
+            {
+                MainCanvas.Cursor = Cursors.Arrow;
+            }
+        }
+        // Обработчик клика по холсту в режиме комментариев
+        private void MainCanvas_MouseLeftButtonDown_Comment(object sender, MouseButtonEventArgs e)
+        {
+            if (!isCommentModeActive) return;
+
+            Point clickPosition = e.GetPosition(MainCanvas);
+
+            // Проверяем, что клик не по другим элементам
+            if (e.OriginalSource is System.Windows.Controls.Canvas)
+            {
+                CreateCommentAtPosition(clickPosition);
+                e.Handled = true;
+            }
+        }
+        // Создание комментария в указанной позиции
+        private void CreateCommentAtPosition(Point position)
+        {
+            // Создаем визуальный элемент комментария
+            var commentIcon = new Border
+            {
+                Width = 12,
+                Height = 12,
+                Background = Brushes.Red,
+                BorderBrush = Brushes.Red,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Cursor = Cursors.Hand
+            };
+
+            // Создаем TextBlock для отображения текста
+            var commentTextBlock = new Border
+            {
+                Background = Brushes.White,
+                BorderBrush = Brushes.Gray,
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(8),
+                CornerRadius = new CornerRadius(4),
+                Child = new TextBlock
+                {
+                    Text = "",
+                    Foreground = Brushes.Black,
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxWidth = 250
+                },
+                Visibility = Visibility.Collapsed,
+                IsHitTestVisible = false // Чтобы не мешал взаимодействию
+            };
+
+            // Устанавливаем позицию
+            Canvas.SetLeft(commentIcon, position.X - 6);
+            Canvas.SetTop(commentIcon, position.Y - 6);
+
+            // Позиционируем TextBlock рядом с иконкой
+            Canvas.SetLeft(commentTextBlock, position.X + 15);
+            Canvas.SetTop(commentTextBlock, position.Y - 10);
+
+            // Добавляем на холст
+            MainCanvas.Children.Add(commentIcon);
+            MainCanvas.Children.Add(commentTextBlock);
+
+            // Создаем комментарий
+            var comment = new Comment
+            {
+                VisualElement = commentIcon,
+                TextElement = commentTextBlock,
+                Position = position,
+                Text = ""
+            };
+
+            comments.Add(comment);
+
+            // Обработчик двойного клика
+            commentIcon.MouseLeftButtonDown += (s, e) =>
+            {
+                if (e.ClickCount == 2)
+                {
+                    EditComment(comment);
+                    e.Handled = true;
+                }
+            };
+
+            // Показ текста при наведении
+            commentIcon.MouseEnter += (s, e) =>
+            {
+                commentIcon.Opacity = 0.7;
+
+                if (!string.IsNullOrEmpty(comment.Text))
+                {
+                    if (commentTextBlock.Child is TextBlock textBlock)
+                    {
+                        textBlock.Text = comment.Text;
+                    }
+                    commentTextBlock.Visibility = Visibility.Visible;
+                    Canvas.SetZIndex(commentTextBlock, 1000); // Поверх других элементов
+                }
+            };
+
+            commentIcon.MouseLeave += (s, e) =>
+            {
+                commentIcon.Opacity = 1.0;
+                commentTextBlock.Visibility = Visibility.Collapsed;
+            };
+
+            // Сразу открываем редактор
+            EditComment(comment);
+        }
+        // Редактирование комментария
+        private void EditComment(Comment comment)
+        {
+            var editTextBox = new TextBox
+            {
+                Width = 200,
+                Height = 100,
+                Background = Brushes.White,
+                Foreground = Brushes.Black,
+                BorderBrush = Brushes.Gray,
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
+                AcceptsReturn = false,
+                Text = comment.Text,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+            };
+
+            // Позиционируем рядом с комментарием
+            double left = Canvas.GetLeft(comment.VisualElement) + 20;
+            double top = Canvas.GetTop(comment.VisualElement);
+            Canvas.SetLeft(editTextBox, left);
+            Canvas.SetTop(editTextBox, top);
+
+            MainCanvas.Children.Add(editTextBox);
+            editTextBox.Focus();
+            editTextBox.SelectAll();
+
+            // Завершение редактирования
+            void FinishEditing()
+            {
+                string newText = editTextBox.Text.Trim();
+
+                if (string.IsNullOrEmpty(newText))
+                {
+                    DeleteComment(comment);
+                }
+                else
+                {
+                    comment.Text = newText;
+
+                    if (comment.VisualElement is Border border)
+                    {
+                        border.Background = Brushes.Red;
+                    }
+
+                    // Обновляем TextBlock
+                    if (comment.TextElement is Border textBorder && textBorder.Child is TextBlock textBlock)
+                    {
+                        textBlock.Text = newText;
+                    }
+                }
+
+                MainCanvas.Children.Remove(editTextBox);
+            }
+
+            editTextBox.KeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Enter)
+                {
+                    // Если нажат Ctrl+Enter - добавляем новую строку
+                    if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+                    {
+                        // Разрешаем обычное поведение TextBox (добавление новой строки)
+                        return;
+                    }
+
+                    // Обычный Enter - завершаем редактирование
+                    FinishEditing();
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.Escape)
+                {
+                    // При отмене проверяем, был ли текст изначально
+                    if (string.IsNullOrEmpty(comment.Text))
+                    {
+                        DeleteComment(comment);
+                    }
+                    MainCanvas.Children.Remove(editTextBox);
+                    e.Handled = true;
+                }
+            };
+
+            editTextBox.LostFocus += (s, e) =>
+            {
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (MainCanvas.Children.Contains(editTextBox))
+                    {
+                        FinishEditing();
+                    }
+                }));
+            };
+        }
+        // Удаление комментария
+        private void DeleteComment(Comment comment)
+        {
+            if (comment.VisualElement != null)
+            {
+                MainCanvas.Children.Remove(comment.VisualElement);
+            }
+            if (comment.TextElement != null)
+            {
+                MainCanvas.Children.Remove(comment.TextElement);
+            }
+            comments.Remove(comment);
+        }
+
+
+
 
         private double GetElementWidth(UIElement element)
         {
