@@ -2560,6 +2560,68 @@ namespace Graphic_Editor
             }
         }
 
+        private void MainCanvas_MouseMove(object sender, MouseEventArgs e)
+        {
+            // Обработка рисования стрелки
+            if (isArrowModeActive && currentArrow != null && e.LeftButton == MouseButtonState.Pressed)
+            {
+                UpdateArrowDrawing(e.GetPosition(MainCanvas));
+            }
+
+            // Обработка выделения
+            if (isSelecting)
+            {
+                var currentPos = e.GetPosition(MainCanvas);
+
+                var x = Math.Min(currentPos.X, selectionStart.X);
+                var y = Math.Min(currentPos.Y, selectionStart.Y);
+                var width = Math.Abs(currentPos.X - selectionStart.X);
+                var height = Math.Abs(currentPos.Y - selectionStart.Y);
+
+                Canvas.SetLeft(selectionRect, x);
+                Canvas.SetTop(selectionRect, y);
+                selectionRect.Width = width;
+                selectionRect.Height = height;
+
+                UpdateSelectionInRealTime(new Rect(x, y, width, height));
+            }
+
+            // Обработка перетаскивания (частичное повторение написанного ранее)
+            if (isDragging && draggedElement != null && e.LeftButton == MouseButtonState.Pressed)
+            {
+                var element = draggedElement;
+                Point currentPosition = e.GetPosition(MainCanvas);
+
+                double newLeft = currentPosition.X - offset.X;
+                double newTop = currentPosition.Y - offset.Y;
+
+                Canvas.SetLeft(element, newLeft);
+                Canvas.SetTop(element, newTop);
+            }
+
+
+        }
+        private void MainCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            // Завершение выделения
+            if (isSelecting)
+            {
+                isSelecting = false;
+                MainCanvas.ReleaseMouseCapture();
+                selectionRect.Visibility = Visibility.Collapsed;
+            }
+
+            // Завершение перетаскивания
+            if (isDragging && draggedElement != null)
+            {
+                isDragging = false;
+                draggedElement.ReleaseMouseCapture();
+                ApplyCanvasDragVisualFeedback(draggedElement, false);
+                draggedElement = null;
+            }
+
+            e.Handled = true;
+        }
 
         // Метод применения цвета к выделенной фигуре
         private void ApplyColorToSelectedShape(string hexColor)
