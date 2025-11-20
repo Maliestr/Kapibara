@@ -2150,26 +2150,26 @@ namespace Graphic_Editor
                 //SelectShape(element);
 
                 isDragging = false;
-                element.ReleaseMouseCapture();
+                draggedElement.ReleaseMouseCapture();
 
                 // ФИКСИРУЕМ ТРАНСФОРМАЦИЮ ДЛЯ РОМБА
-                if (element is Border border && border.RenderTransform is RotateTransform rotateTransform)
+                if (draggedElement is Border border && border.RenderTransform is RotateTransform rotateTransform)
                 {
                     // Убеждаемся что ромб сохраняет поворот на 45 градусов
                     rotateTransform.Angle = 45;
                 }
 
                 // ВОЗВРАЩАЕМ НОРМАЛЬНЫЙ ZIndex ПОСЛЕ ПЕРЕТАСКИВАНИЯ
-                Canvas.SetZIndex(element, 1);
+                Canvas.SetZIndex(draggedElement, 1);
 
                 // ПОКАЗЫВАЕМ РУЧКИ ИЗМЕНЕНИЯ РАЗМЕРА ПОСЛЕ ЗАВЕРШЕНИЯ ПЕРЕТАСКИВАНИЯ
-                if (resizableElements.ContainsKey(element))
+                if (resizableElements.ContainsKey(draggedElement))
                 {
-                    resizableElements[element].ShowResizeHandles();
+                    resizableElements[draggedElement].ShowResizeHandles();
                 }
 
                 // Возвращаем исходный вид
-                ApplyCanvasDragVisualFeedback(element, false);
+                ApplyCanvasDragVisualFeedback(draggedElement, false);
 
                 draggedElement = null;
                 e.Handled = true;
@@ -2396,7 +2396,7 @@ namespace Graphic_Editor
                 }
                 
             }
-            else
+            else if
             {
                 // Возвращаем оригинальные цвета
                 if (element is Ellipse ellipse)
@@ -3113,7 +3113,7 @@ namespace Graphic_Editor
             {
                 // Активируем режим рисования
                 MainCanvas.Cursor = Cursors.Cross;
-                PenButton.Background = Brushes.LightBlue;
+                pencil.Background = Brushes.LightBlue;
                 MessageBox.Show("Режим рисования ломаных стрелок активирован.\n\n" +
                                "ЛКМ - добавить точку/сегмент\n" +
                                "ПКМ или Escape - завершить стрелку\n" +
@@ -3124,7 +3124,7 @@ namespace Graphic_Editor
             {
                 // Деактивируем режим рисования
                 MainCanvas.Cursor = Cursors.Arrow;
-                PenButton.Background = Brushes.Transparent;
+                pencil.Background = Brushes.Transparent;
 
                 if (currentArrow != null)
                 {
