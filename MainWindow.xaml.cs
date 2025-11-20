@@ -2755,6 +2755,34 @@ namespace Graphic_Editor
             }
         }
 
+        // Инициализация системы выделения
+        private void InitializeSelectionSystem()
+        {
+            selectionRect = new Rectangle
+            {
+                Stroke = Brushes.DodgerBlue,
+                StrokeThickness = 1,
+                StrokeDashArray = new DoubleCollection { 2, 2 },
+                Fill = new SolidColorBrush(Color.FromArgb(0x20, 0x1E, 0x90, 0xFF)),
+                Visibility = Visibility.Collapsed
+            };
+            MainCanvas.Children.Add(selectionRect);
+            Panel.SetZIndex(selectionRect, 1000);
+
+            // Добавляем обработчики событий для выделения
+            MainCanvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
+            MainCanvas.MouseMove += MainCanvas_MouseMove;
+            MainCanvas.MouseLeftButtonUp += MainCanvas_MouseLeftButtonUp;
+        }
+
+        private void ClearSelection()
+        {
+            foreach (var element in selectedElements.ToList())
+            {
+                DeselectElement(element);
+            }
+        }
+
         // Вспомогательный метод для применения цвета обводки к конкретной фигуре
         private void ApplyStrokeColorToShape(UIElement shape, Brush brush)
         {
