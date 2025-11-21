@@ -163,29 +163,6 @@ namespace Graphic_Editor
             pencil.Click += PenButton_Click;
         }
 
-        // Обработчик клика по пустой области канваса
-        private void MainCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (isCommentModeActive)
-            {
-                Point clickPosition = e.GetPosition(MainCanvas);
-
-                // Проверяем, что клик не по другим элементам
-                if (e.OriginalSource is System.Windows.Controls.Canvas)
-                {
-                    CreateCommentAtPosition(clickPosition);
-                    e.Handled = true;
-                    return; // Выходим, чтобы не выполнять остальной код
-                }
-            }
-            // Проверяем, был ли клик непосредственно по канвасу, а не по дочернему элементу
-            if (e.OriginalSource is System.Windows.Controls.Canvas)
-            {
-                DeselectAll();
-                e.Handled = true;
-            }
-        }
-
         // Обработчики для ручного ввода размеров
         private void DimensionTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
@@ -1439,55 +1416,6 @@ namespace Graphic_Editor
             StrokeColorPreview.Background = Brushes.Transparent;
         }
 
-        // Визуальное выделение элемента
-        private void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
-        {
-            if (isSelected)
-            {
-                if (element is Ellipse ellipse)
-                {
-                    ellipse.Stroke = Brushes.Blue;
-                    ellipse.StrokeThickness += 2;
-                }
-                else if (element is Border border)
-                {
-                    border.BorderBrush = Brushes.Blue;
-                    border.BorderThickness = new Thickness(4);
-                }
-                else if (element is Line line)
-                {
-                    line.Stroke = Brushes.Blue;
-                    line.StrokeThickness += 2;
-                }
-            }
-            else
-            {
-                // Возвращаем оригинальные цвета
-                if (element is Ellipse ellipse)
-                {
-                    if (ellipse.Fill == Brushes.Transparent) // Кольцо
-                    {
-                        ellipse.Stroke = Brushes.White;
-                    }
-                    else // Круг
-                    {
-                        ellipse.Stroke = Brushes.Black;
-                    }
-                    ellipse.StrokeThickness = Math.Max(ellipse.StrokeThickness - 2, 1);
-                }
-                else if (element is Border border)
-                {
-                    border.BorderBrush = Brushes.White;
-                    border.BorderThickness = new Thickness(2);
-                }
-                else if (element is Line line)
-                {
-                    line.Stroke = Brushes.White;
-                    line.StrokeThickness = Math.Max(line.StrokeThickness - 2, 1);
-                }
-            }
-        }
-
         // Копирование выделенного элемента
         private void CopySelectedElement()
         {
@@ -2544,10 +2472,6 @@ namespace Graphic_Editor
         // Визуальное выделение элемента
         // Визуальное выделение элемента
         // Визуальное выделение элемента
-        // Визуальное выделение элемента
-        // Визуальное выделение элемента
-        // Визуальное выделение элемента
-        // Визуальное выделение элемента
         private void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
         {
             if (isSelected)
@@ -3060,6 +2984,19 @@ namespace Graphic_Editor
                 return;
             }
 
+            if (isCommentModeActive)
+            {
+                Point clickPosition = e.GetPosition(MainCanvas);
+
+                // Проверяем, что клик не по другим элементам
+                if (e.OriginalSource is System.Windows.Controls.Canvas)
+                {
+                    CreateCommentAtPosition(clickPosition);
+                    e.Handled = true;
+                    return; // Выходим, чтобы не выполнять остальной код
+                }
+            }
+
             // Если кликнули на пустую область канваса - снимаем выделение
             if (e.OriginalSource == MainCanvas)
             {
@@ -3363,47 +3300,6 @@ namespace Graphic_Editor
             }
         }
 
-        // Сохранение оригинальных цветов
-        private void SaveOriginalColors(UIElement shape)
-        {
-            if (shape is Ellipse ellipse)
-            {
-                if (!originalStrokeColors.ContainsKey(shape))
-                {
-                    originalStrokeColors[shape] = ellipse.Stroke;
-                }
-                if (!originalFillColors.ContainsKey(shape))
-                {
-                    originalFillColors[shape] = ellipse.Fill;
-                }
-            }
-            else if (shape is Border border)
-            {
-                if (!originalStrokeColors.ContainsKey(shape))
-                {
-                    originalStrokeColors[shape] = border.BorderBrush;
-                }
-                if (!originalFillColors.ContainsKey(shape))
-                {
-                    originalFillColors[shape] = border.Background;
-                }
-            }
-            else if (shape is Line line)
-            {
-                if (!originalStrokeColors.ContainsKey(shape))
-                {
-                    originalStrokeColors[shape] = line.Stroke;
-                }
-            }
-            else if (shape is TextBlock textBlock)
-            {
-                if (!originalStrokeColors.ContainsKey(shape))
-                {
-                    originalStrokeColors[shape] = textBlock.Foreground;
-                }
-            }
-        }
-
         private void MainCanvas_MouseMove(object sender, MouseEventArgs e)
         {
             // Обработка рисования стрелки
@@ -3520,70 +3416,6 @@ namespace Graphic_Editor
                 {
                     originalFillColors[selectedShape] = newBrush;
                 }
-            }
-        }
-
-        // Метод обновления комбо-бокса на основе цвета фигуры
-        private void UpdateColorComboBoxFromShape(UIElement shape)
-        {
-            if (shape == null) return;
-
-            Brush fillBrush = null;
-            Brush strokeBrush = null;
-
-            if (shape is Ellipse ellipse)
-            {
-                fillBrush = ellipse.Fill;
-                strokeBrush = ellipse.Stroke;
-            }
-            else if (shape is Border border)
-            {
-                fillBrush = border.Background;
-                strokeBrush = border.BorderBrush;
-            }
-            else if (shape is Line line)
-            {
-                strokeBrush = line.Stroke; // У линии только обводка
-            }
-            else if (shape is TextBlock textBlock)
-            {
-                strokeBrush = textBlock.Foreground; // У текста цвет - это обводка
-            }
-
-            // Обновляем комбо-бокс заливки
-            if (fillBrush is SolidColorBrush fillSolidBrush && fillBrush != Brushes.Transparent)
-            {
-                string fillHexColor = fillSolidBrush.Color.ToString().Substring(3);
-                UpdateComboBoxSelection(FillColorComboBox, fillHexColor);
-            }
-
-            // Обновляем комбо-бокс обводки
-            if (strokeBrush is SolidColorBrush strokeSolidBrush)
-            {
-                string strokeHexColor = strokeSolidBrush.Color.ToString().Substring(3);
-                UpdateComboBoxSelection(StrokeColorComboBox, strokeHexColor);
-            }
-        }
-
-        // Визуальное выделение фигуры
-        private void ApplySelectionVisual(UIElement element)
-        {
-            // Добавляем эффект выделения без изменения реальных цветов
-            if (element is Ellipse ellipse)
-            {
-                ellipse.StrokeThickness += 2;
-                // Добавляем эффект свечения через прозрачность
-                ellipse.Opacity = 0.8;
-            }
-            else if (element is Border border)
-            {
-                border.BorderThickness = new Thickness(4);
-                border.Opacity = 0.8;
-            }
-            else if (element is Line line)
-            {
-                line.StrokeThickness += 2;
-                line.Opacity = 0.8;
             }
         }
 
@@ -3730,30 +3562,6 @@ namespace Graphic_Editor
             DeselectArrow();
         }
 
-        // Вспомогательный метод для применения цвета обводки к конкретной фигуре
-        private void ApplyStrokeColorToShape(UIElement shape, Brush brush)
-        {
-            if (shape is Ellipse ellipse)
-            {
-                // Для эллипсов меняем Stroke (контур)
-                ellipse.Stroke = brush;
-            }
-            else if (shape is Border border)
-            {
-                // Для Border меняем BorderBrush (рамку)
-                border.BorderBrush = brush;
-            }
-            else if (shape is Line line)
-            {
-                // Для линии меняем Stroke (цвет линии)
-                line.Stroke = brush;
-            }
-            else if (shape is TextBlock textBlock)
-            {
-                // Для текста меняем Foreground (цвет текста)
-                textBlock.Foreground = brush;
-            }
-        }
         // Вспомогательный метод для обновления комбо-бокса
         private void UpdateComboBoxSelection(ComboBox comboBox, string hexColor)
         {
@@ -3848,37 +3656,6 @@ namespace Graphic_Editor
                 string strokeHexColor = strokeSolidBrush.Color.ToString().Substring(3);
                 UpdateComboBoxSelection(StrokeColorComboBox, strokeHexColor);
             }
-        }
-
-        private void AnimateShapeAppearance(UIElement shape)
-        {
-            // Сохраняем оригинальную трансформацию перед анимацией
-            Transform originalTransform = shape.RenderTransform;
-
-            var scaleAnimation = new DoubleAnimation
-            {
-                From = 0.5,
-                To = 1.0,
-                Duration = TimeSpan.FromSeconds(0.3),
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-            };
-
-            var transformGroup = new TransformGroup();
-            transformGroup.Children.Add(originalTransform); // Оригинальная трансформация
-            transformGroup.Children.Add(new ScaleTransform());
-
-            shape.RenderTransform = transformGroup;
-            shape.RenderTransformOrigin = new Point(0.5, 0.5);
-
-            transformGroup.Children[1].BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnimation);
-            transformGroup.Children[1].BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnimation);
-        }
-
-        private double GetElementWidth(UIElement element)
-        {
-            if (element is FrameworkElement fe)
-                return fe.ActualWidth > 0 ? fe.ActualWidth : fe.Width;
-            return 0;
         }
 
         private double GetElementHeight(UIElement element)
@@ -4546,9 +4323,6 @@ namespace Graphic_Editor
             }
         }
 
-        
-        
-
         // ОБРАБОТЧИК СОБЫТИЯ ДЛЯ COMBOBOX
         private void FillColorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -4597,30 +4371,6 @@ namespace Graphic_Editor
             }
         }
 
-        // ОБРАБОТЧИК СОБЫТИЯ ДЛЯ COMBOBOX ОБВОДКИ
-        private void StrokeColorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (StrokeColorComboBox.SelectedItem is ComboBoxItem selectedItem)
-            {
-                string hexColor = selectedItem.Tag as string;
-                if (!string.IsNullOrEmpty(hexColor))
-                {
-                    try
-                    {
-                        // Обновляем превью цвета обводки
-                        StrokeColorPreview.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#" + hexColor));
-
-                        // Применяем цвет обводки к выделенной фигуре
-                        ApplyStrokeColorToSelectedShape(hexColor);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Ошибка применения цвета обводки: {ex.Message}");
-                    }
-                }
-            }
-        }
-
         // Метод применения цвета обводки к выделенной фигуре
         private void ApplyStrokeColorToSelectedShape(string hexColor)
         {
@@ -4660,19 +4410,6 @@ namespace Graphic_Editor
             }
             originalStrokeColors[shape] = brush;
         }
-
-        // Вспомогательный метод для обновления комбо-бокса
-        private void UpdateComboBoxSelection(ComboBox comboBox, string hexColor)
-        {
-            foreach (ComboBoxItem item in comboBox.Items)
-            {
-                if (item.Tag as string == hexColor)
-                {
-                    comboBox.SelectedItem = item;
-                    break;
-                }
-            }
-        }
         // Метод для очистки комбо-боксов при запуске программы
         private void ClearColorComboBoxesOnStartup()
         {
@@ -4699,72 +4436,6 @@ namespace Graphic_Editor
                 border.Background = brush;
             }
             // Для Line и TextBlock заливка не применяется
-        }
-
-        // Метод обновления комбо-боксов на основе цветов фигуры
-        private void UpdateColorComboBoxesFromShape(UIElement shape)
-        {
-            if (shape == null) return;
-
-            Brush fillBrush = null;
-            Brush strokeBrush = null;
-
-            // Используем оригинальные цвета если они сохранены
-            if (originalFillColors.ContainsKey(shape))
-            {
-                fillBrush = originalFillColors[shape];
-            }
-            if (originalStrokeColors.ContainsKey(shape))
-            {
-                strokeBrush = originalStrokeColors[shape];
-            }
-
-            // Если оригинальные цвета не сохранены, берем текущие
-            if (fillBrush == null)
-            {
-                if (shape is Ellipse ellipse)
-                {
-                    fillBrush = ellipse.Fill;
-                }
-                else if (shape is Border border)
-                {
-                    fillBrush = border.Background;
-                }
-            }
-
-            if (strokeBrush == null)
-            {
-                if (shape is Ellipse ellipse)
-                {
-                    strokeBrush = ellipse.Stroke;
-                }
-                else if (shape is Border border)
-                {
-                    strokeBrush = border.BorderBrush;
-                }
-                else if (shape is Line line)
-                {
-                    strokeBrush = line.Stroke;
-                }
-                else if (shape is TextBlock textBlock)
-                {
-                    strokeBrush = textBlock.Foreground;
-                }
-            }
-
-            // Обновляем комбо-бокс заливки
-            if (fillBrush is SolidColorBrush fillSolidBrush && fillBrush != Brushes.Transparent)
-            {
-                string fillHexColor = fillSolidBrush.Color.ToString().Substring(3);
-                UpdateComboBoxSelection(FillColorComboBox, fillHexColor);
-            }
-
-            // Обновляем комбо-бокс обводки
-            if (strokeBrush is SolidColorBrush strokeSolidBrush)
-            {
-                string strokeHexColor = strokeSolidBrush.Color.ToString().Substring(3);
-                UpdateComboBoxSelection(StrokeColorComboBox, strokeHexColor);
-            }
         }
 
         private void AnimateShapeAppearance(UIElement shape)
@@ -5016,16 +4687,6 @@ namespace Graphic_Editor
                 MainCanvas.Children.Remove(comment.TextElement);
             }
             comments.Remove(comment);
-        }
-
-
-
-
-        private double GetElementWidth(UIElement element)
-        {
-            if (element is FrameworkElement fe)
-                return fe.ActualWidth > 0 ? fe.ActualWidth : fe.Width;
-            return 0;
         }
 
         private double GetElementHeight(UIElement element)
