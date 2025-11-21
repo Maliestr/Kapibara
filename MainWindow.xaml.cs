@@ -3261,11 +3261,6 @@ namespace Graphic_Editor
                 // Активируем режим рисования
                 MainCanvas.Cursor = Cursors.Cross;
                 pencil.Background = Brushes.LightBlue;
-                MessageBox.Show("Режим рисования ломаных стрелок активирован.\n\n" +
-                               "ЛКМ - добавить точку/сегмент\n" +
-                               "ПКМ или Escape - завершить стрелку\n" +
-                               "перемещение мыши - рисовать плавно",
-                               "Режим пера", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
