@@ -1341,80 +1341,82 @@ namespace Graphic_Editor
             Canvas.SetZIndex(element, 1);
         }
 
-        // Обновите метод SelectElement для показа панели толщины
         private void SelectElement(FrameworkElement element)
         {
             if (element == null) return;
-            
-            // Снимаем выделение с предыдущего элемента
-            DeselectAll();
-            SaveOriginalColors(element);
-            selectedElement = element;
-            ApplySelectionVisualFeedback(element, true);
 
-            // Создаем контекстное меню для выделенного элемента
-            CreateContextMenu(element);
+            // УБИРАЕМ проверку на Ctrl - выделение всегда добавляется
+            // Снимаем выделение с предыдущих элементов только если не зажат Ctrl
+            if (!Keyboard.IsKeyDown(Key.LeftCtrl))
+            {
+                DeselectAll();
+            }
 
-            // Обновляем комбо-боксы в соответствии с цветами фигуры
-            UpdateColorComboBoxesFromShape(element);
+            // Если элемент уже выделен и нажат Ctrl - снимаем выделение (ОСТАВЛЯЕМ эту логику)
+            if (selectedElements.Contains(element) && Keyboard.IsKeyDown(Key.LeftCtrl))
+            {
+                DeselectElement(element);
+                return;
+            }
 
-            // ПОКАЗЫВАЕМ ПАНЕЛЬ ТОЛЩИНЫ ОБВОДКИ
-            UpdateStrokeWidthPanelVisibility();
-            // Обновляем панель текста, если элемент является текстовым
-            UpdateTextPanelForSelectedElement(element);
-
+            // Если элемент не выделен - выделяем его
             if (!selectedElements.Contains(element))
             {
+                SaveOriginalColors(element);
+                selectedElement = element;
+                ApplySelectionVisualFeedback(element, true);
+
+                // Создаем контекстное меню для выделенного элемента
+                CreateContextMenu(element);
+
+                // Обновляем комбо-боксы в соответствии с цветами фигуры
+                UpdateColorComboBoxesFromShape(element);
+
+                // ПОКАЗЫВАЕМ ПАНЕЛЬ ТОЛЩИНЫ ОБВОДКИ
+                UpdateStrokeWidthPanelVisibility();
+                // Обновляем панель текста, если элемент является текстовым
+                UpdateTextPanelForSelectedElement(element);
+
                 selectedElements.Add(element);
+
+                // Показываем ручки изменения размера
+                ShowResizeHandlesForElement(element);
             }
         }
 
-        // Обновите метод DeselectAll для скрытия панели толщины
         private void DeselectAll()
         {
-            if (selectedElement != null)
+            // Снимаем выделение со всех элементов
+            foreach (var element in selectedElements.ToList())
             {
-                ApplySelectionVisualFeedback(selectedElement, false);
-                selectedElements.Remove(selectedElement);
-                if (selectedElement is FrameworkElement frameworkElement)
+                ApplySelectionVisualFeedback(element, false);
+                if (element is FrameworkElement frameworkElement)
                 {
                     frameworkElement.ContextMenu = null;
                     Canvas.SetZIndex(frameworkElement, 1);
                 }
-                selectedElement = null;
+
+                // Скрываем ручки изменения размера
+                if (resizableElements.ContainsKey(element))
+                {
+                    resizableElements[element].HideResizeHandles();
+                }
             }
+
+            selectedElements.Clear();
+            selectedElement = null;
 
             // СКРЫВАЕМ ПАНЕЛЬ ТОЛЩИНЫ ОБВОДКИ
             StrokeWidthPanel.Visibility = Visibility.Collapsed;
 
             // Очищаем комбо-боксы
-            if (selectedShape != null)
-            {
-                if (selectedShape is FrameworkElement shapeFrameworkElement)
-                {
-                    Canvas.SetZIndex(shapeFrameworkElement, 1);
-                }
-
-                // Скрываем ручки изменения размера
-                if (selectedShape != null && resizableElements.ContainsKey(selectedShape))
-                {
-                    resizableElements[selectedShape].HideResizeHandles();
-                }
-                selectedShape = null;
-            }
-
-            // Скрываем ручки для всех выбранных элементов
-            foreach (var element in selectedElements.ToList())
-            {
-                if (element != null && resizableElements.ContainsKey(element))
-                {
-                    resizableElements[element].HideResizeHandles();
-                }
-            }
-            selectedElements.Clear();
             ClearColorComboBoxes();
+
             // Сбрасываем комбо-боксы текста при снятии выделения
             ResetTextComboBoxesToEmpty();
+
+            // Снимаем выделение со стрелки если есть
+            DeselectArrow();
         }
         private void ClearColorComboBoxes()
         {
@@ -2532,84 +2534,109 @@ namespace Graphic_Editor
                 }
             }
         }
-        // Визуальное выделение элемента
-        // Визуальное выделение элемента
-        // Визуальное выделение элемента
+
         private void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
         {
             if (element == null) return;
-            
+
             if (isSelected)
             {
-                // ВЫДЕЛЕНИЕ СИНИМ ЦВЕТОМ
-                if (element is Ellipse ellipseElement)
+                // ВЫДЕЛЕНИЕ СИНИМ ЦВЕТОМ ДЛЯ ВСЕХ ВЫДЕЛЕННЫХ ЭЛЕМЕНТОВ
+                if (selectedElements.Contains(element))
                 {
-                    ellipseElement.Stroke = Brushes.Blue;
-                }
-                else if (element is Border borderElement)
-                {
-                    borderElement.BorderBrush = Brushes.Blue;
-                }
-                else if (element is Line lineElement)
-                {
-                    lineElement.Stroke = Brushes.Blue;
-                }
-                else if (element is TextBlock textBlockElement)
-                {
-                    textBlockElement.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 255));
+                    if (element is Ellipse ellipseElement)
+                    {
+                        ellipseElement.Stroke = Brushes.Blue;
+                        ellipseElement.StrokeThickness += 2;
+                    }
+                    else if (element is Border borderElement)
+                    {
+                        borderElement.BorderBrush = Brushes.Blue;
+                        borderElement.BorderThickness = new Thickness(borderElement.BorderThickness.Left + 2);
+                    }
+                    else if (element is Line lineElement)
+                    {
+                        lineElement.Stroke = Brushes.Blue;
+                        lineElement.StrokeThickness += 2;
+                    }
+                    else if (element is TextBlock textBlockElement)
+                    {
+                        textBlockElement.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 255));
+                    }
                 }
             }
             else
             {
-                // ВОЗВРАЩАЕМ ОРИГИНАЛЬНЫЕ ЗНАЧЕНИЯ ИЗ СОХРАНЕННЫХ
-                if (element is Ellipse ellipseElement)
+                // ВОЗВРАЩАЕМ ОРИГИНАЛЬНЫЕ ЗНАЧЕНИЯ ТОЛЬКО ЕСЛИ ЭЛЕМЕНТ НЕ ВЫДЕЛЕН
+                if (!selectedElements.Contains(element))
                 {
-                    if (originalStrokeColors.ContainsKey(element))
+                    if (element is Ellipse ellipseElement)
                     {
-                        ellipseElement.Stroke = originalStrokeColors[element];
-                    }
-                    else
-                    {
-                        // Если цвет не сохранен, используем логику по умолчанию
-                        if (ellipseElement.Fill == Brushes.Transparent) // Кольцо
+                        if (originalStrokeColors.ContainsKey(element))
                         {
-                            ellipseElement.Stroke = Brushes.White;
+                            ellipseElement.Stroke = originalStrokeColors[element];
                         }
-                        else // Круг
+                        else
                         {
-                            ellipseElement.Stroke = Brushes.Black;
+                            // Если цвет не сохранен, используем логику по умолчанию
+                            if (ellipseElement.Fill == Brushes.Transparent) // Кольцо
+                            {
+                                ellipseElement.Stroke = Brushes.White;
+                            }
+                            else // Круг
+                            {
+                                ellipseElement.Stroke = Brushes.Black;
+                            }
+                        }
+
+                        // Восстанавливаем толщину
+                        if (originalStrokeThickness.ContainsKey(element))
+                        {
+                            ellipseElement.StrokeThickness = originalStrokeThickness[element];
                         }
                     }
-                }
-                else if (element is Border borderElement)
-                {
-                    if (originalStrokeColors.ContainsKey(element))
+                    else if (element is Border borderElement)
                     {
-                        borderElement.BorderBrush = originalStrokeColors[element];
+                        if (originalStrokeColors.ContainsKey(element))
+                        {
+                            borderElement.BorderBrush = originalStrokeColors[element];
+                        }
+                        else
+                        {
+                            borderElement.BorderBrush = Brushes.White;
+                        }
+
+                        // Восстанавливаем толщину
+                        if (originalStrokeThickness.ContainsKey(element))
+                        {
+                            borderElement.BorderThickness = new Thickness(originalStrokeThickness[element]);
+                        }
                     }
-                    else
+                    else if (element is Line lineElement)
                     {
-                        borderElement.BorderBrush = Brushes.White;
+                        if (originalStrokeColors.ContainsKey(element))
+                        {
+                            lineElement.Stroke = originalStrokeColors[element];
+                        }
+                        else
+                        {
+                            lineElement.Stroke = Brushes.White;
+                        }
+
+                        // Восстанавливаем толщину
+                        if (originalStrokeThickness.ContainsKey(element))
+                        {
+                            lineElement.StrokeThickness = originalStrokeThickness[element];
+                        }
                     }
-                }
-                else if (element is Line lineElement)
-                {
-                    if (originalStrokeColors.ContainsKey(element))
+                    else if (element is TextBlock textBlockElement)
                     {
-                        lineElement.Stroke = originalStrokeColors[element];
+                        if (originalStrokeColors.ContainsKey(element))
+                        {
+                            textBlockElement.Foreground = originalStrokeColors[element];
+                        }
+                        textBlockElement.Background = Brushes.Transparent;
                     }
-                    else
-                    {
-                        lineElement.Stroke = Brushes.White;
-                    }
-                }
-                else if (element is TextBlock textBlockElement)
-                {
-                    if (originalStrokeColors.ContainsKey(element))
-                    {
-                        textBlockElement.Foreground = originalStrokeColors[element];
-                    }
-                    textBlockElement.Background = Brushes.Transparent;
                 }
             }
         }
@@ -3264,12 +3291,10 @@ namespace Graphic_Editor
             }
         }
 
-        // Метод для выделения фигуры
-        // Метод для выделения фигуры
         public void SelectShape(UIElement shape)
         {
             if (shape == null) return;
-            
+
             // Проверяем, находится ли элемент в панели нотации
             if (IsElementInNotation(shape))
             {
@@ -3284,10 +3309,20 @@ namespace Graphic_Editor
 
             // Выделяем новую фигуру
             selectedShape = shape;
-            selectedElement = shape as FrameworkElement;
+
+            if (shape is FrameworkElement frameworkElement)
+            {
+                selectedElement = frameworkElement;
+
+                // Добавляем в список выделенных элементов если еще нет
+                if (!selectedElements.Contains(frameworkElement))
+                {
+                    selectedElements.Add(frameworkElement);
+                }
+            }
 
             // Применяем визуальное выделение
-            ApplySelectionVisual(selectedShape);
+            ApplySelectionVisualFeedback(shape, true);
 
             // Показываем ручки изменения размера
             ShowResizeHandlesForElement(shape);
@@ -3296,9 +3331,9 @@ namespace Graphic_Editor
             UpdateColorComboBoxesFromShape(selectedShape);
 
             // Создаем контекстное меню
-            if (shape is FrameworkElement frameworkElement)
+            if (shape is FrameworkElement frameworkElementForMenu)
             {
-                CreateContextMenu(frameworkElement);
+                CreateContextMenu(frameworkElementForMenu);
             }
         }
 
@@ -4027,19 +4062,6 @@ namespace Graphic_Editor
                 ToggleArrowMode();
             }
 
-            /*currentArrow.StrokeThickness = 4;
-            currentArrow.StrokeEndLineCap = PenLineCap.Triangle;
-
-            // Добавляем стрелку в список для управления
-            arrows.Add(currentArrow);
-
-            // Делаем стрелку перетаскиваемой
-            MakeArrowDraggable(currentArrow);
-
-            // Сохраняем в стек отмены
-            SaveToUndoStack(currentArrow);
-
-            currentArrow = null;*/
         }
         private void RegisterArrowContainer(ArrowContainer arrowContainer)
         {
@@ -4048,6 +4070,7 @@ namespace Graphic_Editor
             CaptureArrowOriginalAppearance(arrowContainer);
             arrows.Add(arrowContainer);
             MakeArrowDraggable(arrowContainer);
+            MakeArrowPointsDraggable(arrowContainer);
         }
 
         private void CaptureArrowOriginalAppearance(ArrowContainer arrowContainer)
@@ -4223,7 +4246,6 @@ namespace Graphic_Editor
                 e.Handled = true;
             }
         }
-
         private void Arrow_MouseMove(object sender, MouseEventArgs e)
         {
             if (isDragging && draggedElement != null && e.LeftButton == MouseButtonState.Pressed)
@@ -4251,11 +4273,97 @@ namespace Graphic_Editor
                     // Обновляем точки стрелки
                     arrow.Points = newPoints;
 
-                    // Обновляем позицию наконечника
-                    UpdateArrowheadPosition(arrowContainer);
+                    // ОБНОВЛЯЕМ ПОЗИЦИЮ НАКОНЕЧНИКА СИНХРОННО
+                    if (arrowContainer.Arrowhead != null)
+                    {
+                        UpdateArrowheadPosition(arrowContainer);
+                    }
                 }
             }
         }
+
+        private void MakeArrowPointsDraggable(ArrowContainer arrowContainer)
+        {
+            // Создаем невидимые маркеры для точек излома
+            for (int i = 1; i < arrowContainer.Line.Points.Count - 1; i++)
+            {
+                var pointMarker = new Ellipse
+                {
+                    Width = 10,
+                    Height = 10,
+                    Fill = Brushes.Transparent,
+                    Stroke = Brushes.Transparent,
+                    Cursor = Cursors.SizeAll,
+                    Tag = i // Сохраняем индекс точки
+                };
+
+                // Позиционируем маркер на точке
+                Point point = arrowContainer.Line.Points[i];
+                Canvas.SetLeft(pointMarker, point.X - 5);
+                Canvas.SetTop(pointMarker, point.Y - 5);
+
+                MainCanvas.Children.Add(pointMarker);
+
+                // Обработчики для перетаскивания точки
+                pointMarker.MouseLeftButtonDown += (s, e) =>
+                {
+                    var marker = s as Ellipse;
+                    if (marker != null && marker.Tag is int pointIndex)
+                    {
+                        isDragging = true;
+                        draggedElement = marker;
+                        marker.CaptureMouse();
+                        dragStartPoint = e.GetPosition(MainCanvas);
+
+                        // Сохраняем оригинальные точки
+                        arrowContainer.OriginalPoints = new PointCollection(arrowContainer.Line.Points);
+                        e.Handled = true;
+                    }
+                };
+
+                pointMarker.MouseMove += (s, e) =>
+                {
+                    var marker = s as Ellipse;
+                    if (isDragging && marker != null && marker.Tag is int pointIndex &&
+                        arrowContainer.OriginalPoints != null)
+                    {
+                        Point currentPosition = e.GetPosition(MainCanvas);
+
+                        // Обновляем конкретную точку в стрелке
+                        var newPoints = new PointCollection(arrowContainer.Line.Points);
+                        newPoints[pointIndex] = currentPosition;
+
+                        arrowContainer.Line.Points = newPoints;
+
+                        // Обновляем позицию маркера
+                        Canvas.SetLeft(marker, currentPosition.X - 5);
+                        Canvas.SetTop(marker, currentPosition.Y - 5);
+
+                        // Обновляем наконечник если это последняя точка
+                        if (pointIndex == arrowContainer.Line.Points.Count - 2)
+                        {
+                            UpdateArrowheadPosition(arrowContainer);
+                        }
+                    }
+                };
+
+                pointMarker.MouseLeftButtonUp += (s, e) =>
+                {
+                    var marker = s as Ellipse;
+                    if (marker != null)
+                    {
+                        isDragging = false;
+                        marker.ReleaseMouseCapture();
+                        arrowContainer.OriginalPoints = null;
+                        draggedElement = null;
+                        e.Handled = true;
+                    }
+                };
+            }
+        }
+
+
+
         private void Arrow_MouseLeftButtonUp(object sender, MouseEventArgs e)
         {
             var arrow = sender as Polyline;
@@ -4267,6 +4375,9 @@ namespace Graphic_Editor
                 {
                     isDragging = false;
                     arrow.ReleaseMouseCapture();
+
+                    // ФИНАЛЬНОЕ ОБНОВЛЕНИЕ НАКОНЕЧНИКА
+                    UpdateArrowheadPosition(arrowContainer);
 
                     SetArrowDragVisual(arrowContainer, false);
 
@@ -4967,7 +5078,6 @@ namespace Graphic_Editor
                 e.Handled = true;
             };
         }
-        // Метод для обновления позиции наконечника
         private void UpdateArrowheadPosition(ArrowContainer arrowContainer)
         {
             if (arrowContainer.Line.Points.Count < 2 || arrowContainer.Arrowhead == null) return;
@@ -4976,27 +5086,8 @@ namespace Graphic_Editor
             Point lineStart = arrowContainer.Line.Points[arrowContainer.Line.Points.Count - 2];
             Point lineEnd = arrowContainer.Line.Points[arrowContainer.Line.Points.Count - 1];
 
-            // Обновляем геометрию наконечника
+            // ОБНОВЛЯЕМ ГЕОМЕТРИЮ НАКОНЕЧНИКА НА МЕСТЕ
             UpdateArrowheadGeometry(arrowContainer.Arrowhead, lineStart, lineEnd, arrowContainer.Line.Stroke);
-
-    
-            // Ищем наконечник по позиции (упрощенный способ)
-            /*foreach (var element in arrows)
-            {
-                if (element is Polygon arrowhead && IsArrowheadForLine(arrowhead, arrow))
-                {
-                    // Пересоздаем наконечник на новой позиции
-                    MainCanvas.Children.Remove(arrowhead);
-                    arrows.Remove(arrowhead);
-
-                    Polygon newArrowhead = CreateArrowhead(lineStart, lineEnd, arrow.Stroke);
-                    MainCanvas.Children.Add(newArrowhead);
-                    arrows.Add(newArrowhead);
-                    MakeArrowheadDraggable(newArrowhead, arrow);
-                    break;
-                }
-            }*/
-
         }
 
         // Метод для создания и прикрепления наконечника
