@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.Win32;
 using System.IO;
 using System.Windows.Media.Imaging;
@@ -25,12 +25,6 @@ using System.Windows.Shapes;
 using System.Windows.Shell;
 using System.Xml;
 using System.Xml.Linq;
-using System.Windows.Shapes;
-using System.Xml;
-using System.Windows.Shell;
-using System.Windows.Ink;
-using System.Globalization;
-using System.Windows.Navigation;
 
 namespace Graphic_Editor
 {
@@ -148,7 +142,10 @@ namespace Graphic_Editor
             ClearColorComboBoxesOnStartup();
 
             // Добавляем обработчики для комментариев
-            CommentModeButton.Click += CommentModeButton_Click;
+            if (comment != null)
+            {
+                comment.Click += CommentButton_Click;
+            }
 
             // Сбрасываем комбо-боксы текста при запуске
             ResetTextComboBoxesToEmpty();
@@ -1205,6 +1202,8 @@ namespace Graphic_Editor
         // Сохранение оригинальных цветов и толщины
         private void SaveOriginalColors(UIElement shape)
         {
+            if (shape == null) return;
+            
             if (shape is Ellipse ellipse)
             {
                 if (!originalStrokeColors.ContainsKey(shape))
@@ -1345,6 +1344,8 @@ namespace Graphic_Editor
         // Обновите метод SelectElement для показа панели толщины
         private void SelectElement(FrameworkElement element)
         {
+            if (element == null) return;
+            
             // Снимаем выделение с предыдущего элемента
             DeselectAll();
             SaveOriginalColors(element);
@@ -1362,13 +1363,10 @@ namespace Graphic_Editor
             // Обновляем панель текста, если элемент является текстовым
             UpdateTextPanelForSelectedElement(element);
 
-            if (!selectedElements.Contains(frameworkElement))
+            if (!selectedElements.Contains(element))
             {
-                selectedElements.Add(frameworkElement);
+                selectedElements.Add(element);
             }
-
-            // Создаем контекстное меню для выделенного элемента
-            CreateContextMenu(frameworkElement);
         }
 
         // Обновите метод DeselectAll для скрытия панели толщины
@@ -1398,12 +1396,22 @@ namespace Graphic_Editor
                 }
 
                 // Скрываем ручки изменения размера
-                if (resizableElements.ContainsKey(selectedElement))
+                if (selectedShape != null && resizableElements.ContainsKey(selectedShape))
                 {
-                    resizableElements[selectedElement].HideResizeHandles();
+                    resizableElements[selectedShape].HideResizeHandles();
                 }
                 selectedShape = null;
             }
+
+            // Скрываем ручки для всех выбранных элементов
+            foreach (var element in selectedElements.ToList())
+            {
+                if (element != null && resizableElements.ContainsKey(element))
+                {
+                    resizableElements[element].HideResizeHandles();
+                }
+            }
+            selectedElements.Clear();
             ClearColorComboBoxes();
             // Сбрасываем комбо-боксы текста при снятии выделения
             ResetTextComboBoxesToEmpty();
@@ -1682,6 +1690,8 @@ namespace Graphic_Editor
         // Сохранение оригинальных цветов для копии элемента
         private void SaveOriginalColorsForCopy(UIElement original, UIElement copy)
         {
+            if (original == null || copy == null) return;
+            
             if (original is Ellipse originalEllipse && copy is Ellipse copyEllipse)
             {
                 if (originalStrokeColors.ContainsKey(original))
@@ -1748,6 +1758,8 @@ namespace Graphic_Editor
         // Восстановление оригинальных цветов элемента
         private void RestoreOriginalColors(UIElement element)
         {
+            if (element == null) return;
+            
             if (element is Ellipse ellipse)
             {
                 if (originalStrokeColors.ContainsKey(element))
@@ -1906,7 +1918,10 @@ namespace Graphic_Editor
                 FontWeight = fontWeight,
                 Cursor = Cursors.Hand,
                 FocusVisualStyle = null,
-                Background = Brushes.Transparent
+                Background = Brushes.Transparent,
+                // Устанавливаем начальные размеры для возможности изменения размера
+                Width = double.NaN, // Автоматический размер
+                Height = double.NaN // Автоматический размер
             };
 
             // Устанавливаем позицию на холсте
@@ -1922,6 +1937,7 @@ namespace Graphic_Editor
             MainCanvas.Children.Add(textBlock);
 
             textBlock.MouseLeftButtonDown += TextElement_MouseLeftButtonDown;
+            MakeCanvasShapeDraggable(textBlock);
             SelectElement(textBlock);
             SelectShape(textBlock);
         }
@@ -2135,7 +2151,10 @@ namespace Graphic_Editor
                     FontWeight = editTextBox.FontWeight,
                     Cursor = Cursors.Hand,
                     FocusVisualStyle = null,
-                    Background = Brushes.Transparent
+                    Background = Brushes.Transparent,
+                    // Устанавливаем начальные размеры для возможности изменения размера
+                    Width = double.NaN, // Автоматический размер
+                    Height = double.NaN // Автоматический размер
                 };
 
                 Canvas.SetLeft(textBlock, left);
@@ -2147,7 +2166,9 @@ namespace Graphic_Editor
 
                 MainCanvas.Children.Add(textBlock);
                 textBlock.MouseLeftButtonDown += TextElement_MouseLeftButtonDown;
+                MakeCanvasShapeDraggable(textBlock);
                 SelectElement(textBlock);
+                SelectShape(textBlock);
             }
         }
 
@@ -2176,21 +2197,22 @@ namespace Graphic_Editor
         // Обработчик изменения шрифта
         private void FontComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (FontComboBox.SelectedItem is ComboBoxItem selectedItem)
+            if (FontComboBox.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content != null)
             {
                 currentFontFamily = selectedItem.Content.ToString();
                 ApplyTextFormattingToSelected();
             }
-            else
+            else if (FontComboBox.SelectedItem == null)
             {
-                currentFontFamily = null;
+                // Не сбрасываем currentFontFamily, если элемент уже выбран
+                // Это позволяет сохранить текущее значение при программном изменении
             }
         }
 
         // Обработчик изменения стиля шрифта
         private void FontStyleComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (FontStyleComboBox.SelectedItem is ComboBoxItem selectedItem)
+            if (FontStyleComboBox.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content != null)
             {
                 switch (selectedItem.Content.ToString())
                 {
@@ -2213,17 +2235,16 @@ namespace Graphic_Editor
                 }
                 ApplyTextFormattingToSelected();
             }
-            else
+            else if (FontStyleComboBox.SelectedItem == null)
             {
-                currentFontStyle = FontStyles.Normal;
-                currentFontWeight = FontWeights.Normal;
+                // Не сбрасываем значения при программном изменении
             }
         }
 
         // Обработчик изменения размера шрифта
         private void FontSizeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (FontSizeComboBox.SelectedItem is ComboBoxItem selectedItem)
+            if (FontSizeComboBox.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content != null)
             {
                 if (double.TryParse(selectedItem.Content.ToString(), out double size))
                 {
@@ -2231,9 +2252,9 @@ namespace Graphic_Editor
                     ApplyTextFormattingToSelected();
                 }
             }
-            else
+            else if (FontSizeComboBox.SelectedItem == null)
             {
-                currentFontSize = 0;
+                // Не сбрасываем значение при программном изменении
             }
         }
 
@@ -2241,13 +2262,28 @@ namespace Graphic_Editor
         private void ApplyTextFormattingToSelected()
         {
             // Применяем изменения только если есть выбранный текстовый элемент
-            // и все комбо-боксы имеют выбранные значения
-            if (selectedElement is TextBlock textBlock &&
-                !string.IsNullOrEmpty(currentFontFamily) &&
-                currentFontSize > 0)
+            if (selectedElement is TextBlock textBlock)
             {
-                textBlock.FontFamily = new FontFamily(currentFontFamily);
-                textBlock.FontSize = currentFontSize;
+                // Применяем шрифт, если он выбран
+                if (!string.IsNullOrEmpty(currentFontFamily))
+                {
+                    try
+                    {
+                        textBlock.FontFamily = new FontFamily(currentFontFamily);
+                    }
+                    catch
+                    {
+                        // Игнорируем ошибки при создании FontFamily
+                    }
+                }
+
+                // Применяем размер шрифта, если он выбран
+                if (currentFontSize > 0)
+                {
+                    textBlock.FontSize = currentFontSize;
+                }
+
+                // Применяем стиль и вес шрифта
                 textBlock.FontStyle = currentFontStyle;
                 textBlock.FontWeight = currentFontWeight;
 
@@ -2258,6 +2294,8 @@ namespace Graphic_Editor
         // Обновление панели текста для выбранного элемента
         private void UpdateTextPanelForSelectedElement(FrameworkElement element)
         {
+            if (element == null) return;
+            
             if (element is TextBlock textBlock)
             {
                 // Показываем панель текста
@@ -2281,25 +2319,40 @@ namespace Graphic_Editor
         // Обновление комбо-боксов текста значениями из TextBlock
         private void UpdateTextComboBoxes(TextBlock textBlock)
         {
+            if (textBlock == null) return;
+            
             // Обновляем шрифт
+            string fontFamilySource = textBlock.FontFamily?.Source ?? "";
             foreach (ComboBoxItem item in FontComboBox.Items)
             {
-                if (item.Content.ToString() == textBlock.FontFamily.Source)
+                if (item.Content != null && item.Content.ToString() == fontFamilySource)
                 {
+                    // Временно отключаем обработчик, чтобы избежать рекурсии
+                    FontComboBox.SelectionChanged -= FontComboBox_SelectionChanged;
                     FontComboBox.SelectedItem = item;
-                    currentFontFamily = textBlock.FontFamily.Source;
+                    FontComboBox.SelectionChanged += FontComboBox_SelectionChanged;
+                    currentFontFamily = fontFamilySource;
                     break;
                 }
+            }
+            
+            // Если шрифт не найден в списке, устанавливаем значение напрямую
+            if (string.IsNullOrEmpty(currentFontFamily) && !string.IsNullOrEmpty(fontFamilySource))
+            {
+                currentFontFamily = fontFamilySource;
             }
 
             // Обновляем размер шрифта
             bool fontSizeFound = false;
             foreach (ComboBoxItem item in FontSizeComboBox.Items)
             {
-                if (double.TryParse(item.Content.ToString(), out double size) &&
+                if (item.Content != null && double.TryParse(item.Content.ToString(), out double size) &&
                     Math.Abs(size - textBlock.FontSize) < 0.1)
                 {
+                    // Временно отключаем обработчик, чтобы избежать рекурсии
+                    FontSizeComboBox.SelectionChanged -= FontSizeComboBox_SelectionChanged;
                     FontSizeComboBox.SelectedItem = item;
+                    FontSizeComboBox.SelectionChanged += FontSizeComboBox_SelectionChanged;
                     currentFontSize = textBlock.FontSize;
                     fontSizeFound = true;
                     break;
@@ -2307,11 +2360,18 @@ namespace Graphic_Editor
             }
 
             // Если размер не найден в списке, добавляем его
-            if (!fontSizeFound)
+            if (!fontSizeFound && textBlock.FontSize > 0)
             {
                 var newItem = new ComboBoxItem { Content = textBlock.FontSize.ToString("0") };
                 FontSizeComboBox.Items.Add(newItem);
+                // Временно отключаем обработчик
+                FontSizeComboBox.SelectionChanged -= FontSizeComboBox_SelectionChanged;
                 FontSizeComboBox.SelectedItem = newItem;
+                FontSizeComboBox.SelectionChanged += FontSizeComboBox_SelectionChanged;
+                currentFontSize = textBlock.FontSize;
+            }
+            else if (!fontSizeFound && textBlock.FontSize > 0)
+            {
                 currentFontSize = textBlock.FontSize;
             }
 
@@ -2319,9 +2379,12 @@ namespace Graphic_Editor
             string styleName = GetFontStyleName(textBlock.FontStyle, textBlock.FontWeight);
             foreach (ComboBoxItem item in FontStyleComboBox.Items)
             {
-                if (item.Content.ToString() == styleName)
+                if (item.Content != null && item.Content.ToString() == styleName)
                 {
+                    // Временно отключаем обработчик, чтобы избежать рекурсии
+                    FontStyleComboBox.SelectionChanged -= FontStyleComboBox_SelectionChanged;
                     FontStyleComboBox.SelectedItem = item;
+                    FontStyleComboBox.SelectionChanged += FontStyleComboBox_SelectionChanged;
                     currentFontStyle = textBlock.FontStyle;
                     currentFontWeight = textBlock.FontWeight;
                     break;
@@ -2474,6 +2537,8 @@ namespace Graphic_Editor
         // Визуальное выделение элемента
         private void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
         {
+            if (element == null) return;
+            
             if (isSelected)
             {
                 // ВЫДЕЛЕНИЕ СИНИМ ЦВЕТОМ
@@ -3029,35 +3094,54 @@ namespace Graphic_Editor
         {
             foreach (UIElement element in MainCanvas.Children)
             {
-                if (element == selectionRect) continue;
+                if (element == selectionRect || element == null) continue;
 
                 var elementBounds = GetElementBounds(element);
                 bool shouldBeSelected = selectionBounds.IntersectsWith(elementBounds);
 
-                if (Keyboard.IsKeyDown(Key.LeftCtrl))
+                if (element is FrameworkElement frameworkElement)
                 {
-                    // В режиме Ctrl: добавляем к существующему выделению
-                    if (shouldBeSelected && !selectedElements.Contains(element))
+                    if (Keyboard.IsKeyDown(Key.LeftCtrl))
                     {
-                        SelectElement(element);
+                        // В режиме Ctrl: добавляем к существующему выделению
+                        if (shouldBeSelected && !selectedElements.Contains(frameworkElement))
+                        {
+                            // Добавляем к выделению без вызова DeselectAll
+                            if (!selectedElements.Contains(frameworkElement))
+                            {
+                                selectedElements.Add(frameworkElement);
+                                SaveOriginalColors(frameworkElement);
+                                ApplySelectionVisualFeedback(frameworkElement, true);
+                                SelectShape(frameworkElement);
+                            }
+                        }
                     }
-                }
-                else
-                {
-                    // В обычном режиме: выделяем только элементы в области
-                    if (shouldBeSelected && !selectedElements.Contains(element))
+                    else
                     {
-                        SelectElement(element);
-                    }
-                    else if (!shouldBeSelected && selectedElements.Contains(element))
-                    {
-                        DeselectElement(element);
+                        // В обычном режиме: выделяем только элементы в области
+                        if (shouldBeSelected && !selectedElements.Contains(frameworkElement))
+                        {
+                            // Добавляем к выделению без вызова DeselectAll
+                            if (!selectedElements.Contains(frameworkElement))
+                            {
+                                selectedElements.Add(frameworkElement);
+                                SaveOriginalColors(frameworkElement);
+                                ApplySelectionVisualFeedback(frameworkElement, true);
+                                SelectShape(frameworkElement);
+                            }
+                        }
+                        else if (!shouldBeSelected && selectedElements.Contains(frameworkElement))
+                        {
+                            DeselectElement(frameworkElement);
+                        }
                     }
                 }
             }
         }
         private Rect GetElementBounds(UIElement element)
         {
+            if (element == null) return new Rect(0, 0, 0, 0);
+            
             double left = Canvas.GetLeft(element);
             double top = Canvas.GetTop(element);
             double width = 0;
@@ -3112,61 +3196,23 @@ namespace Graphic_Editor
 
         private void HandleElementClick(UIElement element, MouseButtonEventArgs e)
         {
-            if (Keyboard.IsKeyDown(Key.LeftCtrl))
+            if (element == null) return;
+            
+            if (element is FrameworkElement frameworkElement)
             {
-                // Ctrl + клик: переключаем выделение
-                if (selectedElements.Contains(element))
+                if (Keyboard.IsKeyDown(Key.LeftCtrl))
                 {
-                    DeselectElement(element);
+                    // Ctrl + клик: переключаем выделение
+                    if (selectedElements.Contains(frameworkElement))
+                    {
+                        DeselectElement(frameworkElement);
+                    }
+                    else
+                    {
+                        SelectElement(frameworkElement);
+                    }
                 }
-                else
-                {
-                    SelectElement(element);
-                }
             }
-        }
-
-        // Метод для полного снятия выделения со всех элементов
-        private void DeselectAll()
-        {
-            // Снимаем выделение с selectedElement
-            if (selectedElement != null)
-            {
-                ApplySelectionVisualFeedback(selectedElement, false);
-                if (selectedElement is FrameworkElement frameworkElement)
-                {
-                    frameworkElement.ContextMenu = null;
-                }
-                selectedElement = null;
-            }
-
-            // Снимаем выделение с selectedShape
-            if (selectedShape != null)
-            {
-                RemoveSelectionVisual(selectedShape);
-                selectedShape = null;
-            }
-
-            // Скрываем все ручки изменения размера
-            if (currentResizableElement != null)
-            {
-                currentResizableElement.HideResizeHandles();
-                currentResizableElement = null;
-            }
-
-            // Скрываем ручки у всех элементов в словаре
-            foreach (var resizableElement in resizableElements.Values)
-            {
-                resizableElement.HideResizeHandles();
-            }
-
-            // Очищаем текстовые поля размеров
-            ClearDimensionTextboxes();
-
-            // Сбрасываем комбо-боксы цветов
-            ResetColorComboBoxes();
-
-            DeselectArrow();
         }
 
         // Метод для очистки текстовых полей размеров
@@ -3222,6 +3268,8 @@ namespace Graphic_Editor
         // Метод для выделения фигуры
         public void SelectShape(UIElement shape)
         {
+            if (shape == null) return;
+            
             // Проверяем, находится ли элемент в панели нотации
             if (IsElementInNotation(shape))
             {
@@ -3230,9 +3278,6 @@ namespace Graphic_Editor
             }
 
             DeselectArrow();
-
-            // Снимаем выделение со всех элементов перед выделением нового
-            //DeselectAll();
 
             // Сохраняем оригинальные цвета перед выделением
             SaveOriginalColors(shape);
@@ -3367,33 +3412,33 @@ namespace Graphic_Editor
             if (isDragging && draggedElement != null)
             {
                 // Сохраняем текущую толщину ПОСЛЕ перетаскивания
-                if (originalStrokeThickness.ContainsKey(element))
+                if (originalStrokeThickness.ContainsKey(draggedElement))
                 {
                     // Обновляем сохраненную толщину текущим значением
-                    if (element is Ellipse ellipseElement)
+                    if (draggedElement is Ellipse ellipseElement)
                     {
-                        originalStrokeThickness[element] = ellipseElement.StrokeThickness;
+                        originalStrokeThickness[draggedElement] = ellipseElement.StrokeThickness;
                     }
-                    else if (element is Border borderElement)
+                    else if (draggedElement is Border borderElement)
                     {
-                        originalStrokeThickness[element] = borderElement.BorderThickness.Left;
+                        originalStrokeThickness[draggedElement] = borderElement.BorderThickness.Left;
                     }
-                    else if (element is Line lineElement)
+                    else if (draggedElement is Line lineElement)
                     {
-                        originalStrokeThickness[element] = lineElement.StrokeThickness;
+                        originalStrokeThickness[draggedElement] = lineElement.StrokeThickness;
                     }
                 }
 
                 isDragging = false;
                 draggedElement.ReleaseMouseCapture();
                 // ФИКСИРУЕМ ТРАНСФОРМАЦИЮ ДЛЯ РОМБА
-                if (element is Border border && border.RenderTransform is RotateTransform rotateTransform)
+                if (draggedElement is Border border && border.RenderTransform is RotateTransform rotateTransform)
                 {
                     rotateTransform.Angle = 45;
                 }
 
                 // ВОЗВРАЩАЕМ НОРМАЛЬНЫЙ ZIndex ПОСЛЕ ПЕРЕТАСКИВАНИЯ
-                Canvas.SetZIndex(element, 1000);
+                Canvas.SetZIndex(draggedElement, 1000);
                 ApplyCanvasDragVisualFeedback(draggedElement, false);
                 draggedElement = null;
             }
@@ -3665,6 +3710,13 @@ namespace Graphic_Editor
             return 0;
         }
 
+        private double GetElementWidth(UIElement element)
+        {
+            if (element is FrameworkElement fe)
+                return fe.ActualWidth > 0 ? fe.ActualWidth : fe.Width;
+            return 0;
+        }
+
         private void escButton_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
@@ -3728,7 +3780,10 @@ namespace Graphic_Editor
                 ClearSelection();
                 foreach (var element in newElements)
                 {
-                    SelectElement(element);
+                    if (element is FrameworkElement frameworkElement)
+                    {
+                        SelectElement(frameworkElement);
+                    }
                 }
 
                 MessageBox.Show($"Вставлено {newElements.Count} элементов", "Вставка", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -4169,40 +4224,6 @@ namespace Graphic_Editor
             }
         }
 
-        private void ApplyCanvasDragVisualFeedback(UIElement element, bool isDragging)
-        {
-            if (isDragging)
-            {
-                // Только визуальные эффекты без изменения реальной толщины
-                element.Opacity = 0.7;
-                // НЕ меняем StrokeThickness при перетаскивании
-            }
-            else
-            {
-                // Возвращаем оригинальные настройки
-                element.Opacity = 1.0;
-                // Толщина остается фиксированной
-            }
-        }
-
-        // Метод применения цвета к выделенной фигуре
-        private void ApplyColorToSelectedShape(string hexColor)
-        {
-            if (selectedElement != null)
-            {
-                Color newColor = (Color)ColorConverter.ConvertFromString("#" + hexColor);
-                Brush newBrush = new SolidColorBrush(newColor);
-
-                ApplyFillColorToShape(selectedElement, newBrush);
-
-                // Сохраняем новый цвет как оригинальный
-                if (originalFillColors.ContainsKey(selectedElement))
-                {
-                    originalFillColors[selectedElement] = newBrush;
-                }
-                e.Handled = true;
-            }
-        }
         private void Arrow_MouseMove(object sender, MouseEventArgs e)
         {
             if (isDragging && draggedElement != null && e.LeftButton == MouseButtonState.Pressed)
@@ -4323,67 +4344,6 @@ namespace Graphic_Editor
             }
         }
 
-        // ОБРАБОТЧИК СОБЫТИЯ ДЛЯ COMBOBOX
-        private void FillColorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (FillColorComboBox.SelectedItem is ComboBoxItem selectedItem)
-            {
-                string hexColor = selectedItem.Tag as string;
-                if (!string.IsNullOrEmpty(hexColor))
-                {
-                    try
-                    {
-                        // Обновляем превью цвета
-                        FillColorPreview.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#" + hexColor));
-
-                        // Применяем цвет к выделенной фигуре
-                        ApplyColorToSelectedShape(hexColor);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Ошибка применения цвета: {ex.Message}");
-                    }
-                }
-            }
-        }
-
-        // Вспомогательный метод для применения цвета к конкретной фигуре
-        private void ApplyColorToShape(UIElement shape, Brush brush)
-        {
-            if (shape is Ellipse ellipse)
-            {
-                if (ellipse.Fill == Brushes.Transparent) // Кольцо
-                {
-                    ellipse.Stroke = brush;
-                }
-                else // Круг
-                {
-                    ellipse.Fill = brush;
-                }
-            }
-            else if (shape is Border border)
-            {
-                border.Background = brush;
-            }
-            else if (shape is Line line)
-            {
-                line.Stroke = brush;
-            }
-        }
-
-        // Метод применения цвета обводки к выделенной фигуре
-        private void ApplyStrokeColorToSelectedShape(string hexColor)
-        {
-            if (selectedElement != null)
-            {
-                Color newColor = (Color)ColorConverter.ConvertFromString("#" + hexColor);
-                Brush newBrush = new SolidColorBrush(newColor);
-
-                ApplyStrokeColorToShape(selectedElement, newBrush);
-                originalStrokeColors[selectedElement] = newBrush;
-                
-            }
-        }
 
         // Вспомогательный метод для применения цвета обводки к конкретной фигуре
         private void ApplyStrokeColorToShape(UIElement shape, Brush brush)
@@ -4419,25 +4379,6 @@ namespace Graphic_Editor
             StrokeColorPreview.Background = Brushes.Transparent;
         }
 
-        // Вспомогательный метод для применения цвета заливки
-        private void ApplyFillColorToShape(UIElement shape, Brush brush)
-        {
-            if (shape is Ellipse ellipse)
-            {
-                // Для эллипсов меняем Fill (заливку), только если это не кольцо
-                if (ellipse.Fill != Brushes.Transparent)
-                {
-                    ellipse.Fill = brush;
-                }
-            }
-            else if (shape is Border border)
-            {
-                // Для Border меняем Background (заливку)
-                border.Background = brush;
-            }
-            // Для Line и TextBlock заливка не применяется
-        }
-
         private void AnimateShapeAppearance(UIElement shape)
         {
             // Сохраняем оригинальную трансформацию перед анимацией
@@ -4462,9 +4403,32 @@ namespace Graphic_Editor
             transformGroup.Children[1].BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnimation);
         }
         // Обработчик кнопки комментариев
+        private void CommentButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Переключаем режим комментариев
+            isCommentModeActive = !isCommentModeActive;
+
+            if (isCommentModeActive)
+            {
+                MainCanvas.Cursor = Cursors.Hand;
+            }
+            else
+            {
+                MainCanvas.Cursor = Cursors.Arrow;
+            }
+        }
+
+        // Обработчик кнопки комментариев (старый метод для совместимости)
         private void CommentModeButton_Click(object sender, RoutedEventArgs e)
         {
-            isCommentModeActive = CommentModeButton.IsChecked == true;
+            if (sender is ToggleButton button)
+            {
+                isCommentModeActive = button.IsChecked == true;
+            }
+            else
+            {
+                isCommentModeActive = !isCommentModeActive;
+            }
 
             if (isCommentModeActive)
             {
@@ -4687,13 +4651,6 @@ namespace Graphic_Editor
                 MainCanvas.Children.Remove(comment.TextElement);
             }
             comments.Remove(comment);
-        }
-
-        private double GetElementHeight(UIElement element)
-        {
-            if (element is FrameworkElement fe)
-                return fe.ActualHeight > 0 ? fe.ActualHeight : fe.Height;
-            return 0;
         }
 
         // Выделение стрелки

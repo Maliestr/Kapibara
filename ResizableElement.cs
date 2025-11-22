@@ -436,8 +436,23 @@ namespace Graphic_Editor
         {
             if (element is FrameworkElement frameworkElement)
             {
-                frameworkElement.Width = width;
-                frameworkElement.Height = height;
+                // Для TextBlock устанавливаем размеры
+                if (element is System.Windows.Controls.TextBlock textBlock)
+                {
+                    // TextBlock может не иметь фиксированных размеров, устанавливаем их явно
+                    frameworkElement.Width = Math.Max(20, width);
+                    frameworkElement.Height = Math.Max(20, height);
+                    // Для TextBlock также можно использовать TextWrapping для лучшего отображения
+                    if (textBlock.TextWrapping == TextWrapping.NoWrap)
+                    {
+                        textBlock.TextWrapping = TextWrapping.Wrap;
+                    }
+                }
+                else
+                {
+                    frameworkElement.Width = width;
+                    frameworkElement.Height = height;
+                }
             }
 
             Canvas.SetLeft(element, left);
