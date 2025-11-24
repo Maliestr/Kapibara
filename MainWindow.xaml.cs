@@ -133,39 +133,37 @@ namespace Graphic_Editor
 
         public MainWindow()
         {
-            InitializeComponent();
-            MakeAllShapesDraggable();
+            InitializeComponent(); //Инициализация WPF компонентов
 
-            InitializeGrid(); // Инициализируем сетку
-            InitializePanels();
-            InitializeSelectionSystem(); // Инициализация системы выделения
+            MakeAllShapesDraggable(); //Делает фигуры в панели инструментов перетаскиваемыми
+            ClearColorComboBoxesOnStartup(); // Очищаем блоки свойств заливки и обводки при запуске
+            ResetTextComboBoxesToEmpty(); //Сбрасываем блок свойств текста при запуске
+
+            InitializeGrid(); //Создает и инициализирует визуальную сетку
+            InitializePanels(); //Находит и регистрирует все панели выделения
+            InitializeSelectionSystem(); //Настраивает систему прямоугольного выделения
 
             // Обработка горячих клавиш
-            this.KeyDown += MainWindow_KeyDown;
+            this.KeyDown += MainWindow_KeyDown; //Ctrl+Z/Y - отмена/повтор
+                                                //Ctrl+X/C/V - вырезание/копирование/вставка
+                                                //Delete - удаление выделенного
+                                                //Ctrl+G - переключение сетки
+                                                //Ctrl+S - привязка к сетке
+                                                //F12/Ctrl+H - скрытие панелей
 
-            // Добавляем обработчик клика по канвасу для сброса выделения
+            // Добавляем обработчик клика по Canvas для сброса выделения
             MainCanvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
 
-            // Очищаем комбо-боксы при запуске
-            ClearColorComboBoxesOnStartup();
+            // Добавляем обработчики для комментариев (переключает режим комментариев)
+            comment.Click += CommentButton_Click;
+            // Кнопка пера включает/выключает режим рисования стрелок
+            pencil.Click += PenButton_Click;
 
-            // Добавляем обработчики для комментариев
-            if (comment != null)
-            {
-                comment.Click += CommentButton_Click;
-            }
-
-            // Сбрасываем комбо-боксы текста при запуске
-            ResetTextComboBoxesToEmpty();
-
-            // Обработчики для текстовых полей размеров
+            // Обработчики для размеров текстовых полей
             WidthTextBox.LostFocus += DimensionTextBox_LostFocus;
             HeightTextBox.LostFocus += DimensionTextBox_LostFocus;
             WidthTextBox.KeyDown += DimensionTextBox_KeyDown;
             HeightTextBox.KeyDown += DimensionTextBox_KeyDown;
-
-            // Кнопка пера включает/выключает режим рисования стрелок
-            pencil.Click += PenButton_Click;
         }
 
         // Обработчики для ручного ввода размеров
@@ -3963,7 +3961,7 @@ namespace Graphic_Editor
             {
                 // Активируем режим рисования
                 MainCanvas.Cursor = Cursors.Cross;
-                pencil.Background = Brushes.LightBlue;
+                pencil.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
             }
             else
             {
@@ -4530,10 +4528,12 @@ namespace Graphic_Editor
             if (isCommentModeActive)
             {
                 MainCanvas.Cursor = Cursors.Hand;
+                comment.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
             }
             else
             {
                 MainCanvas.Cursor = Cursors.Arrow;
+                comment.Background = Brushes.Transparent;
             }
         }
 

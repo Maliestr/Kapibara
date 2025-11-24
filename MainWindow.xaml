@@ -67,6 +67,33 @@
             </Setter>
         </Style>
 
+        <Style x:Key="ControlButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <!--Нужно ли-->
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                          VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#FF3939"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#AC1C1C"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <WindowChrome.WindowChrome>
@@ -400,63 +427,64 @@
                             <ColumnDefinition Width="8"/>
                         </Grid.ColumnDefinitions>
                         <!-- Ручной инструмент -->
-                        <Button x:Name="cursor"
-                            Width="34" 
-                            Height="34"
-                            Cursor="Hand"
-                            Grid.Column="1"
-                            Background="#FF343434"
-                            BorderBrush="Transparent"
-                            FocusVisualStyle="{x:Null}" HorizontalAlignment="Center">
+                        <Button x:Name="cursor" Style="{StaticResource ControlButtonStyle}"
+                                Width="34" 
+                                Height="34"
+                                Cursor="Hand"
+                                Grid.Column="1"
+                                Background="#FF343434"
+                                BorderBrush="Transparent"
+                                FocusVisualStyle="{x:Null}" 
+                                HorizontalAlignment="Center">
                             <Image Source="/Icons/Cursor.png"
-                                Width="30" 
-                                Height="30"
-                                RenderOptions.BitmapScalingMode="HighQuality"
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Center"/>
+                                   Width="30" 
+                                   Height="30"
+                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"/>
                         </Button>
                         <!-- Перо -->
-                        <Button x:Name="pencil"
-                            Width="34" 
-                            Height="34"
-                            Cursor="Hand"
-                            Grid.Column="2"
-                            Background="#FF343434"
-                            BorderBrush="Transparent"
-                            FocusVisualStyle="{x:Null}">
+                        <Button x:Name="pencil" Style="{StaticResource ControlButtonStyle}"
+                                Width="34" 
+                                Height="34"
+                                Cursor="Hand"
+                                Grid.Column="2"
+                                Background="#FF343434"
+                                BorderBrush="Transparent"
+                                FocusVisualStyle="{x:Null}">
                             <Image Source="/Icons/Pencil.png"
-                                Width="30" 
-                                Height="30"
+                                   Width="30" 
+                                   Height="30"
                                    RenderOptions.BitmapScalingMode="HighQuality"
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Center"/>
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"/>
                         </Button>
                         <!-- Квадратик -->
-                        <Button x:Name="rectangle"
-                            Width="34" 
-                            Height="34"
-                            Cursor="Hand"
-                            Grid.Column="3"
-                            Background="#FF343434"
-                            BorderBrush="Transparent"
-                            FocusVisualStyle="{x:Null}">
+                        <Button x:Name="rectangle" Style="{StaticResource ControlButtonStyle}"
+                                Width="34"
+                                Height="34"
+                                Cursor="Hand"
+                                Grid.Column="3"
+                                Background="#FF343434"
+                                BorderBrush="Transparent"
+                                FocusVisualStyle="{x:Null}">
                             <Image Source="/Icons/Rectangle.png"
-                                Width="30" 
-                                Height="30"
+                                   Width="30" 
+                                   Height="30"
                                    RenderOptions.BitmapScalingMode="HighQuality"
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Center"/>
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"/>
                         </Button>
                         <!-- Текст -->
-                        <Button x:Name="text"
-                            Width="34" 
-                            Height="34"
-                            Cursor="Hand"
-                            Grid.Column="4"
-                            Background="#FF343434"
-                            BorderBrush="Transparent"
-                            FocusVisualStyle="{x:Null}"
-                            Click="TextButton_Click">
+                        <Button x:Name="text" Style="{StaticResource ControlButtonStyle}"
+                                Width="34" 
+                                Height="34"
+                                Cursor="Hand"
+                                Grid.Column="4"
+                                Background="#FF343434"
+                                BorderBrush="Transparent"
+                                FocusVisualStyle="{x:Null}"
+                                Click="TextButton_Click">
                             <Image Source="/Icons/Writing.png"
                                 Width="30" 
                                 Height="30"
@@ -465,7 +493,7 @@
                                 HorizontalAlignment="Center"/>
                         </Button>
                         <!-- Комментарий -->
-                        <Button x:Name="comment"
+                        <Button x:Name="comment" Style="{StaticResource ControlButtonStyle}"
                             Width="34" 
                             Height="34"
                             Cursor="Hand"
@@ -481,7 +509,7 @@
                                 HorizontalAlignment="Center"/>
                         </Button>
                         <!-- Квадратики -->
-                        <Button x:Name="dash"
+                        <Button x:Name="dash" Style="{StaticResource ControlButtonStyle}"
                             Width="34" 
                             Height="34"
                             Cursor="Hand"
