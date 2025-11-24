@@ -982,6 +982,7 @@ namespace Graphic_Editor
                 e.Handled = true;
             }
         }
+
         // Новые методы для работы с множественным выделением
         private void CutSelectedElements()
         {
