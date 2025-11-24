@@ -18,6 +18,8 @@ namespace Graphic_Editor
         private ResizeDirection resizeDirection;
         private Point startPoint;
         private double startWidth, startHeight, startLeft, startTop;
+        private FrameworkElement frameworkElement;
+        private bool handlesVisible;
 
         private enum ResizeDirection
         {
@@ -36,7 +38,36 @@ namespace Graphic_Editor
         {
             this.element = element;
             this.canvas = canvas;
+            frameworkElement = element as FrameworkElement;
+            AttachElementEvents();
             InitializeResizeHandles();
+        }
+
+        private void AttachElementEvents()
+        {
+            if (frameworkElement != null)
+            {
+                frameworkElement.SizeChanged += Element_SizeChanged;
+                frameworkElement.LayoutUpdated += Element_LayoutUpdated;
+            }
+        }
+
+        private void Element_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            OnElementLayoutChanged();
+        }
+
+        private void Element_LayoutUpdated(object sender, EventArgs e)
+        {
+            OnElementLayoutChanged();
+        }
+
+        private void OnElementLayoutChanged()
+        {
+            if (handlesVisible && !isResizing)
+            {
+                UpdateResizeHandlesPosition();
+            }
         }
 
         private void InitializeResizeHandles()
@@ -146,6 +177,7 @@ namespace Graphic_Editor
             if (element == null) return;
 
             UpdateResizeHandlesPosition();
+            handlesVisible = true;
 
             foreach (var handle in cornerHandles)
             {
@@ -162,6 +194,7 @@ namespace Graphic_Editor
 
         public void HideResizeHandles()
         {
+            handlesVisible = false;
             if (cornerHandles != null)
             {
                 foreach (var handle in cornerHandles)
@@ -246,6 +279,8 @@ namespace Graphic_Editor
             {
                 if (fe.ActualWidth > 0)
                     return fe.ActualWidth;
+                if (fe.RenderSize.Width > 0)
+                    return fe.RenderSize.Width;
                 if (!double.IsNaN(fe.Width))
                     return fe.Width;
             }
@@ -258,6 +293,8 @@ namespace Graphic_Editor
             {
                 if (fe.ActualHeight > 0)
                     return fe.ActualHeight;
+                if (fe.RenderSize.Height > 0)
+                    return fe.RenderSize.Height;
                 if (!double.IsNaN(fe.Height))
                     return fe.Height;
             }
@@ -399,8 +436,23 @@ namespace Graphic_Editor
         {
             if (element is FrameworkElement frameworkElement)
             {
-                frameworkElement.Width = width;
-                frameworkElement.Height = height;
+                // Для TextBlock устанавливаем размеры
+                if (element is System.Windows.Controls.TextBlock textBlock)
+                {
+                    // TextBlock может не иметь фиксированных размеров, устанавливаем их явно
+                    frameworkElement.Width = Math.Max(20, width);
+                    frameworkElement.Height = Math.Max(20, height);
+                    // Для TextBlock также можно использовать TextWrapping для лучшего отображения
+                    if (textBlock.TextWrapping == TextWrapping.NoWrap)
+                    {
+                        textBlock.TextWrapping = TextWrapping.Wrap;
+                    }
+                }
+                else
+                {
+                    frameworkElement.Width = width;
+                    frameworkElement.Height = height;
+                }
             }
 
             Canvas.SetLeft(element, left);
@@ -420,6 +472,13 @@ namespace Graphic_Editor
 
         public void Dispose()
         {
+            handlesVisible = false;
+            if (frameworkElement != null)
+            {
+                frameworkElement.SizeChanged -= Element_SizeChanged;
+                frameworkElement.LayoutUpdated -= Element_LayoutUpdated;
+            }
+
             if (cornerHandles != null)
             {
                 foreach (var handle in cornerHandles)
