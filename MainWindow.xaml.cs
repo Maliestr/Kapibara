@@ -5023,7 +5023,6 @@ namespace Graphic_Editor
             }
         }
 
-
         // Создание стрелки из данных файла
         private void CreateArrowFromData(string[] data)
         {
@@ -5121,7 +5120,6 @@ namespace Graphic_Editor
 
             return arrowhead;
         }
-
         private void UpdateArrowheadPosition(ArrowContainer arrowContainer)
         {
             if (arrowContainer.Line.Points.Count < 2 || arrowContainer.Arrowhead == null) return;
@@ -5153,7 +5151,6 @@ namespace Graphic_Editor
             double arrowWidth = 12;
 
             // Вычисляем точки треугольника
-            // Острие наконечника должно быть точно в конце стрелки
             Point arrowTip = lineEnd;
 
             // Боковые точки наконечника
