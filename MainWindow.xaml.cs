@@ -80,6 +80,7 @@ namespace Graphic_Editor
         //Система сохранения оригинальных стилей
         private Dictionary<UIElement, Brush> originalStrokeColors = new Dictionary<UIElement, Brush>(); //Исходные цвета контуров
         private Dictionary<UIElement, Brush> originalFillColors = new Dictionary<UIElement, Brush>(); //Исходные цвета заливки
+        private Dictionary<UIElement, double> originalStrokeThickness = new Dictionary<UIElement, double>(); //Оригинальная толщина обводки
 
         //Управление интерфейсом
         private bool arePanelsVisible = true; //Видимость всех панелей инструментов
@@ -103,6 +104,10 @@ namespace Graphic_Editor
         private List<Polyline> lines = new List<Polyline>(); //Список линий
         private List<Polygon> arrowheads = new List<Polygon>(); //Список наконечников
         //private List<UIElement> arrows = new List<UIElement>(); //Хранение всех стрелок на холсте в виде коллекции UIElement
+
+        //Не работает
+        private const double WorkAreaTop = 40;    // Отступ сверху (под меню)
+        private const double WorkAreaBottom = 100; // Отступ снизу (над панелью инструментов)
 
         public class TextFormatting //Класс для форматирования текста
         {
@@ -223,21 +228,6 @@ namespace Graphic_Editor
                 }
             }
         }
-
-        // Для выделения кнопок
-        //private void Button_Click(object sender, RoutedEventArgs e)
-        //{
-        //    // Сбрасываем выделение у всех кнопок
-        //    cursor.Tag = null;
-        //    pencil.Tag = null;
-        //    rectangle.Tag = null;
-        //    text.Tag = null;
-        //    comment.Tag = null;
-        //    dash.Tag = null;
-
-        //    // Выделяем нажатую кнопку
-        //    ((Button)sender).Tag = "Selected";
-        //}
 
         // Инициализация сетки
         private void InitializeGrid()
@@ -925,11 +915,6 @@ namespace Graphic_Editor
                 : WindowState.Maximized;
         }
 
-        private void CloseBtn_Click(object sender, RoutedEventArgs e)
-        {
-            Close();
-        }
-
         // Перетаскивание окна за заголовок
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
@@ -942,8 +927,6 @@ namespace Graphic_Editor
                 DragMove();
             }
         }
-
-        // Новые методы для работы с фигурами
 
         // Обработка горячих клавиш
         protected override void OnKeyDown(KeyEventArgs e)
@@ -1067,22 +1050,6 @@ namespace Graphic_Editor
             // Устанавливаем контекстное меню для элемента
             element.ContextMenu = contextMenu;
         }
-
-        // Выделение элемента
-        
-
-        // Снятие выделения со всех элементов
-        
-        
-            
-        
-        // Визуальное выделение элемента
-        private const double WorkAreaTop = 50;    // Отступ сверху (под меню)
-        private const double WorkAreaBottom = 100; // Отступ снизу (над панелью инструментов)
-
-
-        // Словарь для хранения оригинальной толщины обводки
-        private Dictionary<UIElement, double> originalStrokeThickness = new Dictionary<UIElement, double>();
 
         // Метод для показа/скрытия панели толщины обводки
         private void UpdateStrokeWidthPanelVisibility()
@@ -1552,9 +1519,6 @@ namespace Graphic_Editor
 
                 return newArrow;
             }
-
-
-
             if (original is Ellipse originalEllipse)
             {
                 var newEllipse = new Ellipse
@@ -1618,10 +1582,8 @@ namespace Graphic_Editor
                 {
                     newLine.RenderTransform = new RotateTransform(originalRotate.Angle);
                 }
-
                 return newLine;
             }
-
             return null;
         }
 
@@ -1684,7 +1646,6 @@ namespace Graphic_Editor
                 MessageBox.Show("Нет действий для повтора", "Повтор", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
-        // Восстановление оригинального вида элемента (без выделения)
         
         // Сохранение в стек отмены
         private void SaveToUndoStack(UIElement element)
@@ -1695,6 +1656,7 @@ namespace Graphic_Editor
             // Очищаем стек повтора при новом действии
             redoStack.Clear();
         }
+
         // Сохранение оригинальных цветов для копии элемента
         private void SaveOriginalColorsForCopy(UIElement original, UIElement copy)
         {
@@ -1763,6 +1725,7 @@ namespace Graphic_Editor
                 }
             }
         }
+
         // Восстановление оригинальных цветов элемента
         private void RestoreOriginalColors(UIElement element)
         {
@@ -1805,6 +1768,7 @@ namespace Graphic_Editor
                 }
             }
         }
+
         // Выделение всех элементов
         private void SelectAllElements()
         {
@@ -1818,17 +1782,6 @@ namespace Graphic_Editor
                 }
             }
         }
-        //ИЗНАЧАЛЬНАЯ ВЕРСИЯ:
-        /*private void SelectAllElements()
-        {
-            // Пока просто выделяем первый элемент (можно расширить для множественного выделения)
-            if (MainCanvas.Children.Count > 0)
-            {
-                SelectElement(MainCanvas.Children[0] as FrameworkElement);
-            }
-        }*/
-
-        //ТЕКСТ
 
         // Обработчик для кнопки текста на панели инструментов
         private void TextButton_Click(object sender, RoutedEventArgs e)
@@ -1907,6 +1860,7 @@ namespace Graphic_Editor
         {
             CreateTextElementWithColor(text, left, top, Brushes.White);
         }
+
         // Создание текстового элемента с указанным цветом
         private void CreateTextElementWithColor(string text, double left, double top, Brush color)
         {
@@ -1964,6 +1918,7 @@ namespace Graphic_Editor
                 };
             }
         }
+
         // Обработчик нажатия левой кнопки мыши на текстовом элементе
         private void TextElement_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
@@ -2072,6 +2027,7 @@ namespace Graphic_Editor
             draggedElement?.ReleaseMouseCapture();
             draggedElement = null;
         }
+
         // Редактирование существующего текстового элемента
         private void EditTextElement(TextBlock textBlock)
         {
@@ -2140,6 +2096,7 @@ namespace Graphic_Editor
                 editTextBox.LostFocus += (s, e) => FinishEditWithFormatting(editTextBox, left, top, originalStrokeColor);
             }
         }
+        
         // Завершение редактирования с сохранением форматирования
         private void FinishEditWithFormatting(TextBox editTextBox, double left, double top, Brush originalColor)
         {
@@ -2200,7 +2157,6 @@ namespace Graphic_Editor
                 CreateTextElementWithColor(newText, left, top, originalColor);
             }
         }
-
 
         // Обработчик изменения шрифта
         private void FontComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -2299,6 +2255,7 @@ namespace Graphic_Editor
                 SaveCurrentTextFormatting(textBlock);
             }
         }
+
         // Обновление панели текста для выбранного элемента
         private void UpdateTextPanelForSelectedElement(FrameworkElement element)
         {
@@ -2324,6 +2281,7 @@ namespace Graphic_Editor
                 ResetTextComboBoxesToEmpty();
             }
         }
+
         // Обновление комбо-боксов текста значениями из TextBlock
         private void UpdateTextComboBoxes(TextBlock textBlock)
         {
@@ -2444,7 +2402,6 @@ namespace Graphic_Editor
             TextPanel.Visibility = Visibility.Collapsed;
         }
 
-
         private void MakeAllShapesDraggable()
         {
             // Добавляем обработчики для всех фигур в нотации
@@ -2459,9 +2416,6 @@ namespace Graphic_Editor
             AddDragHandlers(stick);
         }
         
-
-
-
         private void AddDragHandlers(UIElement element)
         {
             if (element == null) return;
@@ -2715,6 +2669,7 @@ namespace Graphic_Editor
                 e.Handled = true;
             }
         }
+
         // Метод для принудительного обновления толщины во всех связанных элементах
         private void UpdateStrokeThicknessInAllReferences(UIElement element, double thickness)
         {
@@ -3123,6 +3078,7 @@ namespace Graphic_Editor
 
             MainCanvas.CaptureMouse();
         }
+
         private void UpdateSelectionInRealTime(Rect selectionBounds)
         {
             foreach (UIElement element in MainCanvas.Children)
@@ -3171,6 +3127,7 @@ namespace Graphic_Editor
                 }
             }
         }
+
         private Rect GetElementBounds(UIElement element)
         {
             if (element == null) return new Rect(0, 0, 0, 0);
@@ -3209,7 +3166,7 @@ namespace Graphic_Editor
 
             return new Rect(left, top, width, height);
         }
-        //ПОСМОТРЕТЬ ПРАВИЛЬНОСТЬ
+
         private UIElement FindElementAtPosition(Point position)
         {
             // Ищем элементы с конца (верхние элементы в z-order)
@@ -3430,9 +3387,8 @@ namespace Graphic_Editor
                 Canvas.SetLeft(element, newLeft);
                 Canvas.SetTop(element, newTop);
             }
-
-
         }
+
         private void MainCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             if (isArrowModeActive)
@@ -3552,6 +3508,7 @@ namespace Graphic_Editor
                 }
             }
         }
+
         // Вспомогательный метод для применения цвета к конкретной фигуре
         private void ApplyColorToShape(UIElement shape, Brush brush)
         {
@@ -3575,6 +3532,7 @@ namespace Graphic_Editor
                 line.Stroke = brush;
             }
         }
+
         // ОБРАБОТЧИК СОБЫТИЯ ДЛЯ COMBOBOX ОБВОДКИ
         private void StrokeColorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -3660,6 +3618,7 @@ namespace Graphic_Editor
                 }
             }
         }
+
         // Вспомогательный метод для применения цвета заливки
         private void ApplyFillColorToShape(UIElement shape, Brush brush)
         {
@@ -3678,6 +3637,7 @@ namespace Graphic_Editor
             }
             // Для Line и TextBlock заливка не применяется
         }
+
         // Метод обновления комбо-боксов на основе цветов фигуры
         private void UpdateColorComboBoxesFromShape(UIElement shape)
         {
@@ -3758,20 +3718,6 @@ namespace Graphic_Editor
             return 0;
         }
 
-        private void escButton_Click(object sender, RoutedEventArgs e)
-        {
-            this.Close();
-        }
-
-        private void MenuItem_Click(object sender, RoutedEventArgs e)
-        {
-
-        }
-
-        private void MenuItem_Click_1(object sender, RoutedEventArgs e)
-        {
-
-        }
         private void CopySelectedElements()
         {
             if (selectedElements.Count > 0)
@@ -4067,8 +4013,8 @@ namespace Graphic_Editor
                 currentArrow = null;
                 ToggleArrowMode();
             }
-
         }
+
         private void RegisterArrowContainer(ArrowContainer arrowContainer)
         {
             if (arrowContainer == null || arrowContainer.Line == null) return;
@@ -4368,8 +4314,6 @@ namespace Graphic_Editor
             }
         }
 
-
-
         private void Arrow_MouseLeftButtonUp(object sender, MouseEventArgs e)
         {
             var arrow = sender as Polyline;
@@ -4461,7 +4405,6 @@ namespace Graphic_Editor
             }
         }
 
-
         // Вспомогательный метод для применения цвета обводки к конкретной фигуре
         private void ApplyStrokeColorToShape(UIElement shape, Brush brush)
         {
@@ -4537,42 +4480,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Обработчик кнопки комментариев (старый метод для совместимости)
-        private void CommentModeButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is ToggleButton button)
-            {
-                isCommentModeActive = button.IsChecked == true;
-            }
-            else
-            {
-                isCommentModeActive = !isCommentModeActive;
-            }
-
-            if (isCommentModeActive)
-            {
-                MainCanvas.Cursor = Cursors.Hand;
-            }
-            else
-            {
-                MainCanvas.Cursor = Cursors.Arrow;
-            }
-        }
-        // Обработчик клика по холсту в режиме комментариев
-        private void MainCanvas_MouseLeftButtonDown_Comment(object sender, MouseButtonEventArgs e)
-        {
-            if (!isCommentModeActive) return;
-
-            Point clickPosition = e.GetPosition(MainCanvas);
-
-            // Проверяем, что клик не по другим элементам
-            if (e.OriginalSource is System.Windows.Controls.Canvas)
-            {
-                CreateCommentAtPosition(clickPosition);
-                e.Handled = true;
-            }
-        }
-        // Создание комментария в указанной позиции
+        //Создание комментария в указанной позиции
         private void CreateCommentAtPosition(Point position)
         {
             // Создаем визуальный элемент комментария
@@ -4956,28 +4864,7 @@ namespace Graphic_Editor
                 arrows.Remove(arrowContainer);
             }
         }
-        private void RemoveArrowhead(Polyline arrow)
-        {
-            // Находим контейнер стрелки
-            var arrowContainer = arrows.FirstOrDefault(a => a.Line == arrow);
-            if (arrowContainer != null && arrowContainer.Arrowhead != null)
-            {
-                if (MainCanvas.Children.Contains(arrowContainer.Arrowhead))
-                {
-                    MainCanvas.Children.Remove(arrowContainer.Arrowhead);
-                }
-                arrowContainer.Arrowhead = null;
-            }
-
-            /* var arrowheadToRemove = arrows.OfType<Polygon>()
-                                           .FirstOrDefault(ah => IsArrowheadForLine(ah, arrow));
-
-             if (arrowheadToRemove != null)
-             {
-                 MainCanvas.Children.Remove(arrowheadToRemove);
-                 arrows.Remove(arrowheadToRemove);
-             }*/
-        }
+        
         // Создание стрелки из данных файла
         private void CreateArrowFromData(string[] data)
         {
@@ -5076,16 +4963,6 @@ namespace Graphic_Editor
             return arrowhead;
         }
 
-        // Метод для перетаскивания наконечника вместе со стрелкой
-        private void MakeArrowheadDraggable(Polygon arrowhead, Polyline arrow)
-        {
-            arrowhead.MouseLeftButtonDown += (s, e) =>
-            {
-                // При клике на наконечник выделяем всю стрелку
-                SelectArrow(arrow);
-                e.Handled = true;
-            };
-        }
         private void UpdateArrowheadPosition(ArrowContainer arrowContainer)
         {
             if (arrowContainer.Line.Points.Count < 2 || arrowContainer.Arrowhead == null) return;
@@ -5097,27 +4974,6 @@ namespace Graphic_Editor
             // ОБНОВЛЯЕМ ГЕОМЕТРИЮ НАКОНЕЧНИКА НА МЕСТЕ
             UpdateArrowheadGeometry(arrowContainer.Arrowhead, lineStart, lineEnd, arrowContainer.Line.Stroke);
         }
-
-        // Метод для создания и прикрепления наконечника
-        private void CreateAndAttachArrowhead(Polyline arrow, Point lineStart, Point lineEnd)
-        {
-            Polygon arrowhead = CreateArrowhead(lineStart, lineEnd, arrow.Stroke);
-            if (arrowhead != null)
-            {
-                MainCanvas.Children.Add(arrowhead);
-                arrowheads.Add(arrowhead); // Используем правильную коллекцию
-                MakeArrowheadDraggable(arrowhead, arrow);
-
-                StoreArrowheadRelation(arrow, arrowhead);
-            }
-        }
-
-        // Метод для сохранения связи между стрелкой и наконечником
-        private void StoreArrowheadRelation(Polyline arrow, Polygon arrowhead)
-        {
-            arrowToArrowheadMap[arrow] = arrowhead;
-        }
-
 
         // Метод для обновления геометрии наконечника
         private void UpdateArrowheadGeometry(Polygon arrowhead, Point lineStart, Point lineEnd, Brush color)
@@ -5157,71 +5013,6 @@ namespace Graphic_Editor
             arrowhead.Stroke = color;
         }
 
-        // Метод для обновления точек существующего наконечника
-        private void UpdateArrowheadPoints(Polygon arrowhead, Point lineStart, Point lineEnd, Brush color)
-        {
-            // Вычисляем направление стрелки
-            double dx = lineEnd.X - lineStart.X;
-            double dy = lineEnd.Y - lineStart.Y;
-            double length = Math.Sqrt(dx * dx + dy * dy);
-
-            if (length == 0) return;
-
-            // Нормализуем вектор направления
-            dx /= length;
-            dy /= length;
-
-            // Размеры наконечника
-            double arrowLength = 15; // Увеличим для лучшей видимости
-            double arrowWidth = 10;
-
-            // Вычисляем новые точки треугольника
-            // Острие наконечника должно быть точно в конце стрелки
-            Point arrowTip = lineEnd;
-
-            // Боковые точки наконечника
-            Point arrowLeft = new Point(
-                lineEnd.X - dx * arrowLength + dy * arrowWidth,
-                lineEnd.Y - dy * arrowLength - dx * arrowWidth
-            );
-            Point arrowRight = new Point(
-                lineEnd.X - dx * arrowLength - dy * arrowWidth,
-                lineEnd.Y - dy * arrowLength + dx * arrowWidth
-            );
-
-            // Обновляем точки наконечника
-            arrowhead.Points = new PointCollection { arrowTip, arrowLeft, arrowRight };
-            arrowhead.Fill = color;
-            arrowhead.Stroke = color;
-        }
-
-
-        // Проверка, принадлежит ли наконечник стрелке
-        // Улучшенный метод проверки принадлежности наконечника
-        private bool IsArrowheadForLine(Polygon arrowhead, Polyline arrow)
-        {
-            if (arrow.Points.Count < 2 || arrowhead.Points.Count == 0) return false;
-
-            Point lineEnd = arrow.Points[arrow.Points.Count - 1];
-            Point arrowheadTip = arrowhead.Points[0]; // Первая точка - острие наконечника
-
-            // Проверяем близость острия наконечника к концу стрелки
-            double distance = Math.Sqrt(Math.Pow(arrowheadTip.X - lineEnd.X, 2) + Math.Pow(arrowheadTip.Y - lineEnd.Y, 2));
-            return distance < 15; // Увеличиваем допуск для лучшего определения
-        }
-
-        // Получение центра полигона
-        private Point GetPolygonCenter(Polygon polygon)
-        {
-            double centerX = 0, centerY = 0;
-            foreach (Point point in polygon.Points)
-            {
-                centerX += point.X;
-                centerY += point.Y;
-            }
-            return new Point(centerX / polygon.Points.Count, centerY / polygon.Points.Count);
-        }
-
         private void MainCanvas_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (isArrowModeActive && currentArrow != null)
@@ -5231,13 +5022,5 @@ namespace Graphic_Editor
                 e.Handled = true;
             }
         }
-
-        // Метод для поиска наконечника по стрелке
-        private Polygon FindArrowheadForArrow(Polyline arrow)
-        {
-            var arrowContainer = arrows.FirstOrDefault(a => a.Line == arrow);
-            return arrowContainer?.Arrowhead;
-        }
-
     }
 }

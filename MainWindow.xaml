@@ -124,7 +124,7 @@
 
                     <Menu Background="Transparent" FontSize="12" Foreground="White" 
                           WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom" Height="34">
-                        <MenuItem Header="Файл" Margin="0,2,18,0" Height="32" Click="MenuItem_Click_1">
+                        <MenuItem Header="Файл" Margin="0,2,18,0" Height="32">
                             <MenuItem Header="Новый" Click="NewFile_Click"/>
                             <MenuItem Header="Открыть..." Click="OpenFile_Click"/>
                             <MenuItem Header="Сохранить" Click="SaveFile_Click"/>
@@ -151,7 +151,7 @@
                                       IsCheckable="True"/>
                         </MenuItem>
 
-                        <MenuItem Header="Правка" Margin="0,2,18,0" Height="32" Click="MenuItem_Click">
+                        <MenuItem Header="Правка" Margin="0,2,18,0" Height="32">
                             <MenuItem Header="Отменить" InputGestureText="Ctrl+Z" Click="Undo_Click"/>
                             <MenuItem Header="Повторить" InputGestureText="Ctrl+Y" Click="Redo_Click"/>
                             <Separator/>
@@ -187,7 +187,7 @@
                     </Button>
 
                     <Button x:Name="CloseBtn" Background="Transparent" BorderBrush="Transparent"
-                            Click="CloseBtn_Click" Width="46" Height="34"
+                            Click="Exit_Click" Width="46" Height="34"
                             Style="{StaticResource CloseButtonStyle}"
                             WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom" Margin="0,0,6,0">
                         <Image Source="/Icons/Group 1.png" Width="12" Height="12" Margin="0,2,0,0"/>
