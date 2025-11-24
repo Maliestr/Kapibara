@@ -19,7 +19,6 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Shell;
@@ -30,48 +29,82 @@ namespace Graphic_Editor
 {
     public partial class MainWindow : Window
     {
-        private bool isDragging = false;
-        private UIElement draggedElement;
-        private Point offset;
-        private UIElement shapeCopy;
-        private Transform originalTransform;
-        private Point dragStartPoint;
-        private string currentFilePath = null;
-        private List<UIElement> canvasElements = new List<UIElement>();
+        //Состояние перетаскивания
+        private bool isDragging = false; //Идёт ли процесс перетаскивания - нет
+        private UIElement draggedElement; //Элемент, который сейчас перетаскивается
+        private Point offset; //Смещение курсора относительно элемента при захвате
+        private UIElement shapeCopy; //Копия элемента при перетаскивании из панели
+        private Transform originalTransform; //Исходная трансформация элемента для восстановления
+        private Point dragStartPoint; //Начальная точка перетаскивания
 
-        private FrameworkElement selectedElement;
-        private FrameworkElement copiedElement;
-        private Point lastMousePosition;
-        private Stack<UIElement> undoStack = new Stack<UIElement>();
-        private Stack<UIElement> redoStack = new Stack<UIElement>();
+        //Управление элементами холста
+        private string currentFilePath = null; //Путь к текущему файлу (null - новый файл)
+        private List<UIElement> canvasElements = new List<UIElement>(); //Список всех элементов на холсте
 
-        private bool isGridEnabled = false;
-        private bool isSnapToGridEnabled = false;
-        private System.Windows.Shapes.Path gridPath;
-        private const double GridSize = 20; // Размер ячейки сетки
-        private bool isTextModeActive = false;
-        private TextBox textBox;
+        //Система выделения
+        private FrameworkElement selectedElement; //Текущий выделенный элемент (для операций)
+        private UIElement selectedShape; //Выделенная фигура (альтернативная система выделения)
+        private FrameworkElement copiedElement; //Элемент в буфере обмена для копирования/вставки
+        private Point lastMousePosition; //Последняя позиция мыши (для отслеживания движения)
 
-        private Dictionary<UIElement, TextFormatting> textFormatting = new Dictionary<UIElement, TextFormatting>();
+        //Система прямоугольного выделения
+        private bool isSelecting = false; //Идёт ли процесс выделения - нет
+        private Point selectionStart; //Начальная точка выделения
+        private Rectangle selectionRect; //Визуальный прямоугольник выделения
+        private List<UIElement> selectedElements = new List<UIElement>(); //Список выделенных элементов
+        private Dictionary<UIElement, ResizableElement> resizableElements = 
+            new Dictionary<UIElement, ResizableElement>(); //Хранит связь между элементами на холсте и их контроллерами изменения размера
+        private ResizableElement currentResizableElement; //Текущий активный изменяемый в размерах элемент
 
-        private Dictionary<UIElement, Brush> originalStrokeColors = new Dictionary<UIElement, Brush>();
-        private Dictionary<UIElement, Brush> originalFillColors = new Dictionary<UIElement, Brush>();
-        private UIElement selectedShape;
+        //Система отмены/повтора
+        private Stack<UIElement> undoStack = new Stack<UIElement>(); //Стек для отмены действий
+        private Stack<UIElement> redoStack = new Stack<UIElement>(); //Стек для повтора действий
 
-        private bool arePanelsVisible = true;
+        //Система сетки
+        private bool isGridEnabled = false; //Отображение сетки - нет
+        private bool isSnapToGridEnabled = false; //Привязка к сетке - нет
+        private System.Windows.Shapes.Path gridPath; //Отрисовка линий сетки
+        private const double GridSize = 20; //Размер ячейки сетки в пикселях
 
-        // Список всех плашек для управления видимостью
-        private List<Border> panels = new List<Border>();
+        //Режим текста
+        private bool isTextModeActive = false; //Активация режима ввода текста - нет
+        private TextBox textBox; //Временное текстовое поле для ввода
+        private Dictionary<UIElement, TextFormatting> textFormatting = new Dictionary<UIElement, TextFormatting>(); //Система форматирования текста (хранит шрифт, размер, стиль)
 
-        private bool isCommentModeActive = false;
-        private List<Comment> comments = new List<Comment>();
+        //Временные настройки текста
+        private string currentFontFamily = "Gotham Pro"; //Текущий шрифт
+        private double currentFontSize = 14; //Текущий размер шрифта
+        private FontStyle currentFontStyle = FontStyles.Normal; //Текущий стиль
+        private FontWeight currentFontWeight = FontWeights.Normal; //Текущая насыщенность
 
-        private string currentFontFamily = "Gotham Pro";
-        private double currentFontSize = 14;
-        private FontStyle currentFontStyle = FontStyles.Normal;
-        private FontWeight currentFontWeight = FontWeights.Normal;
+        //Система сохранения оригинальных стилей
+        private Dictionary<UIElement, Brush> originalStrokeColors = new Dictionary<UIElement, Brush>(); //Исходные цвета контуров
+        private Dictionary<UIElement, Brush> originalFillColors = new Dictionary<UIElement, Brush>(); //Исходные цвета заливки
 
-        public class TextFormatting
+        //Управление интерфейсом
+        private bool arePanelsVisible = true; //Видимость всех панелей инструментов
+        private List<Border> panels = new List<Border>(); //Список всех плашек для управления видимостью
+
+        //Система комментариев
+        private bool isCommentModeActive = false; //Активность режима добавления комментариев - нет
+        private List<Comment> comments = new List<Comment>(); //Список всех комментариев на холсте
+
+        //Система рисования стрелок
+        private bool isArrowModeActive = false; //Активен ли режим рисования стрелок - нет
+        private Polyline currentArrow; //Текущая рисуемая стрелка
+        private Point arrowStartPoint; //Начальная точка стрелки
+        private List<ArrowContainer> arrows = new List<ArrowContainer>(); //Все стрелки на холсте
+        private ArrowContainer selectedArrowContainer; //Выделенная стрелка
+        private Polygon draggedArrowhead; //Перетаскиваемый наконечник
+        private PointCollection originalArrowPoints; //Оригинальные точки стрелки перед перетаскиванием
+        private Dictionary<Polyline, Polygon> arrowToArrowheadMap = new Dictionary<Polyline, Polygon>(); //Связь стрелка-наконечник
+
+        //Нужно разобраться
+        private List<Polyline> lines = new List<Polyline>(); //Список линий
+        private List<Polygon> arrowheads = new List<Polygon>(); //Список наконечников
+        //private List<UIElement> arrows = new List<UIElement>(); //Хранение всех стрелок на холсте в виде коллекции UIElement
+
+        public class TextFormatting //Класс для форматирования текста
         {
             public FontFamily FontFamily { get; set; }
             public double FontSize { get; set; }
@@ -79,36 +112,15 @@ namespace Graphic_Editor
             public FontWeight FontWeight { get; set; }
         }
 
-        public class Comment
+        public class Comment //Класс для комментирования
         {
             public UIElement VisualElement { get; set; }
             public UIElement TextElement { get; set; }
             public string Text { get; set; }
             public Point Position { get; set; }
         }
-        // Переменные для системы выделения
-        private bool isSelecting = false;
-        private Point selectionStart;
-        private Rectangle selectionRect;
-        private List<UIElement> selectedElements = new List<UIElement>();
 
-        // Добавляем переменные для режима рисования стрелок
-        private bool isArrowModeActive = false;
-        private Polyline currentArrow;
-        private Point arrowStartPoint;
-        //private List<UIElement> arrows = new List<UIElement>();
-        private List<ArrowContainer> arrows = new List<ArrowContainer>();
-        private ArrowContainer selectedArrowContainer;
-
-        private Polygon draggedArrowhead;
-        private PointCollection originalArrowPoints;
-        private Dictionary<Polyline, Polygon> arrowToArrowheadMap = new Dictionary<Polyline, Polygon>();
-
-        private List<Polyline> lines = new List<Polyline>();
-        private List<Polygon> arrowheads = new List<Polygon>();
-
-        // Класс для хранения стрелки и её наконечника вместе
-        public class ArrowContainer
+        public class ArrowContainer //Класс для хранения стрелки и её наконечника вместе
         {
             public Polyline Line { get; set; }
             public Polygon Arrowhead { get; set; }
@@ -118,10 +130,6 @@ namespace Graphic_Editor
             public Brush OriginalArrowheadFill { get; set; }
             public Brush OriginalArrowheadStroke { get; set; }
         }
-
-
-        private Dictionary<UIElement, ResizableElement> resizableElements = new Dictionary<UIElement, ResizableElement>();
-        private ResizableElement currentResizableElement;
 
         public MainWindow()
         {
