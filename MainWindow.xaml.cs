@@ -1062,8 +1062,134 @@ namespace Graphic_Editor
             deleteMenuItem.Click += (s, e) => DeleteSelectedElement();
             contextMenu.Items.Add(deleteMenuItem);
 
+            contextMenu.Items.Add(new Separator());
+
+            // Пункт "Перенести на передний план"
+            MenuItem bringToFrontMenuItem = new MenuItem
+            {
+                Header = "Перенести на передний план",
+                Icon = new TextBlock { Text = "⬆", FontSize = 14 }
+            };
+            bringToFrontMenuItem.Click += (s, e) => BringToFront(element);
+            contextMenu.Items.Add(bringToFrontMenuItem);
+
+            // Пункт "Перенести на задний план"
+            MenuItem sendToBackMenuItem = new MenuItem
+            {
+                Header = "Перенести на задний план",
+                Icon = new TextBlock { Text = "⬇", FontSize = 14 }
+            };
+            sendToBackMenuItem.Click += (s, e) => SendToBack(element);
+            contextMenu.Items.Add(sendToBackMenuItem);
+
             // Устанавливаем контекстное меню для элемента
             element.ContextMenu = contextMenu;
+        }
+
+        // Метод для получения максимального ZIndex на холсте
+        private int GetMaxZIndex()
+        {
+            int maxZIndex = 0;
+            foreach (UIElement child in MainCanvas.Children)
+            {
+                int zIndex = Canvas.GetZIndex(child);
+                if (zIndex > maxZIndex)
+                {
+                    maxZIndex = zIndex;
+                }
+            }
+            return maxZIndex;
+        }
+
+        // Метод для получения минимального ZIndex на холсте
+        private int GetMinZIndex()
+        {
+            int minZIndex = 0;
+            bool first = true;
+            foreach (UIElement child in MainCanvas.Children)
+            {
+                int zIndex = Canvas.GetZIndex(child);
+                if (first || zIndex < minZIndex)
+                {
+                    minZIndex = zIndex;
+                    first = false;
+                }
+            }
+            return minZIndex;
+        }
+
+        // Перенести элемент на передний план
+        private void BringToFront(FrameworkElement element)
+        {
+            if (element == null || !MainCanvas.Children.Contains(element)) return;
+
+            int maxZIndex = GetMaxZIndex();
+            Canvas.SetZIndex(element, maxZIndex + 1);
+
+            // Также перемещаем элемент в конец коллекции для гарантии
+            MainCanvas.Children.Remove(element);
+            MainCanvas.Children.Add(element);
+        }
+
+        // Перенести элемент на задний план
+        private void SendToBack(FrameworkElement element)
+        {
+            if (element == null || !MainCanvas.Children.Contains(element)) return;
+
+            int minZIndex = GetMinZIndex();
+            Canvas.SetZIndex(element, minZIndex - 1);
+
+            // Также перемещаем элемент в начало коллекции для гарантии
+            MainCanvas.Children.Remove(element);
+            MainCanvas.Children.Insert(0, element);
+        }
+
+        // Перенести стрелку на передний план (линия и наконечник вместе)
+        private void BringArrowToFront(ArrowContainer arrowContainer)
+        {
+            if (arrowContainer?.Line == null) return;
+
+            int maxZIndex = GetMaxZIndex();
+
+            // Перемещаем линию на передний план
+            if (MainCanvas.Children.Contains(arrowContainer.Line))
+            {
+                Canvas.SetZIndex(arrowContainer.Line, maxZIndex + 1);
+                MainCanvas.Children.Remove(arrowContainer.Line);
+                MainCanvas.Children.Add(arrowContainer.Line);
+            }
+
+            // Перемещаем наконечник на передний план (выше линии)
+            if (arrowContainer.Arrowhead != null && MainCanvas.Children.Contains(arrowContainer.Arrowhead))
+            {
+                Canvas.SetZIndex(arrowContainer.Arrowhead, maxZIndex + 2);
+                MainCanvas.Children.Remove(arrowContainer.Arrowhead);
+                MainCanvas.Children.Add(arrowContainer.Arrowhead);
+            }
+        }
+
+        // Перенести стрелку на задний план (линия и наконечник вместе)
+        private void SendArrowToBack(ArrowContainer arrowContainer)
+        {
+            if (arrowContainer?.Line == null) return;
+
+            int minZIndex = GetMinZIndex();
+
+            // Перемещаем наконечник на задний план (сначала наконечник, чтобы он был выше линии)
+            if (arrowContainer.Arrowhead != null && MainCanvas.Children.Contains(arrowContainer.Arrowhead))
+            {
+                Canvas.SetZIndex(arrowContainer.Arrowhead, minZIndex - 1);
+                MainCanvas.Children.Remove(arrowContainer.Arrowhead);
+                MainCanvas.Children.Insert(0, arrowContainer.Arrowhead);
+            }
+
+            // Перемещаем линию на задний план
+            if (MainCanvas.Children.Contains(arrowContainer.Line))
+            {
+                Canvas.SetZIndex(arrowContainer.Line, minZIndex - 2);
+                MainCanvas.Children.Remove(arrowContainer.Line);
+                MainCanvas.Children.Insert(0, arrowContainer.Line);
+            }
         }
 
         // Метод для показа/скрытия панели толщины обводки
@@ -1449,6 +1575,12 @@ namespace Graphic_Editor
                 MainCanvas.Children.Add(newElement);
                 canvasElements.Add(newElement);
                 MakeCanvasShapeDraggable(newElement);
+
+                // Перемещаем на передний план
+                if (newElement is FrameworkElement frameworkElement)
+                {
+                    BringToFront(frameworkElement);
+                }
 
                 // Создаем ResizableElement для нового элемента
                 resizableElements[newElement] = new ResizableElement(newElement, MainCanvas);
@@ -1901,6 +2033,7 @@ namespace Graphic_Editor
 
             // Добавляем текстовый элемент на холст
             MainCanvas.Children.Add(textBlock);
+            BringToFront(textBlock);
 
             textBlock.MouseLeftButtonDown += TextElement_MouseLeftButtonDown;
             MakeCanvasShapeDraggable(textBlock);
@@ -2134,6 +2267,7 @@ namespace Graphic_Editor
                 SaveTextFormatting(textBlock);
 
                 MainCanvas.Children.Add(textBlock);
+                BringToFront(textBlock);
                 textBlock.MouseLeftButtonDown += TextElement_MouseLeftButtonDown;
                 MakeCanvasShapeDraggable(textBlock);
                 SelectElement(textBlock);
@@ -2645,8 +2779,8 @@ namespace Graphic_Editor
                         // Если копия была создана в рабочей области, делаем ее полностью видимой
                         shapeCopy.Opacity = 1.0;
 
-                        // ВОЗВРАЩАЕМ НОРМАЛЬНЫЙ ZIndex ДЛЯ ФИГУРЫ НА ХОЛСТЕ
-                        Canvas.SetZIndex(shapeCopy, 1);
+                        // ПЕРЕМЕЩАЕМ ФИГУРУ НА ПЕРЕДНИЙ ПЛАН
+                        BringToFront(shapeCopy as FrameworkElement);
 
                         MakeCanvasShapeDraggable(shapeCopy);
 
@@ -3733,6 +3867,12 @@ namespace Graphic_Editor
                     canvasElements.Add(newElement);
                     MakeCanvasShapeDraggable(newElement);
 
+                    // Перемещаем на передний план
+                    if (newElement is FrameworkElement frameworkElement)
+                    {
+                        BringToFront(frameworkElement);
+                    }
+
                     newElements.Add(newElement);
 
                     // Сохраняем в стек отмены
@@ -3982,6 +4122,13 @@ namespace Graphic_Editor
 
                 // Регистрируем стрелку
                 RegisterArrowContainer(arrowContainer);
+
+                // Перемещаем стрелку и наконечник на передний план
+                BringToFront(currentArrow);
+                if (arrowContainer.Arrowhead != null)
+                {
+                    BringToFront(arrowContainer.Arrowhead);
+                }
 
                 // Сохраняем в стек отмены
                 SaveToUndoStack(currentArrow);
@@ -4857,6 +5004,26 @@ namespace Graphic_Editor
             };
             deleteMenuItem.Click += (s, e) => DeleteArrow(arrowContainer.Line);
             contextMenu.Items.Add(deleteMenuItem);
+
+            contextMenu.Items.Add(new Separator());
+
+            // Пункт "Перенести на передний план"
+            MenuItem bringToFrontMenuItem = new MenuItem
+            {
+                Header = "Перенести на передний план",
+                Icon = new TextBlock { Text = "⬆", FontSize = 14 }
+            };
+            bringToFrontMenuItem.Click += (s, e) => BringArrowToFront(arrowContainer);
+            contextMenu.Items.Add(bringToFrontMenuItem);
+
+            // Пункт "Перенести на задний план"
+            MenuItem sendToBackMenuItem = new MenuItem
+            {
+                Header = "Перенести на задний план",
+                Icon = new TextBlock { Text = "⬇", FontSize = 14 }
+            };
+            sendToBackMenuItem.Click += (s, e) => SendArrowToBack(arrowContainer);
+            contextMenu.Items.Add(sendToBackMenuItem);
 
             arrowContainer.Line.ContextMenu = contextMenu;
         }
