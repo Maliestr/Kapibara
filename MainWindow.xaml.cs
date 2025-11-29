@@ -115,6 +115,8 @@ namespace Graphic_Editor
         private Point arrowOffset;
         private Point arrowDragStartPoint;
 
+        private bool isCursor = true;
+
         public class TextFormatting //Класс для форматирования текста
         {
             public FontFamily FontFamily { get; set; }
@@ -153,6 +155,7 @@ namespace Graphic_Editor
             InitializeGrid(); //Создает и инициализирует визуальную сетку
             InitializePanels(); //Находит и регистрирует все панели выделения
             InitializeSelectionSystem(); //Настраивает систему прямоугольного выделения
+            isActiveCursor();
 
             // Обработка горячих клавиш
             this.KeyDown += MainWindow_KeyDown; //Ctrl+Z/Y - отмена/повтор
@@ -165,10 +168,12 @@ namespace Graphic_Editor
             // Добавляем обработчик клика по Canvas для сброса выделения
             MainCanvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
 
-            // Добавляем обработчики для комментариев (переключает режим комментариев)
-            comment.Click += CommentButton_Click;
+            // Кнопка курсора для обработки взаимодействия с объектами
+            cursor.Click += CursorButton_Click;
             // Кнопка пера включает/выключает режим рисования стрелок
             pencil.Click += PenButton_Click;
+            // Добавляем обработчики для комментариев (переключает режим комментариев)
+            comment.Click += CommentButton_Click;
 
             // Обработчики для размеров текстовых полей
             WidthTextBox.LostFocus += DimensionTextBox_LostFocus;
@@ -346,7 +351,7 @@ namespace Graphic_Editor
             return new Point(snappedX, snappedY);
         }
 
-        // Обновите метод перемещения фигур на канвасе
+        // Метод перемещения фигур на Canvas
         private void CanvasShape_MouseMove(object sender, MouseEventArgs e)
         {
             if (isDragging && draggedElement != null && e.LeftButton == MouseButtonState.Pressed)
@@ -1384,6 +1389,7 @@ namespace Graphic_Editor
             // Скрываем панели свойств
             StrokeWidthPanel.Visibility = Visibility.Collapsed;
         }
+
         private void ClearColorComboBoxes()
         {
             FillColorComboBox.SelectedIndex = -1;
@@ -5073,10 +5079,28 @@ namespace Graphic_Editor
             }
         }
 
+        private void CursorButton_Click(object sender, RoutedEventArgs e)
+        {
+            isCursor = !isCursor;
+            isActiveCursor();
+        }
+
         // Обработчик для кнопки пера на панели инструментов
         private void PenButton_Click(object sender, RoutedEventArgs e)
         {
             ToggleArrowMode(); //изменить название кнопки
+        }
+
+        private void isActiveCursor()
+        {
+            if (isCursor)
+            {
+                cursor.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
+            }
+            else
+            {
+                cursor.Background = Brushes.Transparent;
+            }
         }
 
         // Метод для создания треугольника-наконечника
