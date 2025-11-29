@@ -901,7 +901,7 @@ namespace Graphic_Editor
         // Меню "Справка"
         private void Help_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Справка");
+            HelpSystem.ShowHelp();
         }
 
         private void About_Click(object sender, RoutedEventArgs e)
