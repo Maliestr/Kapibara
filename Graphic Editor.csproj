@@ -14,6 +14,8 @@
     <WarningLevel>4</WarningLevel>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
+    <GenerateResourceMSBuildArchitecture>CurrentArchitecture</GenerateResourceMSBuildArchitecture>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -55,6 +57,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Page Include="InputDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Compile Include="ResizableElement.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -62,6 +69,9 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="InputDialog.xaml.cs">
+      <DependentUpon>InputDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
@@ -120,6 +130,27 @@
     <Resource Include="Icons\align-horizontal-center.png" />
     <Resource Include="Icons\align-horizontal-top.png" />
     <Resource Include="Icons\dashboard.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\КнСк.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\Cursor.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\Pencil.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\Rectangle.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\Writing.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\Com.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\dash.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
