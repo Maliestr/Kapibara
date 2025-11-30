@@ -149,11 +149,11 @@ namespace Graphic_Editor
             InitializeComponent(); //Инициализация WPF компонентов
 
             MakeAllShapesDraggable(); //Делает фигуры в панели инструментов перетаскиваемыми
-            ClearColorComboBoxesOnStartup(); // Очищаем блоки свойств заливки и обводки при запуске
-            ResetTextComboBoxesToEmpty(); //Сбрасываем блок свойств текста при запуске
+            //ClearColorComboBoxesOnStartup(); // Очищаем блоки свойств заливки и обводки при запуске
 
             InitializeGrid(); //Создает и инициализирует визуальную сетку
             InitializePanels(); //Находит и регистрирует все панели выделения
+            InitializePropertyBlocks();
             InitializeSelectionSystem(); //Настраивает систему прямоугольного выделения
             isActiveCursor();
 
@@ -562,6 +562,19 @@ namespace Graphic_Editor
             //if (filePanel != null) panels.Add(filePanel);
         }
 
+        private void InitializePropertyBlocks()
+        {
+            var dimensionsPanel = FindName("DimensionsPanel") as Border;
+            var fillPanel = FindName("FillPanel") as Border;
+            var strokePanel = FindName("StrokePanel") as Border;
+            var textPanel = FindName("TextPanel") as Border;
+
+            DimensionsPanel.Visibility = Visibility.Collapsed;
+            FillPanel.Visibility = Visibility.Collapsed;
+            StrokePanel.Visibility = Visibility.Collapsed;
+            TextPanel.Visibility = Visibility.Collapsed;
+        }
+
         // Обработчик кнопки скрытия/показа панелей
         private void TogglePanelsButton_Click(object sender, RoutedEventArgs e)
         {
@@ -593,13 +606,6 @@ namespace Graphic_Editor
                     panel.Visibility = Visibility.Collapsed;
                 }
             }
-
-            // Также скрываем нижнюю панель инструментов
-            var bottomToolbar = FindName("BottomToolbar") as Border;
-            if (bottomToolbar != null)
-            {
-                bottomToolbar.Visibility = Visibility.Collapsed;
-            }
         }
 
         // Показать все панели
@@ -611,13 +617,6 @@ namespace Graphic_Editor
                 {
                     panel.Visibility = Visibility.Visible;
                 }
-            }
-
-            // Показываем нижнюю панель инструментов
-            var bottomToolbar = FindName("BottomToolbar") as Border;
-            if (bottomToolbar != null)
-            {
-                bottomToolbar.Visibility = Visibility.Visible;
             }
         }
 
@@ -1388,6 +1387,11 @@ namespace Graphic_Editor
 
             // Скрываем панели свойств
             StrokeWidthPanel.Visibility = Visibility.Collapsed;
+
+            DimensionsPanel.Visibility = Visibility.Collapsed;
+            FillPanel.Visibility = Visibility.Collapsed;
+            StrokePanel.Visibility = Visibility.Collapsed;
+            TextPanel.Visibility = Visibility.Collapsed;
         }
 
         private void ClearColorComboBoxes()
@@ -1813,7 +1817,7 @@ namespace Graphic_Editor
                 Foreground = Brushes.White,
                 BorderBrush = Brushes.Gray,
                 FontSize = 14,
-                Text = "Введите текст...",
+                Text = "",
                 CaretBrush = Brushes.White,
                 FocusVisualStyle = null
             };
@@ -2284,9 +2288,6 @@ namespace Graphic_Editor
             }
             else
             {
-                // Скрываем панель текста для не-текстовых элементов
-                TextPanel.Visibility = Visibility.Collapsed;
-
                 // Сбрасываем комбо-боксы к пустым значениям
                 ResetTextComboBoxesToEmpty();
             }
@@ -2409,7 +2410,7 @@ namespace Graphic_Editor
             currentFontWeight = FontWeights.Normal;
 
             // Скрываем панель текста
-            TextPanel.Visibility = Visibility.Collapsed;
+            //TextPanel.Visibility = Visibility.Collapsed;
         }
 
         private void MakeAllShapesDraggable()
@@ -3282,6 +3283,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Углы для изменения размера, а также появление блоков
         private void ShowResizeHandlesForElement(UIElement element)
         {
             // Не показываем ручки во время перетаскивания
@@ -3301,27 +3303,33 @@ namespace Graphic_Editor
                 currentResizableElement = null;
             }
 
-            // Создаем или используем существующий ResizableElement для текущего элемента
-            try
+            if (element is Ellipse ellipse || element is Border border || element is Line line)
             {
-                if (!resizableElements.ContainsKey(element))
-                {
-                    // Создаем новый ResizableElement
-                    resizableElements[element] = new ResizableElement(element, MainCanvas);
-                }
-
-                currentResizableElement = resizableElements[element];
-                currentResizableElement.ShowResizeHandles();
-
-                // Обновляем текстовые поля размеров
-                if (element is FrameworkElement frameworkElement)
-                {
-                    UpdateDimensions(frameworkElement.ActualWidth, frameworkElement.ActualHeight);
-                }
+                DimensionsPanel.Visibility = Visibility.Visible;
+                FillPanel.Visibility = Visibility.Visible;
+                StrokePanel.Visibility = Visibility.Visible;
             }
-            catch (Exception ex)
+            else if (element is TextBlock textBlock)
             {
-                System.Diagnostics.Debug.WriteLine($"Ошибка создания ResizableElement: {ex.Message}");
+                DimensionsPanel.Visibility = Visibility.Visible;
+                StrokePanel.Visibility = Visibility.Visible;
+                TextPanel.Visibility = Visibility.Visible;
+            }
+
+            // Создаем или используем существующий ResizableElement для текущего элемента
+            if (!resizableElements.ContainsKey(element))
+            {
+                // Создаем новый ResizableElement
+                resizableElements[element] = new ResizableElement(element, MainCanvas);
+            }
+
+            currentResizableElement = resizableElements[element];
+            currentResizableElement.ShowResizeHandles();
+
+            // Обновляем текстовые поля размеров
+            if (element is FrameworkElement frameworkElement)
+            {
+                UpdateDimensions(frameworkElement.ActualWidth, frameworkElement.ActualHeight);
             }
         }
 
