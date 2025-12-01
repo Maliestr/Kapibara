@@ -460,6 +460,13 @@ namespace Graphic_Editor
             MainCanvas.Children.Clear();
             canvasElements.Clear();
             currentFilePath = null;
+            
+            // Сбрасываем имя файла на "Untitled"
+            if (FileNameTextBox != null)
+            {
+                FileNameTextBox.Text = "Untitled";
+            }
+            
             UpdateWindowTitle();
             MessageBox.Show("Создан новый файл", "Новый файл", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -478,6 +485,7 @@ namespace Graphic_Editor
                 {
                     LoadFromFile(openFileDialog.FileName);
                     currentFilePath = openFileDialog.FileName;
+                    // LoadFromFile уже обновляет TextBox, но обновим заголовок окна
                     UpdateWindowTitle();
                     MessageBox.Show("Файл успешно открыт", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -516,6 +524,19 @@ namespace Graphic_Editor
                 Title = "Сохранить как",
                 DefaultExt = ".ged"
             };
+            
+            // Используем имя из TextBox для предложения имени файла
+            if (FileNameTextBox != null && !string.IsNullOrEmpty(FileNameTextBox.Text) && FileNameTextBox.Text != "Untitled")
+            {
+                string fileNameFromTextBox = FileNameTextBox.Text;
+                // Убираем недопустимые символы для имени файла
+                string invalidChars = new string(System.IO.Path.GetInvalidFileNameChars());
+                foreach (char c in invalidChars)
+                {
+                    fileNameFromTextBox = fileNameFromTextBox.Replace(c, '_');
+                }
+                saveFileDialog.FileName = fileNameFromTextBox;
+            }
 
             if (saveFileDialog.ShowDialog() == true)
             {
@@ -523,6 +544,14 @@ namespace Graphic_Editor
                 {
                     SaveToFile(saveFileDialog.FileName);
                     currentFilePath = saveFileDialog.FileName;
+                    
+                    // Обновляем TextBox с именем файла без расширения
+                    if (FileNameTextBox != null)
+                    {
+                        string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(saveFileDialog.FileName);
+                        FileNameTextBox.Text = fileNameWithoutExtension;
+                    }
+                    
                     UpdateWindowTitle();
                     MessageBox.Show("Файл успешно сохранен", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -646,6 +675,10 @@ namespace Graphic_Editor
             using (StreamWriter writer = new StreamWriter(filePath))
             {
                 writer.WriteLine("GEDv1.0"); // Заголовок файла
+                
+                // Сохраняем имя файла из TextBox
+                string fileName = FileNameTextBox?.Text ?? System.IO.Path.GetFileNameWithoutExtension(filePath);
+                writer.WriteLine($"FILENAME|{fileName}"); // Метаданные: имя файла
 
                 foreach (UIElement element in MainCanvas.Children)
                 {
@@ -716,11 +749,19 @@ namespace Graphic_Editor
                     throw new Exception("Неверный формат файла");
                 }
 
+                string loadedFileName = null;
                 string line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     string[] parts = line.Split('|');
                     if (parts.Length < 2) continue;
+
+                    // Читаем имя файла из метаданных
+                    if (parts[0] == "FILENAME" && parts.Length >= 2)
+                    {
+                        loadedFileName = parts[1];
+                        continue;
+                    }
 
                     switch (parts[0])
                     {
@@ -739,6 +780,24 @@ namespace Graphic_Editor
                         case "ARROW":
                             CreateArrowFromData(parts);
                             break;
+                    }
+                }
+                
+                // Обновляем TextBox с именем файла (из метаданных или из файловой системы)
+                if (loadedFileName != null)
+                {
+                    if (FileNameTextBox != null)
+                    {
+                        FileNameTextBox.Text = loadedFileName;
+                    }
+                }
+                else
+                {
+                    // Если метаданных нет, используем имя файла из файловой системы без расширения
+                    string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(filePath);
+                    if (FileNameTextBox != null)
+                    {
+                        FileNameTextBox.Text = fileNameWithoutExtension;
                     }
                 }
             }
@@ -871,8 +930,27 @@ namespace Graphic_Editor
 
         private void UpdateWindowTitle()
         {
-            string fileName = string.IsNullOrEmpty(currentFilePath) ? "Новый файл" : System.IO.Path.GetFileName(currentFilePath);
-            this.Title = $"Graphic Editor - {fileName}";
+            // Используем текст из TextBox, если он доступен, иначе имя файла из файловой системы
+            string fileName;
+            if (FileNameTextBox != null && !string.IsNullOrEmpty(FileNameTextBox.Text) && FileNameTextBox.Text != "Untitled")
+            {
+                fileName = FileNameTextBox.Text;
+            }
+            else if (!string.IsNullOrEmpty(currentFilePath))
+            {
+                fileName = System.IO.Path.GetFileNameWithoutExtension(currentFilePath);
+            }
+            else
+            {
+                fileName = "Новый файл";
+            }
+            this.Title = $"Kapibara - {fileName}";
+        }
+        
+        // Обработчик изменения текста в TextBox имени файла
+        private void FileNameTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            UpdateWindowTitle();
         }
 
         // Меню "Вид"

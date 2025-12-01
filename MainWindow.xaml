@@ -226,11 +226,12 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBox Text="Untaitled" Background="Transparent"
+                    <TextBox x:Name="FileNameTextBox" Text="Untitled" Background="Transparent"
                              Height="18" Grid.Column="1" Margin="0,0,0,1"
                              Foreground="White" VerticalAlignment="Center"
                              AcceptsReturn="False" MaxLength="50"
-                             BorderThickness="0" FontSize="16"/>
+                             BorderThickness="0" FontSize="16"
+                             TextChanged="FileNameTextBox_TextChanged"/>
 
                     <Button x:Name="TogglePanelsButton"
                             Grid.Column="2" HorizontalAlignment="Right" 
