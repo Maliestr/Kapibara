@@ -815,8 +815,8 @@
                                     </StackPanel>
                                 </ComboBoxItem>
 
-                            <ComboBoxItem Tag="C44141">
-                                <StackPanel Orientation="Horizontal" Margin="2">
+                                <ComboBoxItem Tag="C44141">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
 
                                         <TextBlock Text="Красный" 
                                        FontSize="11"
@@ -824,8 +824,8 @@
                                     </StackPanel>
                                 </ComboBoxItem>
 
-                            <ComboBoxItem Tag="4166C4">
-                                <StackPanel Orientation="Horizontal" Margin="2">
+                                <ComboBoxItem Tag="4166C4">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
 
                                         <TextBlock Text="Синий" 
                                        FontSize="11"
@@ -833,8 +833,8 @@
                                     </StackPanel>
                                 </ComboBoxItem>
 
-                            <ComboBoxItem Tag="41C441">
-                                <StackPanel Orientation="Horizontal" Margin="2">
+                                <ComboBoxItem Tag="41C441">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
 
                                         <TextBlock Text="Зеленый" 
                                        FontSize="11"
@@ -845,9 +845,7 @@
 
                         </StackPanel>
                     </StackPanel>
-
-                </StackPanel>
-            </Border>
+                </Border>
 
                 <!-- Панель с текстом -->
                 <Border x:Name="TextPanel" CornerRadius="10"
