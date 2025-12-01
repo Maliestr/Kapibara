@@ -252,11 +252,12 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBox Text="Untaitled" Background="Transparent"
+                    <TextBox x:Name="FileNameTextBox" Text="Untitled" Background="Transparent"
                              Height="18" Grid.Column="1" Margin="0,0,0,1"
                              Foreground="White" VerticalAlignment="Center"
                              AcceptsReturn="False" MaxLength="50"
-                             BorderThickness="0" FontSize="16"/>
+                             BorderThickness="0" FontSize="16"
+                             TextChanged="FileNameTextBox_TextChanged"/>
 
                     <ToggleButton x:Name="TogglePanelsButton" Style="{StaticResource TogglePanelsButtonStyle}"
                             Grid.Column="2" HorizontalAlignment="Right" 
@@ -814,8 +815,8 @@
                                     </StackPanel>
                                 </ComboBoxItem>
 
-                                <ComboBoxItem Tag="C44141">
-                                    <StackPanel Orientation="Horizontal" Margin="2">
+                            <ComboBoxItem Tag="C44141">
+                                <StackPanel Orientation="Horizontal" Margin="2">
 
                                         <TextBlock Text="Красный" 
                                        FontSize="11"
@@ -823,8 +824,8 @@
                                     </StackPanel>
                                 </ComboBoxItem>
 
-                                <ComboBoxItem Tag="4166C4">
-                                    <StackPanel Orientation="Horizontal" Margin="2">
+                            <ComboBoxItem Tag="4166C4">
+                                <StackPanel Orientation="Horizontal" Margin="2">
 
                                         <TextBlock Text="Синий" 
                                        FontSize="11"
@@ -832,8 +833,8 @@
                                     </StackPanel>
                                 </ComboBoxItem>
 
-                                <ComboBoxItem Tag="41C441">
-                                    <StackPanel Orientation="Horizontal" Margin="2">
+                            <ComboBoxItem Tag="41C441">
+                                <StackPanel Orientation="Horizontal" Margin="2">
 
                                         <TextBlock Text="Зеленый" 
                                        FontSize="11"
@@ -844,7 +845,9 @@
 
                         </StackPanel>
                     </StackPanel>
-                </Border>
+
+                </StackPanel>
+            </Border>
 
                 <!-- Панель с текстом -->
                 <Border x:Name="TextPanel" CornerRadius="10"

@@ -62,6 +62,7 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Compile Include="Help.cs" />
+    <Compile Include="AutoSave.cs" />
     <Compile Include="ResizableElement.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
