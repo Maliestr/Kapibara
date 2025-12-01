@@ -1024,11 +1024,6 @@ namespace Graphic_Editor
                 }
 
                 ClearSelection();
-                MessageBox.Show($"Вырезано {elementsToCut.Count} элементов", "Вырезание", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                MessageBox.Show("Сначала выделите элементы", "Вырезание", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -1417,11 +1412,6 @@ namespace Graphic_Editor
             if (selectedElement != null)
             {
                 copiedElement = CloneUIElement(selectedElement);
-                MessageBox.Show("Элемент скопирован", "Копирование", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                MessageBox.Show("Сначала выделите элемент", "Копирование", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -1441,11 +1431,6 @@ namespace Graphic_Editor
                 canvasElements.Remove(selectedElement);
 
                 DeselectAll();
-                MessageBox.Show("Элемент вырезан", "Вырезание", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                MessageBox.Show("Сначала выделите элемент", "Вырезание", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -1477,12 +1462,6 @@ namespace Graphic_Editor
                 
                 // Сохраняем в стек отмены
                 SaveToUndoStack(newElement);
-                
-                MessageBox.Show("Элемент вставлен", "Вставка", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                MessageBox.Show("Нет скопированного элемента", "Вставка", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -1505,11 +1484,6 @@ namespace Graphic_Editor
                 canvasElements.Remove(selectedElement);
                 
                 DeselectAll();
-                MessageBox.Show("Элемент удален", "Удаление", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                MessageBox.Show("Сначала выделите элемент", "Удаление", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -3721,11 +3695,6 @@ namespace Graphic_Editor
                 copiedElements = selectedElements.Select(CloneUIElement)
                                                .Cast<UIElement>()
                                                .ToList();
-                MessageBox.Show($"Скопировано {selectedElements.Count} элементов", "Копирование", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                MessageBox.Show("Сначала выделите элементы", "Копирование", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -3767,12 +3736,6 @@ namespace Graphic_Editor
                         SelectElement(frameworkElement);
                     }
                 }
-
-                MessageBox.Show($"Вставлено {newElements.Count} элементов", "Вставка", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                MessageBox.Show("Нет скопированных элементов", "Вставка", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
