@@ -153,7 +153,7 @@ namespace Graphic_Editor
 
             InitializeGrid(); //Создает и инициализирует визуальную сетку
             InitializePanels(); //Находит и регистрирует все панели выделения
-            InitializePropertyBlocks();
+            InitializePropertyBlocks(); //Скрывает блоки свойств при загрузке приложения
             InitializeSelectionSystem(); //Настраивает систему прямоугольного выделения
             isActiveCursor();
 
@@ -1371,6 +1371,13 @@ namespace Graphic_Editor
 
                 // Показываем ручки изменения размера
                 ShowResizeHandlesForElement(element);
+            }
+
+            if (element is TextBlock textBlock)
+            {
+                DimensionsPanel.Visibility = Visibility.Visible;
+                StrokePanel.Visibility = Visibility.Visible;
+                TextPanel.Visibility = Visibility.Visible;
             }
         }
 
@@ -3309,12 +3316,12 @@ namespace Graphic_Editor
                 FillPanel.Visibility = Visibility.Visible;
                 StrokePanel.Visibility = Visibility.Visible;
             }
-            else if (element is TextBlock textBlock)
-            {
-                DimensionsPanel.Visibility = Visibility.Visible;
-                StrokePanel.Visibility = Visibility.Visible;
-                TextPanel.Visibility = Visibility.Visible;
-            }
+            //else if (element is TextBlock textBlock)
+            //{
+            //    DimensionsPanel.Visibility = Visibility.Visible;
+            //    StrokePanel.Visibility = Visibility.Visible;
+            //    TextPanel.Visibility = Visibility.Visible;
+            //}
 
             // Создаем или используем существующий ResizableElement для текущего элемента
             if (!resizableElements.ContainsKey(element))
@@ -4137,58 +4144,46 @@ namespace Graphic_Editor
         {
             if (arrowContainer == null || arrowContainer.Line == null) return;
 
-            try
-            {
-                // Обработчики для линии стрелки
-                arrowContainer.Line.MouseLeftButtonDown += Arrow_MouseLeftButtonDown;
-                arrowContainer.Line.MouseMove += Arrow_MouseMove;
-                arrowContainer.Line.MouseLeftButtonUp += Arrow_MouseLeftButtonUp;
+            // Обработчики для линии стрелки
+            arrowContainer.Line.MouseLeftButtonDown += Arrow_MouseLeftButtonDown;
+            arrowContainer.Line.MouseMove += Arrow_MouseMove;
+            arrowContainer.Line.MouseLeftButtonUp += Arrow_MouseLeftButtonUp;
 
-                // Обработчики для наконечника
-                if (arrowContainer.Arrowhead != null)
-                {
-                    arrowContainer.Arrowhead.MouseLeftButtonDown += Arrowhead_MouseLeftButtonDown;
-                    arrowContainer.Arrowhead.MouseMove += Arrow_MouseMove;
-                    arrowContainer.Arrowhead.MouseLeftButtonUp += Arrow_MouseLeftButtonUp;
-                }
-
-                // Добавляем контекстное меню
-                arrowContainer.Line.MouseRightButtonDown += (s, e) =>
-                {
-                    CreateArrowContextMenu(arrowContainer);
-                    e.Handled = true;
-                };
-            }
-            catch (Exception ex)
+            // Обработчики для наконечника
+            if (arrowContainer.Arrowhead != null)
             {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в MakeArrowDraggable: {ex.Message}");
+                arrowContainer.Arrowhead.MouseLeftButtonDown += Arrowhead_MouseLeftButtonDown;
+                arrowContainer.Arrowhead.MouseMove += Arrow_MouseMove;
+                arrowContainer.Arrowhead.MouseLeftButtonUp += Arrow_MouseLeftButtonUp;
             }
+
+            // Добавляем контекстное меню
+            arrowContainer.Line.MouseRightButtonDown += (s, e) =>
+            {
+                CreateArrowContextMenu(arrowContainer);
+                e.Handled = true;
+            };
         }
 
         private void Arrowhead_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (isArrowModeActive) return;
 
-            try
-            {
-                var arrowhead = sender as Polygon;
-                if (arrowhead == null) return;
+            var arrowhead = sender as Polygon;
+            if (arrowhead == null) return;
 
-                // Находим контейнер стрелки по наконечнику
-                var arrowContainer = arrows?.FirstOrDefault(a => a?.Arrowhead == arrowhead);
-                if (arrowContainer == null) return;
+            // Находим контейнер стрелки по наконечнику
+            var arrowContainer = arrows?.FirstOrDefault(a => a?.Arrowhead == arrowhead);
+            if (arrowContainer == null) return;
 
-                // Выделяем стрелку
-                SelectArrow(arrowContainer.Line);
+            // Выделяем стрелку
+            SelectArrow(arrowContainer.Line);
 
-                // Начинаем перетаскивание
-                StartArrowDrag(arrowContainer, e);
-                e.Handled = true;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в Arrowhead_MouseLeftButtonDown: {ex.Message}");
-            }
+            // Начинаем перетаскивание
+            StartArrowDrag(arrowContainer, e);
+            e.Handled = true;
+
+
         }
 
         // Обновленный метод для начала перетаскивания стрелки
@@ -4766,29 +4761,22 @@ namespace Graphic_Editor
         {
             if (arrow == null) return;
 
-            try
-            {
-                // Снимаем выделение с других элементов
-                DeselectAll();
-                DeselectArrow();
+            // Снимаем выделение с других элементов
+            DeselectAll();
+            DeselectArrow();
 
-                // Находим контейнер стрелки
-                var arrowContainer = arrows?.FirstOrDefault(a => a?.Line == arrow);
-                if (arrowContainer == null) return;
+            // Находим контейнер стрелки
+            var arrowContainer = arrows?.FirstOrDefault(a => a?.Line == arrow);
+            if (arrowContainer == null) return;
 
-                selectedArrowContainer = arrowContainer;
-                ApplyArrowSelectionVisual(arrowContainer);
+            selectedArrowContainer = arrowContainer;
+            ApplyArrowSelectionVisual(arrowContainer);
 
-                // Создаем контекстное меню
-                CreateArrowContextMenu(arrowContainer);
+            // Создаем контекстное меню
+            CreateArrowContextMenu(arrowContainer);
 
-                // Показываем информацию о стрелке в панелях свойств
-                UpdateArrowPropertiesInPanels(arrowContainer);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в SelectArrow: {ex.Message}");
-            }
+            // Показываем информацию о стрелке в панелях свойств
+            UpdateArrowPropertiesInPanels(arrowContainer);
         }
 
         private void UpdateArrowPropertiesInPanels(ArrowContainer arrowContainer)
