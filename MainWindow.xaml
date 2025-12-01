@@ -690,8 +690,8 @@
                           SelectedIndex="0"
                           SelectionChanged="FillColorComboBox_SelectionChanged">
 
-                                <ComboBoxItem Tag="C44141">
-                                    <StackPanel Orientation="Horizontal" Margin="2">
+                            <ComboBoxItem Tag="C44141">
+                                <StackPanel Orientation="Horizontal" Margin="2">
 
                                         <TextBlock Text="Красный" 
                                        FontSize="11"
@@ -699,8 +699,8 @@
                                     </StackPanel>
                                 </ComboBoxItem>
 
-                                <ComboBoxItem Tag="4166C4">
-                                    <StackPanel Orientation="Horizontal" Margin="2">
+                            <ComboBoxItem Tag="4166C4">
+                                <StackPanel Orientation="Horizontal" Margin="2">
 
                                         <TextBlock Text="Синий" 
                                        FontSize="11"
@@ -708,8 +708,8 @@
                                     </StackPanel>
                                 </ComboBoxItem>
 
-                                <ComboBoxItem Tag="41C441">
-                                    <StackPanel Orientation="Horizontal" Margin="2">
+                            <ComboBoxItem Tag="41C441">
+                                <StackPanel Orientation="Horizontal" Margin="2">
 
                                         <TextBlock Text="Зеленый" 
                                        FontSize="11"
@@ -717,8 +717,8 @@
                                     </StackPanel>
                                 </ComboBoxItem>
 
-                                <ComboBoxItem Tag="C4C441">
-                                    <StackPanel Orientation="Horizontal" Margin="2">
+                            <ComboBoxItem Tag="C4C441">
+                                <StackPanel Orientation="Horizontal" Margin="2">
 
                                         <TextBlock Text="Желтый" 
                                        FontSize="11"
@@ -726,8 +726,8 @@
                                     </StackPanel>
                                 </ComboBoxItem>
 
-                                <ComboBoxItem Tag="000000">
-                                    <StackPanel Orientation="Horizontal" Margin="2">
+                            <ComboBoxItem Tag="000000">
+                                <StackPanel Orientation="Horizontal" Margin="2">
 
                                         <TextBlock Text="Черный" 
                                        FontSize="11"
@@ -843,6 +843,73 @@
                             </ComboBox>
 
                         </StackPanel>
+                        <!-- Превью цвета обводки -->
+                        <Border x:Name="StrokeColorPreview"
+                    CornerRadius="5"
+                    Width="40" 
+                    Height="22"
+                    Background="#FF000000"
+                    VerticalAlignment="Center"
+                    Margin="0,0,10,0"
+                    BorderThickness="1"
+                    BorderBrush="#FF666666" RenderTransformOrigin="0.512,0.527"/>
+
+                        <!-- Выпадающий список цветов обводки -->
+                        <ComboBox x:Name="StrokeColorComboBox"
+                      Width="92" 
+                      Height="22"
+                      VerticalAlignment="Center"
+                      Margin="0,0,10,0"
+                      Background="#D9D9D9"
+                      BorderThickness="0"
+                      FontSize="11"
+                      SelectedIndex="0"
+                      SelectionChanged="StrokeColorComboBox_SelectionChanged">
+
+                            <ComboBoxItem Tag="000000">
+                                <StackPanel Orientation="Horizontal" Margin="2">
+                                    <TextBlock Text="Черный" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+
+                            <ComboBoxItem Tag="FFFFFF">
+                                <StackPanel Orientation="Horizontal" Margin="2">
+
+                                    <TextBlock Text="Белый" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+
+                            <ComboBoxItem Tag="C44141">
+                                <StackPanel Orientation="Horizontal" Margin="2">
+
+                                    <TextBlock Text="Красный" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+
+                            <ComboBoxItem Tag="4166C4">
+                                <StackPanel Orientation="Horizontal" Margin="2">
+
+                                    <TextBlock Text="Синий" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+
+                            <ComboBoxItem Tag="41C441">
+                                <StackPanel Orientation="Horizontal" Margin="2">
+
+                                    <TextBlock Text="Зеленый" 
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+                        </ComboBox>
 
                     </StackPanel>
                 </Border>
