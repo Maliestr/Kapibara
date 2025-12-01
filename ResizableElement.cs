@@ -425,7 +425,6 @@ namespace Graphic_Editor
                 newLeft = 0;
             }
 
-            // Гарантируем минимальный размер
             newWidth = Math.Max(minSize, newWidth);
             newHeight = Math.Max(minSize, newHeight);
 
@@ -439,10 +438,8 @@ namespace Graphic_Editor
                 // Для TextBlock устанавливаем размеры
                 if (element is System.Windows.Controls.TextBlock textBlock)
                 {
-                    // TextBlock может не иметь фиксированных размеров, устанавливаем их явно
                     frameworkElement.Width = Math.Max(20, width);
                     frameworkElement.Height = Math.Max(20, height);
-                    // Для TextBlock также можно использовать TextWrapping для лучшего отображения
                     if (textBlock.TextWrapping == TextWrapping.NoWrap)
                     {
                         textBlock.TextWrapping = TextWrapping.Wrap;

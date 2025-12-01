@@ -45,9 +45,8 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Запускает систему автосохранения
-        /// </summary>
+
+        // Запускает систему автосохранения
         public void Start()
         {
             if (autoSaveTimer != null)
@@ -59,9 +58,8 @@ namespace Graphic_Editor
             autoSaveTimer = new Timer(SaveCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(saveIntervalSeconds));
         }
 
-        /// <summary>
-        /// Останавливает систему автосохранения
-        /// </summary>
+
+        // Останавливает систему автосохранения
         public void Stop()
         {
             isEnabled = false;
@@ -72,9 +70,8 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Устанавливает интервал автосохранения в секундах
-        /// </summary>
+
+        // Устанавливает интервал автосохранения в секундах
         public void SetInterval(int seconds)
         {
             if (seconds <= 0)
@@ -89,9 +86,7 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Принудительно выполняет сохранение немедленно
-        /// </summary>
+        // Принудительно выполняет сохранение немедленно
         public void SaveNow()
         {
             if (isSaving)
@@ -118,9 +113,7 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Очищает старые файлы автосохранения (оставляет только последние N файлов)
-        /// </summary>
+        // Очищает старые файлы автосохранения (оставляет только последние N файлов)
         public void CleanupOldSaves(int keepCount = 10)
         {
             try
@@ -129,7 +122,7 @@ namespace Graphic_Editor
                     return;
 
                 var files = Directory.GetFiles(autoSaveDirectory, "autosave_*.ged");
-                
+
                 if (files.Length <= keepCount)
                     return;
 
@@ -155,17 +148,13 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Получает путь к последнему файлу автосохранения
-        /// </summary>
+        // Получает путь к последнему файлу автосохранения
         public string GetLastAutoSavePath()
         {
             return currentAutoSavePath;
         }
 
-        /// <summary>
-        /// Колбэк для таймера
-        /// </summary>
+        // Колбэк для таймера
         private void SaveCallback(object state)
         {
             if (!isEnabled || isSaving)
@@ -203,9 +192,8 @@ namespace Graphic_Editor
             });
         }
 
-        /// <summary>
-        /// Выполняет фактическое сохранение
-        /// </summary>
+
+        // Выполняет фактическое сохранение
         private void PerformSave()
         {
             if (canvas == null || canvas.Dispatcher == null)
@@ -225,16 +213,15 @@ namespace Graphic_Editor
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             currentAutoSavePath = System.IO.Path.Combine(autoSaveDirectory, $"autosave_{timestamp}.ged");
 
-            // Сохраняем на UI потоке
             canvas.Dispatcher.Invoke(() =>
             {
                 try
                 {
                     SaveCanvasToFile(currentAutoSavePath);
-                    
+
                     // Очищаем старые файлы после успешного сохранения
                     CleanupOldSaves(10);
-                    
+
                     System.Diagnostics.Debug.WriteLine($"Автосохранение выполнено: {currentAutoSavePath}");
                 }
                 catch (Exception ex)
@@ -244,9 +231,7 @@ namespace Graphic_Editor
             });
         }
 
-        /// <summary>
-        /// Сохраняет состояние Canvas в файл (аналогично SaveToFile из MainWindow)
-        /// </summary>
+        // Сохраняет состояние холста в файл
         private void SaveCanvasToFile(string filePath)
         {
             using (StreamWriter writer = new StreamWriter(filePath))
@@ -255,8 +240,6 @@ namespace Graphic_Editor
 
                 foreach (UIElement element in canvas.Children)
                 {
-                    // Пропускаем служебные элементы (ручки изменения размера, линии выделения и т.д.)
-                    // Ручки изменения размера имеют высокий ZIndex (1001)
                     int zIndex = Canvas.GetZIndex(element);
                     if (zIndex >= 1000)
                         continue;
@@ -265,7 +248,7 @@ namespace Graphic_Editor
                     {
                         double left = Canvas.GetLeft(ellipse);
                         double top = Canvas.GetTop(ellipse);
-                        
+
                         if (double.IsNaN(left)) left = 0;
                         if (double.IsNaN(top)) top = 0;
 
@@ -279,8 +262,6 @@ namespace Graphic_Editor
                     {
                         string strokeColor = (arrow.Stroke as SolidColorBrush)?.Color.ToString() ?? "Black";
                         double strokeThickness = arrow.StrokeThickness;
-
-                        // Сохраняем все точки стрелки
                         string points = string.Join(";", arrow.Points.Select(p => $"{p.X},{p.Y}"));
                         writer.WriteLine($"ARROW|{points}|{strokeColor}|{strokeThickness}");
                     }
@@ -288,7 +269,7 @@ namespace Graphic_Editor
                     {
                         double left = Canvas.GetLeft(border);
                         double top = Canvas.GetTop(border);
-                        
+
                         if (double.IsNaN(left)) left = 0;
                         if (double.IsNaN(top)) top = 0;
 
@@ -296,7 +277,6 @@ namespace Graphic_Editor
                         string borderColor = (border.BorderBrush as SolidColorBrush)?.Color.ToString() ?? "Black";
                         double borderThickness = border.BorderThickness.Left;
 
-                        // Определяем тип Border (квадрат или ромб)
                         string type = "SQUARE";
                         if (border.RenderTransform is RotateTransform rotateTransform && Math.Abs(rotateTransform.Angle - 45.354) < 0.1)
                         {
@@ -322,9 +302,7 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Освобождает ресурсы
-        /// </summary>
+        // Освобождает ресурсы
         public void Dispose()
         {
             Stop();

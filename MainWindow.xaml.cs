@@ -60,8 +60,28 @@ namespace Graphic_Editor
         private AutoSave autoSave; //Система автоматического сохранения проекта
 
         //Система отмены/повтора
-        private Stack<UIElement> undoStack = new Stack<UIElement>(); //Стек для отмены действий
-        private Stack<UIElement> redoStack = new Stack<UIElement>(); //Стек для повтора действий
+        private enum UndoActionType
+        {
+            Add,    // Элемент был добавлен
+            Remove  // Элемент был удален
+        }
+
+        private class UndoAction
+        {
+            public UndoActionType ActionType { get; set; }
+            public UIElement Element { get; set; } // Копия элемента для восстановления
+            public UIElement OriginalElement { get; set; } // Ссылка на оригинальный элемент (для Remove)
+
+            public UndoAction(UndoActionType actionType, UIElement element, UIElement originalElement = null)
+            {
+                ActionType = actionType;
+                Element = element;
+                OriginalElement = originalElement;
+            }
+        }
+
+        private Stack<UndoAction> undoStack = new Stack<UndoAction>(); //Стек для отмены действий
+        private Stack<UndoAction> redoStack = new Stack<UndoAction>(); //Стек для повтора действий
 
         //Система сетки
         private bool isGridEnabled = false; //Отображение сетки - нет
@@ -1093,8 +1113,15 @@ namespace Graphic_Editor
 
                 foreach (var element in elementsToCut)
                 {
-                    // Сохраняем в стек отмены
-                    SaveToUndoStack(element);
+                    // Сохраняем в стек отмены как удаление
+                    SaveToUndoStack(element, UndoActionType.Remove);
+                    
+                    // Удаляем ResizableElement если есть
+                    if (resizableElements.ContainsKey(element))
+                    {
+                        resizableElements[element].Dispose();
+                        resizableElements.Remove(element);
+                    }
 
                     // Удаляем элемент
                     MainCanvas.Children.Remove(element);
@@ -1501,8 +1528,15 @@ namespace Graphic_Editor
                 // Сохраняем копию для буфера обмена
                 copiedElement = CloneUIElement(selectedElement);
 
-                // Сохраняем в стек отмены
-                SaveToUndoStack(selectedElement);
+                // Сохраняем в стек отмены как удаление
+                SaveToUndoStack(selectedElement, UndoActionType.Remove);
+
+                // Удаляем ResizableElement если есть
+                if (resizableElements.ContainsKey(selectedElement))
+                {
+                    resizableElements[selectedElement].Dispose();
+                    resizableElements.Remove(selectedElement);
+                }
 
                 // Удаляем элемент
                 MainCanvas.Children.Remove(selectedElement);
@@ -1548,8 +1582,8 @@ namespace Graphic_Editor
         {
             if (selectedElement != null)
             {
-                // Сохраняем в стек отмены
-                SaveToUndoStack(selectedElement);
+                // Сохраняем в стек отмены как удаление
+                SaveToUndoStack(selectedElement, UndoActionType.Remove);
 
                 // Удаляем ResizableElement если есть
                 if (resizableElements.ContainsKey(selectedElement))
@@ -1657,29 +1691,75 @@ namespace Graphic_Editor
             if (undoStack.Count > 0)
             {
                 DeselectAll();
-                UIElement element = undoStack.Pop();
+                UndoAction action = undoStack.Pop();
 
-                if (MainCanvas.Children.Contains(element))
+                if (action.ActionType == UndoActionType.Add)
                 {
-                    // Если элемент на холсте - удаляем его
-                    MainCanvas.Children.Remove(element);
-                    canvasElements.Remove(element);
-                    redoStack.Push(element);
+                    // Отменяем добавление - удаляем элемент
+                    UIElement elementToRemove = action.OriginalElement ?? FindElementByClone(action.Element);
+                    if (elementToRemove != null && MainCanvas.Children.Contains(elementToRemove))
+                    {
+                        // Удаляем ResizableElement если есть
+                        if (resizableElements.ContainsKey(elementToRemove))
+                        {
+                            resizableElements[elementToRemove].Dispose();
+                            resizableElements.Remove(elementToRemove);
+                        }
+
+                        MainCanvas.Children.Remove(elementToRemove);
+                        canvasElements.Remove(elementToRemove);
+                        
+                        // Сохраняем действие для повтора
+                        redoStack.Push(new UndoAction(UndoActionType.Remove, action.Element, elementToRemove));
+                    }
                 }
-                else
+                else if (action.ActionType == UndoActionType.Remove)
                 {
-                    // Если элемента нет на холсте - восстанавливаем его
-                    MainCanvas.Children.Add(element);
-                    canvasElements.Add(element);
-                    MakeCanvasShapeDraggable(element);
-                    redoStack.Push(element);
-                    RestoreOriginalAppearance(element);
+                    // Отменяем удаление - восстанавливаем элемент
+                    UIElement elementToRestore = CloneUIElement(action.Element);
+                    
+                    // Восстанавливаем позицию
+                    double left = Canvas.GetLeft(action.Element);
+                    double top = Canvas.GetTop(action.Element);
+                    if (!double.IsNaN(left)) Canvas.SetLeft(elementToRestore, left);
+                    if (!double.IsNaN(top)) Canvas.SetTop(elementToRestore, top);
+                    
+                    MainCanvas.Children.Add(elementToRestore);
+                    canvasElements.Add(elementToRestore);
+                    MakeCanvasShapeDraggable(elementToRestore);
+                    
+                    // Создаем ResizableElement для восстановленного элемента
+                    resizableElements[elementToRestore] = new ResizableElement(elementToRestore, MainCanvas);
+                    
+                    RestoreOriginalAppearance(elementToRestore);
+                    
+                    // Сохраняем действие для повтора
+                    redoStack.Push(new UndoAction(UndoActionType.Add, action.Element, elementToRestore));
                 }
             }
-            else
+        }
+        
+        // Поиск элемента на холсте по его копии
+        private UIElement FindElementByClone(UIElement clone)
+        {
+            // Пытаемся найти элемент по позиции и типу
+            double cloneLeft = Canvas.GetLeft(clone);
+            double cloneTop = Canvas.GetTop(clone);
+            
+            foreach (UIElement element in MainCanvas.Children)
             {
-                MessageBox.Show("Нет действий для отмены", "Отмена", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (element.GetType() == clone.GetType())
+                {
+                    double elemLeft = Canvas.GetLeft(element);
+                    double elemTop = Canvas.GetTop(element);
+                    
+                    if (Math.Abs(elemLeft - cloneLeft) < 0.1 && Math.Abs(elemTop - cloneTop) < 0.1)
+                    {
+                        return element;
+                    }
+                }
             }
+            return null;
         }
 
         // Повтор последнего действия
@@ -1688,37 +1768,74 @@ namespace Graphic_Editor
             if (redoStack.Count > 0)
             {
                 DeselectAll();
-                UIElement element = redoStack.Pop();
+                UndoAction action = redoStack.Pop();
 
-                if (MainCanvas.Children.Contains(element))
+                if (action.ActionType == UndoActionType.Add)
                 {
-                    MainCanvas.Children.Remove(element);
-                    canvasElements.Remove(element);
-                    undoStack.Push(element);
+                    // Повторяем добавление - добавляем элемент
+                    UIElement elementToAdd = CloneUIElement(action.Element);
+                    
+                    // Восстанавливаем позицию
+                    double left = Canvas.GetLeft(action.Element);
+                    double top = Canvas.GetTop(action.Element);
+                    if (!double.IsNaN(left)) Canvas.SetLeft(elementToAdd, left);
+                    if (!double.IsNaN(top)) Canvas.SetTop(elementToAdd, top);
+                    
+                    MainCanvas.Children.Add(elementToAdd);
+                    canvasElements.Add(elementToAdd);
+                    MakeCanvasShapeDraggable(elementToAdd);
+                    
+                    // Создаем ResizableElement для добавленного элемента
+                    resizableElements[elementToAdd] = new ResizableElement(elementToAdd, MainCanvas);
+                    
+                    RestoreOriginalAppearance(elementToAdd);
+                    
+                    // Сохраняем действие для отмены
+                    undoStack.Push(new UndoAction(UndoActionType.Add, action.Element, elementToAdd));
                 }
-                else
+                else if (action.ActionType == UndoActionType.Remove)
                 {
-                    MainCanvas.Children.Add(element);
-                    canvasElements.Add(element);
-                    MakeCanvasShapeDraggable(element);
-                    undoStack.Push(element);
-                    RestoreOriginalAppearance(element);
+                    // Повторяем удаление - удаляем элемент
+                    UIElement elementToRemove = action.OriginalElement ?? FindElementByClone(action.Element);
+                    if (elementToRemove != null && MainCanvas.Children.Contains(elementToRemove))
+                    {
+                        // Удаляем ResizableElement если есть
+                        if (resizableElements.ContainsKey(elementToRemove))
+                        {
+                            resizableElements[elementToRemove].Dispose();
+                            resizableElements.Remove(elementToRemove);
+                        }
+
+                        MainCanvas.Children.Remove(elementToRemove);
+                        canvasElements.Remove(elementToRemove);
+                        
+                        // Сохраняем действие для отмены
+                        undoStack.Push(new UndoAction(UndoActionType.Remove, action.Element, elementToRemove));
+                    }
                 }
-            }
-            else
-            {
-                MessageBox.Show("Нет действий для повтора", "Повтор", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
         
-        // Сохранение в стек отмены
-        private void SaveToUndoStack(UIElement element)
+        // Сохранение в стек отмены для добавления элемента
+        private void SaveToUndoStack(UIElement element, UndoActionType actionType = UndoActionType.Add)
         {
+            if (element == null) return;
+            
             UIElement elementCopy = CloneUIElement(element);
             SaveOriginalColorsForCopy(element, elementCopy);
-            undoStack.Push(CloneUIElement(element));
+            
+            // Сохраняем действие с указанием типа и ссылкой на оригинальный элемент
+            UndoAction action = new UndoAction(actionType, elementCopy, element);
+            undoStack.Push(action);
+            
             // Очищаем стек повтора при новом действии
             redoStack.Clear();
+        }
+        
+        // Сохранение в стек отмены (обратная совместимость)
+        private void SaveToUndoStack(UIElement element)
+        {
+            SaveToUndoStack(element, UndoActionType.Add);
         }
 
         // Сохранение оригинальных цветов для копии элемента
@@ -5062,20 +5179,8 @@ namespace Graphic_Editor
 
             try
             {
-                // Создаем копию стрелки для стека отмены
-                var arrowCopy = new Polyline
-                {
-                    Stroke = arrowContainer.Line.Stroke?.CloneCurrentValue() ?? Brushes.Black,
-                    StrokeThickness = arrowContainer.Line.StrokeThickness,
-                    StrokeLineJoin = arrowContainer.Line.StrokeLineJoin,
-                    StrokeStartLineCap = arrowContainer.Line.StrokeStartLineCap,
-                    StrokeEndLineCap = arrowContainer.Line.StrokeEndLineCap,
-                    Points = new PointCollection(arrowContainer.Line.Points ?? new PointCollection()),
-                    Cursor = Cursors.Hand
-                };
-
-                undoStack?.Push(arrowCopy);
-                redoStack?.Clear();
+                // Сохраняем стрелку как удаление
+                SaveToUndoStack(arrowContainer.Line, UndoActionType.Remove);
             }
             catch (Exception ex)
             {
