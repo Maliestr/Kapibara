@@ -56,6 +56,9 @@ namespace Graphic_Editor
             new Dictionary<UIElement, ResizableElement>(); //Хранит связь между элементами на холсте и их контроллерами изменения размера
         private ResizableElement currentResizableElement; //Текущий активный изменяемый в размерах элемент
 
+        //Система автосохранения
+        private AutoSave autoSave; //Система автоматического сохранения проекта
+
         //Система отмены/повтора
         private Stack<UIElement> undoStack = new Stack<UIElement>(); //Стек для отмены действий
         private Stack<UIElement> redoStack = new Stack<UIElement>(); //Стек для повтора действий
@@ -175,6 +178,22 @@ namespace Graphic_Editor
             HeightTextBox.LostFocus += DimensionTextBox_LostFocus;
             WidthTextBox.KeyDown += DimensionTextBox_KeyDown;
             HeightTextBox.KeyDown += DimensionTextBox_KeyDown;
+
+            // Инициализация системы автосохранения (интервал 60 секунд)
+            autoSave = new AutoSave(MainCanvas, intervalSeconds: 60, enabled: true);
+
+            // Обработчик закрытия окна для очистки ресурсов
+            this.Closing += MainWindow_Closing;
+        }
+
+        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // Останавливаем автосохранение и сохраняем перед закрытием
+            if (autoSave != null)
+            {
+                autoSave.SaveNow(); // Принудительное сохранение перед закрытием
+                autoSave.Dispose();
+            }
         }
 
         // Обработчики для ручного ввода размеров
