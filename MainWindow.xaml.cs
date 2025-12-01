@@ -611,13 +611,28 @@ namespace Graphic_Editor
         // Показать все панели
         private void ShowAllPanels()
         {
-            foreach (var panel in panels)
+            NotationCard.Visibility = Visibility.Visible;
+
+            if (selectedElement is Ellipse ellipse || selectedElement is Border border || selectedElement is Line line)
             {
-                if (panel != null)
-                {
-                    panel.Visibility = Visibility.Visible;
-                }
+                DimensionsPanel.Visibility = Visibility.Visible;
+                FillPanel.Visibility = Visibility.Visible;
+                StrokePanel.Visibility = Visibility.Visible;
             }
+            else if (selectedElement is TextBlock textBlock)
+            {
+                DimensionsPanel.Visibility = Visibility.Visible;
+                StrokePanel.Visibility = Visibility.Visible;
+                TextPanel.Visibility = Visibility.Visible;
+            }
+
+            //foreach (var panel in panels)
+            //{
+            //    if (panel != null)
+            //    {
+            //        panel.Visibility = Visibility.Visible;
+            //    }
+            //}
         }
 
         private void Exit_Click(object sender, RoutedEventArgs e)
@@ -1373,7 +1388,7 @@ namespace Graphic_Editor
                 ShowResizeHandlesForElement(element);
             }
 
-            if (element is TextBlock textBlock)
+            if (TogglePanelsButton.IsChecked == false && element is TextBlock textBlock)
             {
                 DimensionsPanel.Visibility = Visibility.Visible;
                 StrokePanel.Visibility = Visibility.Visible;
@@ -2285,7 +2300,7 @@ namespace Graphic_Editor
             if (element is TextBlock textBlock)
             {
                 // Показываем панель текста
-                TextPanel.Visibility = Visibility.Visible;
+                //TextPanel.Visibility = Visibility.Visible;
 
                 // Обновляем комбо-боксы значениями из текстового элемента
                 UpdateTextComboBoxes(textBlock);
@@ -3310,7 +3325,7 @@ namespace Graphic_Editor
                 currentResizableElement = null;
             }
 
-            if (element is Ellipse ellipse || element is Border border || element is Line line)
+            if (TogglePanelsButton.IsChecked == false && (element is Ellipse ellipse || element is Border border || element is Line line))
             {
                 DimensionsPanel.Visibility = Visibility.Visible;
                 FillPanel.Visibility = Visibility.Visible;

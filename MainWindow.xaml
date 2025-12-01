@@ -69,7 +69,6 @@
 
         <Style x:Key="ControlButtonStyle" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
-            <!--Нужно ли-->
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -84,10 +83,37 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#FF3939"/>
+                                <Setter TargetName="border" Property="Background" Value="#3F3F3F"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#AC1C1C"/>
+                                <Setter TargetName="border" Property="Background" Value="#272727"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TogglePanelsButtonStyle" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="border"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#3F3F3F"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#272727"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -232,15 +258,15 @@
                              AcceptsReturn="False" MaxLength="50"
                              BorderThickness="0" FontSize="16"/>
 
-                    <Button x:Name="TogglePanelsButton"
+                    <ToggleButton x:Name="TogglePanelsButton" Style="{StaticResource TogglePanelsButtonStyle}"
                             Grid.Column="2" HorizontalAlignment="Right" 
-                            VerticalAlignment="Center" Margin="0,0,4,0"
+                            VerticalAlignment="Center" Margin="0,0,0,0"
                             Background="Transparent" BorderThickness="0"
-                            Width="30" Height="20" Cursor="Hand"
+                            Width="34" Height="26" Cursor="Hand"
                             Click="TogglePanelsButton_Click">
                         <Image Source="/Icons/КнСк.png" 
                                Width="24" Height="12"/>
-                    </Button>
+                    </ToggleButton>
                 </Grid>
             </Border>
             
