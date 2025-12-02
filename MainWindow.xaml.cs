@@ -56,9 +56,32 @@ namespace Graphic_Editor
             new Dictionary<UIElement, ResizableElement>(); //Хранит связь между элементами на холсте и их контроллерами изменения размера
         private ResizableElement currentResizableElement; //Текущий активный изменяемый в размерах элемент
 
+        //Система автосохранения
+        private AutoSave autoSave; //Система автоматического сохранения проекта
+
         //Система отмены/повтора
-        private Stack<UIElement> undoStack = new Stack<UIElement>(); //Стек для отмены действий
-        private Stack<UIElement> redoStack = new Stack<UIElement>(); //Стек для повтора действий
+        private enum UndoActionType
+        {
+            Add,    // Элемент был добавлен
+            Remove  // Элемент был удален
+        }
+
+        private class UndoAction
+        {
+            public UndoActionType ActionType { get; set; }
+            public UIElement Element { get; set; } // Копия элемента для восстановления
+            public UIElement OriginalElement { get; set; } // Ссылка на оригинальный элемент (для Remove)
+
+            public UndoAction(UndoActionType actionType, UIElement element, UIElement originalElement = null)
+            {
+                ActionType = actionType;
+                Element = element;
+                OriginalElement = originalElement;
+            }
+        }
+
+        private Stack<UndoAction> undoStack = new Stack<UndoAction>(); //Стек для отмены действий
+        private Stack<UndoAction> redoStack = new Stack<UndoAction>(); //Стек для повтора действий
 
         //Система сетки
         private bool isGridEnabled = false; //Отображение сетки - нет
@@ -115,6 +138,8 @@ namespace Graphic_Editor
         private Point arrowOffset;
         private Point arrowDragStartPoint;
 
+        private bool isCursor = true;
+
         public class TextFormatting //Класс для форматирования текста
         {
             public FontFamily FontFamily { get; set; }
@@ -147,12 +172,13 @@ namespace Graphic_Editor
             InitializeComponent(); //Инициализация WPF компонентов
 
             MakeAllShapesDraggable(); //Делает фигуры в панели инструментов перетаскиваемыми
-            ClearColorComboBoxesOnStartup(); // Очищаем блоки свойств заливки и обводки при запуске
-            ResetTextComboBoxesToEmpty(); //Сбрасываем блок свойств текста при запуске
+            //ClearColorComboBoxesOnStartup(); // Очищаем блоки свойств заливки и обводки при запуске
 
             InitializeGrid(); //Создает и инициализирует визуальную сетку
             InitializePanels(); //Находит и регистрирует все панели выделения
+            InitializePropertyBlocks(); //Скрывает блоки свойств при загрузке приложения
             InitializeSelectionSystem(); //Настраивает систему прямоугольного выделения
+            isActiveCursor();
 
             // Обработка горячих клавиш
             this.KeyDown += MainWindow_KeyDown; //Ctrl+Z/Y - отмена/повтор
@@ -165,16 +191,34 @@ namespace Graphic_Editor
             // Добавляем обработчик клика по Canvas для сброса выделения
             MainCanvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
 
-            // Добавляем обработчики для комментариев (переключает режим комментариев)
-            comment.Click += CommentButton_Click;
+            // Кнопка курсора для обработки взаимодействия с объектами
+            cursor.Click += CursorButton_Click;
             // Кнопка пера включает/выключает режим рисования стрелок
             pencil.Click += PenButton_Click;
+            // Добавляем обработчики для комментариев (переключает режим комментариев)
+            comment.Click += CommentButton_Click;
 
             // Обработчики для размеров текстовых полей
             WidthTextBox.LostFocus += DimensionTextBox_LostFocus;
             HeightTextBox.LostFocus += DimensionTextBox_LostFocus;
             WidthTextBox.KeyDown += DimensionTextBox_KeyDown;
             HeightTextBox.KeyDown += DimensionTextBox_KeyDown;
+
+            // Инициализация системы автосохранения (интервал 60 секунд)
+            autoSave = new AutoSave(MainCanvas, intervalSeconds: 60, enabled: true);
+
+            // Обработчик закрытия окна для очистки ресурсов
+            this.Closing += MainWindow_Closing;
+        }
+
+        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // Останавливаем автосохранение и сохраняем перед закрытием
+            if (autoSave != null)
+            {
+                autoSave.SaveNow(); // Принудительное сохранение перед закрытием
+                autoSave.Dispose();
+            }
         }
 
         // Обработчики для ручного ввода размеров
@@ -346,7 +390,7 @@ namespace Graphic_Editor
             return new Point(snappedX, snappedY);
         }
 
-        // Обновите метод перемещения фигур на канвасе
+        // Метод перемещения фигур на Canvas
         private void CanvasShape_MouseMove(object sender, MouseEventArgs e)
         {
             if (isDragging && draggedElement != null && e.LeftButton == MouseButtonState.Pressed)
@@ -441,6 +485,13 @@ namespace Graphic_Editor
             MainCanvas.Children.Clear();
             canvasElements.Clear();
             currentFilePath = null;
+            
+            // Сбрасываем имя файла на "Untitled"
+            if (FileNameTextBox != null)
+            {
+                FileNameTextBox.Text = "Untitled";
+            }
+            
             UpdateWindowTitle();
             MessageBox.Show("Создан новый файл", "Новый файл", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -459,6 +510,7 @@ namespace Graphic_Editor
                 {
                     LoadFromFile(openFileDialog.FileName);
                     currentFilePath = openFileDialog.FileName;
+                    // LoadFromFile уже обновляет TextBox, но обновим заголовок окна
                     UpdateWindowTitle();
                     MessageBox.Show("Файл успешно открыт", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -497,6 +549,19 @@ namespace Graphic_Editor
                 Title = "Сохранить как",
                 DefaultExt = ".ged"
             };
+            
+            // Используем имя из TextBox для предложения имени файла
+            if (FileNameTextBox != null && !string.IsNullOrEmpty(FileNameTextBox.Text) && FileNameTextBox.Text != "Untitled")
+            {
+                string fileNameFromTextBox = FileNameTextBox.Text;
+                // Убираем недопустимые символы для имени файла
+                string invalidChars = new string(System.IO.Path.GetInvalidFileNameChars());
+                foreach (char c in invalidChars)
+                {
+                    fileNameFromTextBox = fileNameFromTextBox.Replace(c, '_');
+                }
+                saveFileDialog.FileName = fileNameFromTextBox;
+            }
 
             if (saveFileDialog.ShowDialog() == true)
             {
@@ -504,6 +569,14 @@ namespace Graphic_Editor
                 {
                     SaveToFile(saveFileDialog.FileName);
                     currentFilePath = saveFileDialog.FileName;
+                    
+                    // Обновляем TextBox с именем файла без расширения
+                    if (FileNameTextBox != null)
+                    {
+                        string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(saveFileDialog.FileName);
+                        FileNameTextBox.Text = fileNameWithoutExtension;
+                    }
+                    
                     UpdateWindowTitle();
                     MessageBox.Show("Файл успешно сохранен", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -557,6 +630,19 @@ namespace Graphic_Editor
             //if (filePanel != null) panels.Add(filePanel);
         }
 
+        private void InitializePropertyBlocks()
+        {
+            var dimensionsPanel = FindName("DimensionsPanel") as Border;
+            var fillPanel = FindName("FillPanel") as Border;
+            var strokePanel = FindName("StrokePanel") as Border;
+            var textPanel = FindName("TextPanel") as Border;
+
+            DimensionsPanel.Visibility = Visibility.Collapsed;
+            FillPanel.Visibility = Visibility.Collapsed;
+            StrokePanel.Visibility = Visibility.Collapsed;
+            TextPanel.Visibility = Visibility.Collapsed;
+        }
+
         // Обработчик кнопки скрытия/показа панелей
         private void TogglePanelsButton_Click(object sender, RoutedEventArgs e)
         {
@@ -588,32 +674,33 @@ namespace Graphic_Editor
                     panel.Visibility = Visibility.Collapsed;
                 }
             }
-
-            // Также скрываем нижнюю панель инструментов
-            var bottomToolbar = FindName("BottomToolbar") as Border;
-            if (bottomToolbar != null)
-            {
-                bottomToolbar.Visibility = Visibility.Collapsed;
-            }
         }
 
         // Показать все панели
         private void ShowAllPanels()
         {
-            foreach (var panel in panels)
+            NotationCard.Visibility = Visibility.Visible;
+
+            if (selectedElement is Ellipse ellipse || selectedElement is Border border || selectedElement is Line line)
             {
-                if (panel != null)
-                {
-                    panel.Visibility = Visibility.Visible;
-                }
+                DimensionsPanel.Visibility = Visibility.Visible;
+                FillPanel.Visibility = Visibility.Visible;
+                StrokePanel.Visibility = Visibility.Visible;
+            }
+            else if (selectedElement is TextBlock textBlock)
+            {
+                DimensionsPanel.Visibility = Visibility.Visible;
+                StrokePanel.Visibility = Visibility.Visible;
+                TextPanel.Visibility = Visibility.Visible;
             }
 
-            // Показываем нижнюю панель инструментов
-            var bottomToolbar = FindName("BottomToolbar") as Border;
-            if (bottomToolbar != null)
-            {
-                bottomToolbar.Visibility = Visibility.Visible;
-            }
+            //foreach (var panel in panels)
+            //{
+            //    if (panel != null)
+            //    {
+            //        panel.Visibility = Visibility.Visible;
+            //    }
+            //}
         }
 
         private void Exit_Click(object sender, RoutedEventArgs e)
@@ -627,6 +714,10 @@ namespace Graphic_Editor
             using (StreamWriter writer = new StreamWriter(filePath))
             {
                 writer.WriteLine("GEDv1.0"); // Заголовок файла
+                
+                // Сохраняем имя файла из TextBox
+                string fileName = FileNameTextBox?.Text ?? System.IO.Path.GetFileNameWithoutExtension(filePath);
+                writer.WriteLine($"FILENAME|{fileName}"); // Метаданные: имя файла
 
                 foreach (UIElement element in MainCanvas.Children)
                 {
@@ -697,11 +788,19 @@ namespace Graphic_Editor
                     throw new Exception("Неверный формат файла");
                 }
 
+                string loadedFileName = null;
                 string line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     string[] parts = line.Split('|');
                     if (parts.Length < 2) continue;
+
+                    // Читаем имя файла из метаданных
+                    if (parts[0] == "FILENAME" && parts.Length >= 2)
+                    {
+                        loadedFileName = parts[1];
+                        continue;
+                    }
 
                     switch (parts[0])
                     {
@@ -720,6 +819,24 @@ namespace Graphic_Editor
                         case "ARROW":
                             CreateArrowFromData(parts);
                             break;
+                    }
+                }
+                
+                // Обновляем TextBox с именем файла (из метаданных или из файловой системы)
+                if (loadedFileName != null)
+                {
+                    if (FileNameTextBox != null)
+                    {
+                        FileNameTextBox.Text = loadedFileName;
+                    }
+                }
+                else
+                {
+                    // Если метаданных нет, используем имя файла из файловой системы без расширения
+                    string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(filePath);
+                    if (FileNameTextBox != null)
+                    {
+                        FileNameTextBox.Text = fileNameWithoutExtension;
                     }
                 }
             }
@@ -852,8 +969,27 @@ namespace Graphic_Editor
 
         private void UpdateWindowTitle()
         {
-            string fileName = string.IsNullOrEmpty(currentFilePath) ? "Новый файл" : System.IO.Path.GetFileName(currentFilePath);
-            this.Title = $"Graphic Editor - {fileName}";
+            // Используем текст из TextBox, если он доступен, иначе имя файла из файловой системы
+            string fileName;
+            if (FileNameTextBox != null && !string.IsNullOrEmpty(FileNameTextBox.Text) && FileNameTextBox.Text != "Untitled")
+            {
+                fileName = FileNameTextBox.Text;
+            }
+            else if (!string.IsNullOrEmpty(currentFilePath))
+            {
+                fileName = System.IO.Path.GetFileNameWithoutExtension(currentFilePath);
+            }
+            else
+            {
+                fileName = "Новый файл";
+            }
+            this.Title = $"Kapibara - {fileName}";
+        }
+        
+        // Обработчик изменения текста в TextBox имени файла
+        private void FileNameTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            UpdateWindowTitle();
         }
 
         // Меню "Вид"
@@ -901,7 +1037,7 @@ namespace Graphic_Editor
         // Меню "Справка"
         private void Help_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Справка");
+            HelpSystem.ShowHelp();
         }
 
         private void About_Click(object sender, RoutedEventArgs e)
@@ -996,8 +1132,15 @@ namespace Graphic_Editor
 
                 foreach (var element in elementsToCut)
                 {
-                    // Сохраняем в стек отмены
-                    SaveToUndoStack(element);
+                    // Сохраняем в стек отмены как удаление
+                    SaveToUndoStack(element, UndoActionType.Remove);
+                    
+                    // Удаляем ResizableElement если есть
+                    if (resizableElements.ContainsKey(element))
+                    {
+                        resizableElements[element].Dispose();
+                        resizableElements.Remove(element);
+                    }
 
                     // Удаляем элемент
                     MainCanvas.Children.Remove(element);
@@ -1005,11 +1148,6 @@ namespace Graphic_Editor
                 }
 
                 ClearSelection();
-                MessageBox.Show($"Вырезано {elementsToCut.Count} элементов", "Вырезание", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                MessageBox.Show("Сначала выделите элементы", "Вырезание", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -1062,8 +1200,134 @@ namespace Graphic_Editor
             deleteMenuItem.Click += (s, e) => DeleteSelectedElement();
             contextMenu.Items.Add(deleteMenuItem);
 
+            contextMenu.Items.Add(new Separator());
+
+            // Пункт "Перенести на передний план"
+            MenuItem bringToFrontMenuItem = new MenuItem
+            {
+                Header = "Перенести на передний план",
+                Icon = new TextBlock { Text = "⬆", FontSize = 14 }
+            };
+            bringToFrontMenuItem.Click += (s, e) => BringToFront(element);
+            contextMenu.Items.Add(bringToFrontMenuItem);
+
+            // Пункт "Перенести на задний план"
+            MenuItem sendToBackMenuItem = new MenuItem
+            {
+                Header = "Перенести на задний план",
+                Icon = new TextBlock { Text = "⬇", FontSize = 14 }
+            };
+            sendToBackMenuItem.Click += (s, e) => SendToBack(element);
+            contextMenu.Items.Add(sendToBackMenuItem);
+
             // Устанавливаем контекстное меню для элемента
             element.ContextMenu = contextMenu;
+        }
+
+        // Метод для получения максимального ZIndex на холсте
+        private int GetMaxZIndex()
+        {
+            int maxZIndex = 0;
+            foreach (UIElement child in MainCanvas.Children)
+            {
+                int zIndex = Canvas.GetZIndex(child);
+                if (zIndex > maxZIndex)
+                {
+                    maxZIndex = zIndex;
+                }
+            }
+            return maxZIndex;
+        }
+
+        // Метод для получения минимального ZIndex на холсте
+        private int GetMinZIndex()
+        {
+            int minZIndex = 0;
+            bool first = true;
+            foreach (UIElement child in MainCanvas.Children)
+            {
+                int zIndex = Canvas.GetZIndex(child);
+                if (first || zIndex < minZIndex)
+                {
+                    minZIndex = zIndex;
+                    first = false;
+                }
+            }
+            return minZIndex;
+        }
+
+        // Перенести элемент на передний план
+        private void BringToFront(FrameworkElement element)
+        {
+            if (element == null || !MainCanvas.Children.Contains(element)) return;
+
+            int maxZIndex = GetMaxZIndex();
+            Canvas.SetZIndex(element, maxZIndex + 1);
+
+            // Также перемещаем элемент в конец коллекции для гарантии
+            MainCanvas.Children.Remove(element);
+            MainCanvas.Children.Add(element);
+        }
+
+        // Перенести элемент на задний план
+        private void SendToBack(FrameworkElement element)
+        {
+            if (element == null || !MainCanvas.Children.Contains(element)) return;
+
+            int minZIndex = GetMinZIndex();
+            Canvas.SetZIndex(element, minZIndex - 1);
+
+            // Также перемещаем элемент в начало коллекции для гарантии
+            MainCanvas.Children.Remove(element);
+            MainCanvas.Children.Insert(0, element);
+        }
+
+        // Перенести стрелку на передний план (линия и наконечник вместе)
+        private void BringArrowToFront(ArrowContainer arrowContainer)
+        {
+            if (arrowContainer?.Line == null) return;
+
+            int maxZIndex = GetMaxZIndex();
+
+            // Перемещаем линию на передний план
+            if (MainCanvas.Children.Contains(arrowContainer.Line))
+            {
+                Canvas.SetZIndex(arrowContainer.Line, maxZIndex + 1);
+                MainCanvas.Children.Remove(arrowContainer.Line);
+                MainCanvas.Children.Add(arrowContainer.Line);
+            }
+
+            // Перемещаем наконечник на передний план (выше линии)
+            if (arrowContainer.Arrowhead != null && MainCanvas.Children.Contains(arrowContainer.Arrowhead))
+            {
+                Canvas.SetZIndex(arrowContainer.Arrowhead, maxZIndex + 2);
+                MainCanvas.Children.Remove(arrowContainer.Arrowhead);
+                MainCanvas.Children.Add(arrowContainer.Arrowhead);
+            }
+        }
+
+        // Перенести стрелку на задний план (линия и наконечник вместе)
+        private void SendArrowToBack(ArrowContainer arrowContainer)
+        {
+            if (arrowContainer?.Line == null) return;
+
+            int minZIndex = GetMinZIndex();
+
+            // Перемещаем наконечник на задний план (сначала наконечник, чтобы он был выше линии)
+            if (arrowContainer.Arrowhead != null && MainCanvas.Children.Contains(arrowContainer.Arrowhead))
+            {
+                Canvas.SetZIndex(arrowContainer.Arrowhead, minZIndex - 1);
+                MainCanvas.Children.Remove(arrowContainer.Arrowhead);
+                MainCanvas.Children.Insert(0, arrowContainer.Arrowhead);
+            }
+
+            // Перемещаем линию на задний план
+            if (MainCanvas.Children.Contains(arrowContainer.Line))
+            {
+                Canvas.SetZIndex(arrowContainer.Line, minZIndex - 2);
+                MainCanvas.Children.Remove(arrowContainer.Line);
+                MainCanvas.Children.Insert(0, arrowContainer.Line);
+            }
         }
 
         // Метод для показа/скрытия панели толщины обводки
@@ -1368,6 +1632,13 @@ namespace Graphic_Editor
                 // Показываем ручки изменения размера
                 ShowResizeHandlesForElement(element);
             }
+
+            if (TogglePanelsButton.IsChecked == false && element is TextBlock textBlock)
+            {
+                DimensionsPanel.Visibility = Visibility.Visible;
+                StrokePanel.Visibility = Visibility.Visible;
+                TextPanel.Visibility = Visibility.Visible;
+            }
         }
 
         private void DeselectAll()
@@ -1383,7 +1654,13 @@ namespace Graphic_Editor
 
             // Скрываем панели свойств
             StrokeWidthPanel.Visibility = Visibility.Collapsed;
+
+            DimensionsPanel.Visibility = Visibility.Collapsed;
+            FillPanel.Visibility = Visibility.Collapsed;
+            StrokePanel.Visibility = Visibility.Collapsed;
+            TextPanel.Visibility = Visibility.Collapsed;
         }
+
         private void ClearColorComboBoxes()
         {
             FillColorComboBox.SelectedIndex = -1;
@@ -1398,11 +1675,6 @@ namespace Graphic_Editor
             if (selectedElement != null)
             {
                 copiedElement = CloneUIElement(selectedElement);
-                MessageBox.Show("Элемент скопирован", "Копирование", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                MessageBox.Show("Сначала выделите элемент", "Копирование", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -1414,19 +1686,21 @@ namespace Graphic_Editor
                 // Сохраняем копию для буфера обмена
                 copiedElement = CloneUIElement(selectedElement);
 
-                // Сохраняем в стек отмены
-                SaveToUndoStack(selectedElement);
+                // Сохраняем в стек отмены как удаление
+                SaveToUndoStack(selectedElement, UndoActionType.Remove);
+
+                // Удаляем ResizableElement если есть
+                if (resizableElements.ContainsKey(selectedElement))
+                {
+                    resizableElements[selectedElement].Dispose();
+                    resizableElements.Remove(selectedElement);
+                }
 
                 // Удаляем элемент
                 MainCanvas.Children.Remove(selectedElement);
                 canvasElements.Remove(selectedElement);
 
                 DeselectAll();
-                MessageBox.Show("Элемент вырезан", "Вырезание", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                MessageBox.Show("Сначала выделите элемент", "Вырезание", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -1450,6 +1724,12 @@ namespace Graphic_Editor
                 canvasElements.Add(newElement);
                 MakeCanvasShapeDraggable(newElement);
 
+                // Перемещаем на передний план
+                if (newElement is FrameworkElement frameworkElement)
+                {
+                    BringToFront(frameworkElement);
+                }
+
                 // Создаем ResizableElement для нового элемента
                 resizableElements[newElement] = new ResizableElement(newElement, MainCanvas);
 
@@ -1458,12 +1738,6 @@ namespace Graphic_Editor
                 
                 // Сохраняем в стек отмены
                 SaveToUndoStack(newElement);
-                
-                MessageBox.Show("Элемент вставлен", "Вставка", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                MessageBox.Show("Нет скопированного элемента", "Вставка", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -1472,8 +1746,8 @@ namespace Graphic_Editor
         {
             if (selectedElement != null)
             {
-                // Сохраняем в стек отмены
-                SaveToUndoStack(selectedElement);
+                // Сохраняем в стек отмены как удаление
+                SaveToUndoStack(selectedElement, UndoActionType.Remove);
 
                 // Удаляем ResizableElement если есть
                 if (resizableElements.ContainsKey(selectedElement))
@@ -1486,11 +1760,6 @@ namespace Graphic_Editor
                 canvasElements.Remove(selectedElement);
                 
                 DeselectAll();
-                MessageBox.Show("Элемент удален", "Удаление", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                MessageBox.Show("Сначала выделите элемент", "Удаление", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -1586,29 +1855,75 @@ namespace Graphic_Editor
             if (undoStack.Count > 0)
             {
                 DeselectAll();
-                UIElement element = undoStack.Pop();
+                UndoAction action = undoStack.Pop();
 
-                if (MainCanvas.Children.Contains(element))
+                if (action.ActionType == UndoActionType.Add)
                 {
-                    // Если элемент на холсте - удаляем его
-                    MainCanvas.Children.Remove(element);
-                    canvasElements.Remove(element);
-                    redoStack.Push(element);
+                    // Отменяем добавление - удаляем элемент
+                    UIElement elementToRemove = action.OriginalElement ?? FindElementByClone(action.Element);
+                    if (elementToRemove != null && MainCanvas.Children.Contains(elementToRemove))
+                    {
+                        // Удаляем ResizableElement если есть
+                        if (resizableElements.ContainsKey(elementToRemove))
+                        {
+                            resizableElements[elementToRemove].Dispose();
+                            resizableElements.Remove(elementToRemove);
+                        }
+
+                        MainCanvas.Children.Remove(elementToRemove);
+                        canvasElements.Remove(elementToRemove);
+                        
+                        // Сохраняем действие для повтора
+                        redoStack.Push(new UndoAction(UndoActionType.Remove, action.Element, elementToRemove));
+                    }
                 }
-                else
+                else if (action.ActionType == UndoActionType.Remove)
                 {
-                    // Если элемента нет на холсте - восстанавливаем его
-                    MainCanvas.Children.Add(element);
-                    canvasElements.Add(element);
-                    MakeCanvasShapeDraggable(element);
-                    redoStack.Push(element);
-                    RestoreOriginalAppearance(element);
+                    // Отменяем удаление - восстанавливаем элемент
+                    UIElement elementToRestore = CloneUIElement(action.Element);
+                    
+                    // Восстанавливаем позицию
+                    double left = Canvas.GetLeft(action.Element);
+                    double top = Canvas.GetTop(action.Element);
+                    if (!double.IsNaN(left)) Canvas.SetLeft(elementToRestore, left);
+                    if (!double.IsNaN(top)) Canvas.SetTop(elementToRestore, top);
+                    
+                    MainCanvas.Children.Add(elementToRestore);
+                    canvasElements.Add(elementToRestore);
+                    MakeCanvasShapeDraggable(elementToRestore);
+                    
+                    // Создаем ResizableElement для восстановленного элемента
+                    resizableElements[elementToRestore] = new ResizableElement(elementToRestore, MainCanvas);
+                    
+                    RestoreOriginalAppearance(elementToRestore);
+                    
+                    // Сохраняем действие для повтора
+                    redoStack.Push(new UndoAction(UndoActionType.Add, action.Element, elementToRestore));
                 }
             }
-            else
+        }
+        
+        // Поиск элемента на холсте по его копии
+        private UIElement FindElementByClone(UIElement clone)
+        {
+            // Пытаемся найти элемент по позиции и типу
+            double cloneLeft = Canvas.GetLeft(clone);
+            double cloneTop = Canvas.GetTop(clone);
+            
+            foreach (UIElement element in MainCanvas.Children)
             {
-                MessageBox.Show("Нет действий для отмены", "Отмена", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (element.GetType() == clone.GetType())
+                {
+                    double elemLeft = Canvas.GetLeft(element);
+                    double elemTop = Canvas.GetTop(element);
+                    
+                    if (Math.Abs(elemLeft - cloneLeft) < 0.1 && Math.Abs(elemTop - cloneTop) < 0.1)
+                    {
+                        return element;
+                    }
+                }
             }
+            return null;
         }
 
         // Повтор последнего действия
@@ -1617,37 +1932,74 @@ namespace Graphic_Editor
             if (redoStack.Count > 0)
             {
                 DeselectAll();
-                UIElement element = redoStack.Pop();
+                UndoAction action = redoStack.Pop();
 
-                if (MainCanvas.Children.Contains(element))
+                if (action.ActionType == UndoActionType.Add)
                 {
-                    MainCanvas.Children.Remove(element);
-                    canvasElements.Remove(element);
-                    undoStack.Push(element);
+                    // Повторяем добавление - добавляем элемент
+                    UIElement elementToAdd = CloneUIElement(action.Element);
+                    
+                    // Восстанавливаем позицию
+                    double left = Canvas.GetLeft(action.Element);
+                    double top = Canvas.GetTop(action.Element);
+                    if (!double.IsNaN(left)) Canvas.SetLeft(elementToAdd, left);
+                    if (!double.IsNaN(top)) Canvas.SetTop(elementToAdd, top);
+                    
+                    MainCanvas.Children.Add(elementToAdd);
+                    canvasElements.Add(elementToAdd);
+                    MakeCanvasShapeDraggable(elementToAdd);
+                    
+                    // Создаем ResizableElement для добавленного элемента
+                    resizableElements[elementToAdd] = new ResizableElement(elementToAdd, MainCanvas);
+                    
+                    RestoreOriginalAppearance(elementToAdd);
+                    
+                    // Сохраняем действие для отмены
+                    undoStack.Push(new UndoAction(UndoActionType.Add, action.Element, elementToAdd));
                 }
-                else
+                else if (action.ActionType == UndoActionType.Remove)
                 {
-                    MainCanvas.Children.Add(element);
-                    canvasElements.Add(element);
-                    MakeCanvasShapeDraggable(element);
-                    undoStack.Push(element);
-                    RestoreOriginalAppearance(element);
+                    // Повторяем удаление - удаляем элемент
+                    UIElement elementToRemove = action.OriginalElement ?? FindElementByClone(action.Element);
+                    if (elementToRemove != null && MainCanvas.Children.Contains(elementToRemove))
+                    {
+                        // Удаляем ResizableElement если есть
+                        if (resizableElements.ContainsKey(elementToRemove))
+                        {
+                            resizableElements[elementToRemove].Dispose();
+                            resizableElements.Remove(elementToRemove);
+                        }
+
+                        MainCanvas.Children.Remove(elementToRemove);
+                        canvasElements.Remove(elementToRemove);
+                        
+                        // Сохраняем действие для отмены
+                        undoStack.Push(new UndoAction(UndoActionType.Remove, action.Element, elementToRemove));
+                    }
                 }
-            }
-            else
-            {
-                MessageBox.Show("Нет действий для повтора", "Повтор", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
         
-        // Сохранение в стек отмены
-        private void SaveToUndoStack(UIElement element)
+        // Сохранение в стек отмены для добавления элемента
+        private void SaveToUndoStack(UIElement element, UndoActionType actionType = UndoActionType.Add)
         {
+            if (element == null) return;
+            
             UIElement elementCopy = CloneUIElement(element);
             SaveOriginalColorsForCopy(element, elementCopy);
-            undoStack.Push(CloneUIElement(element));
+            
+            // Сохраняем действие с указанием типа и ссылкой на оригинальный элемент
+            UndoAction action = new UndoAction(actionType, elementCopy, element);
+            undoStack.Push(action);
+            
             // Очищаем стек повтора при новом действии
             redoStack.Clear();
+        }
+        
+        // Сохранение в стек отмены (обратная совместимость)
+        private void SaveToUndoStack(UIElement element)
+        {
+            SaveToUndoStack(element, UndoActionType.Add);
         }
 
         // Сохранение оригинальных цветов для копии элемента
@@ -1807,7 +2159,7 @@ namespace Graphic_Editor
                 Foreground = Brushes.White,
                 BorderBrush = Brushes.Gray,
                 FontSize = 14,
-                Text = "Введите текст...",
+                Text = "",
                 CaretBrush = Brushes.White,
                 FocusVisualStyle = null
             };
@@ -1901,6 +2253,7 @@ namespace Graphic_Editor
 
             // Добавляем текстовый элемент на холст
             MainCanvas.Children.Add(textBlock);
+            BringToFront(textBlock);
 
             textBlock.MouseLeftButtonDown += TextElement_MouseLeftButtonDown;
             MakeCanvasShapeDraggable(textBlock);
@@ -2134,6 +2487,7 @@ namespace Graphic_Editor
                 SaveTextFormatting(textBlock);
 
                 MainCanvas.Children.Add(textBlock);
+                BringToFront(textBlock);
                 textBlock.MouseLeftButtonDown += TextElement_MouseLeftButtonDown;
                 MakeCanvasShapeDraggable(textBlock);
                 SelectElement(textBlock);
@@ -2268,7 +2622,7 @@ namespace Graphic_Editor
             if (element is TextBlock textBlock)
             {
                 // Показываем панель текста
-                TextPanel.Visibility = Visibility.Visible;
+                //TextPanel.Visibility = Visibility.Visible;
 
                 // Обновляем комбо-боксы значениями из текстового элемента
                 UpdateTextComboBoxes(textBlock);
@@ -2279,7 +2633,7 @@ namespace Graphic_Editor
             else
             {
                 // Скрываем панель текста для не-текстовых элементов
-                TextPanel.Visibility = Visibility.Collapsed;
+                //TextPanel.Visibility = Visibility.Collapsed;
 
                 // Сбрасываем комбо-боксы к пустым значениям
                 ResetTextComboBoxesToEmpty();
@@ -2403,7 +2757,7 @@ namespace Graphic_Editor
             currentFontWeight = FontWeights.Normal;
 
             // Скрываем панель текста
-            TextPanel.Visibility = Visibility.Collapsed;
+            //TextPanel.Visibility = Visibility.Collapsed;
         }
 
         private void MakeAllShapesDraggable()
@@ -2645,8 +2999,8 @@ namespace Graphic_Editor
                         // Если копия была создана в рабочей области, делаем ее полностью видимой
                         shapeCopy.Opacity = 1.0;
 
-                        // ВОЗВРАЩАЕМ НОРМАЛЬНЫЙ ZIndex ДЛЯ ФИГУРЫ НА ХОЛСТЕ
-                        Canvas.SetZIndex(shapeCopy, 1);
+                        // ПЕРЕМЕЩАЕМ ФИГУРУ НА ПЕРЕДНИЙ ПЛАН
+                        BringToFront(shapeCopy as FrameworkElement);
 
                         MakeCanvasShapeDraggable(shapeCopy);
 
@@ -3276,6 +3630,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Углы для изменения размера, а также появление блоков
         private void ShowResizeHandlesForElement(UIElement element)
         {
             // Не показываем ручки во время перетаскивания
@@ -3295,27 +3650,33 @@ namespace Graphic_Editor
                 currentResizableElement = null;
             }
 
-            // Создаем или используем существующий ResizableElement для текущего элемента
-            try
+            if (TogglePanelsButton.IsChecked == false && (element is Ellipse ellipse || element is Border border || element is Line line))
             {
-                if (!resizableElements.ContainsKey(element))
-                {
-                    // Создаем новый ResizableElement
-                    resizableElements[element] = new ResizableElement(element, MainCanvas);
-                }
-
-                currentResizableElement = resizableElements[element];
-                currentResizableElement.ShowResizeHandles();
-
-                // Обновляем текстовые поля размеров
-                if (element is FrameworkElement frameworkElement)
-                {
-                    UpdateDimensions(frameworkElement.ActualWidth, frameworkElement.ActualHeight);
-                }
+                DimensionsPanel.Visibility = Visibility.Visible;
+                FillPanel.Visibility = Visibility.Visible;
+                StrokePanel.Visibility = Visibility.Visible;
             }
-            catch (Exception ex)
+            //else if (element is TextBlock textBlock)
+            //{
+            //    DimensionsPanel.Visibility = Visibility.Visible;
+            //    StrokePanel.Visibility = Visibility.Visible;
+            //    TextPanel.Visibility = Visibility.Visible;
+            //}
+
+            // Создаем или используем существующий ResizableElement для текущего элемента
+            if (!resizableElements.ContainsKey(element))
             {
-                System.Diagnostics.Debug.WriteLine($"Ошибка создания ResizableElement: {ex.Message}");
+                // Создаем новый ResizableElement
+                resizableElements[element] = new ResizableElement(element, MainCanvas);
+            }
+
+            currentResizableElement = resizableElements[element];
+            currentResizableElement.ShowResizeHandles();
+
+            // Обновляем текстовые поля размеров
+            if (element is FrameworkElement frameworkElement)
+            {
+                UpdateDimensions(frameworkElement.ActualWidth, frameworkElement.ActualHeight);
             }
         }
 
@@ -3702,11 +4063,6 @@ namespace Graphic_Editor
                 copiedElements = selectedElements.Select(CloneUIElement)
                                                .Cast<UIElement>()
                                                .ToList();
-                MessageBox.Show($"Скопировано {selectedElements.Count} элементов", "Копирование", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                MessageBox.Show("Сначала выделите элементы", "Копирование", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -3733,6 +4089,12 @@ namespace Graphic_Editor
                     canvasElements.Add(newElement);
                     MakeCanvasShapeDraggable(newElement);
 
+                    // Перемещаем на передний план
+                    if (newElement is FrameworkElement frameworkElement)
+                    {
+                        BringToFront(frameworkElement);
+                    }
+
                     newElements.Add(newElement);
 
                     // Сохраняем в стек отмены
@@ -3748,12 +4110,6 @@ namespace Graphic_Editor
                         SelectElement(frameworkElement);
                     }
                 }
-
-                MessageBox.Show($"Вставлено {newElements.Count} элементов", "Вставка", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                MessageBox.Show("Нет скопированных элементов", "Вставка", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -3983,6 +4339,13 @@ namespace Graphic_Editor
                 // Регистрируем стрелку
                 RegisterArrowContainer(arrowContainer);
 
+                // Перемещаем стрелку и наконечник на передний план
+                BringToFront(currentArrow);
+                if (arrowContainer.Arrowhead != null)
+                {
+                    BringToFront(arrowContainer.Arrowhead);
+                }
+
                 // Сохраняем в стек отмены
                 SaveToUndoStack(currentArrow);
 
@@ -4123,58 +4486,46 @@ namespace Graphic_Editor
         {
             if (arrowContainer == null || arrowContainer.Line == null) return;
 
-            try
-            {
-                // Обработчики для линии стрелки
-                arrowContainer.Line.MouseLeftButtonDown += Arrow_MouseLeftButtonDown;
-                arrowContainer.Line.MouseMove += Arrow_MouseMove;
-                arrowContainer.Line.MouseLeftButtonUp += Arrow_MouseLeftButtonUp;
+            // Обработчики для линии стрелки
+            arrowContainer.Line.MouseLeftButtonDown += Arrow_MouseLeftButtonDown;
+            arrowContainer.Line.MouseMove += Arrow_MouseMove;
+            arrowContainer.Line.MouseLeftButtonUp += Arrow_MouseLeftButtonUp;
 
-                // Обработчики для наконечника
-                if (arrowContainer.Arrowhead != null)
-                {
-                    arrowContainer.Arrowhead.MouseLeftButtonDown += Arrowhead_MouseLeftButtonDown;
-                    arrowContainer.Arrowhead.MouseMove += Arrow_MouseMove;
-                    arrowContainer.Arrowhead.MouseLeftButtonUp += Arrow_MouseLeftButtonUp;
-                }
-
-                // Добавляем контекстное меню
-                arrowContainer.Line.MouseRightButtonDown += (s, e) =>
-                {
-                    CreateArrowContextMenu(arrowContainer);
-                    e.Handled = true;
-                };
-            }
-            catch (Exception ex)
+            // Обработчики для наконечника
+            if (arrowContainer.Arrowhead != null)
             {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в MakeArrowDraggable: {ex.Message}");
+                arrowContainer.Arrowhead.MouseLeftButtonDown += Arrowhead_MouseLeftButtonDown;
+                arrowContainer.Arrowhead.MouseMove += Arrow_MouseMove;
+                arrowContainer.Arrowhead.MouseLeftButtonUp += Arrow_MouseLeftButtonUp;
             }
+
+            // Добавляем контекстное меню
+            arrowContainer.Line.MouseRightButtonDown += (s, e) =>
+            {
+                CreateArrowContextMenu(arrowContainer);
+                e.Handled = true;
+            };
         }
 
         private void Arrowhead_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (isArrowModeActive) return;
 
-            try
-            {
-                var arrowhead = sender as Polygon;
-                if (arrowhead == null) return;
+            var arrowhead = sender as Polygon;
+            if (arrowhead == null) return;
 
-                // Находим контейнер стрелки по наконечнику
-                var arrowContainer = arrows?.FirstOrDefault(a => a?.Arrowhead == arrowhead);
-                if (arrowContainer == null) return;
+            // Находим контейнер стрелки по наконечнику
+            var arrowContainer = arrows?.FirstOrDefault(a => a?.Arrowhead == arrowhead);
+            if (arrowContainer == null) return;
 
-                // Выделяем стрелку
-                SelectArrow(arrowContainer.Line);
+            // Выделяем стрелку
+            SelectArrow(arrowContainer.Line);
 
-                // Начинаем перетаскивание
-                StartArrowDrag(arrowContainer, e);
-                e.Handled = true;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в Arrowhead_MouseLeftButtonDown: {ex.Message}");
-            }
+            // Начинаем перетаскивание
+            StartArrowDrag(arrowContainer, e);
+            e.Handled = true;
+
+
         }
 
         // Обновленный метод для начала перетаскивания стрелки
@@ -4752,29 +5103,22 @@ namespace Graphic_Editor
         {
             if (arrow == null) return;
 
-            try
-            {
-                // Снимаем выделение с других элементов
-                DeselectAll();
-                DeselectArrow();
+            // Снимаем выделение с других элементов
+            DeselectAll();
+            DeselectArrow();
 
-                // Находим контейнер стрелки
-                var arrowContainer = arrows?.FirstOrDefault(a => a?.Line == arrow);
-                if (arrowContainer == null) return;
+            // Находим контейнер стрелки
+            var arrowContainer = arrows?.FirstOrDefault(a => a?.Line == arrow);
+            if (arrowContainer == null) return;
 
-                selectedArrowContainer = arrowContainer;
-                ApplyArrowSelectionVisual(arrowContainer);
+            selectedArrowContainer = arrowContainer;
+            ApplyArrowSelectionVisual(arrowContainer);
 
-                // Создаем контекстное меню
-                CreateArrowContextMenu(arrowContainer);
+            // Создаем контекстное меню
+            CreateArrowContextMenu(arrowContainer);
 
-                // Показываем информацию о стрелке в панелях свойств
-                UpdateArrowPropertiesInPanels(arrowContainer);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в SelectArrow: {ex.Message}");
-            }
+            // Показываем информацию о стрелке в панелях свойств
+            UpdateArrowPropertiesInPanels(arrowContainer);
         }
 
         private void UpdateArrowPropertiesInPanels(ArrowContainer arrowContainer)
@@ -4857,6 +5201,26 @@ namespace Graphic_Editor
             };
             deleteMenuItem.Click += (s, e) => DeleteArrow(arrowContainer.Line);
             contextMenu.Items.Add(deleteMenuItem);
+
+            contextMenu.Items.Add(new Separator());
+
+            // Пункт "Перенести на передний план"
+            MenuItem bringToFrontMenuItem = new MenuItem
+            {
+                Header = "Перенести на передний план",
+                Icon = new TextBlock { Text = "⬆", FontSize = 14 }
+            };
+            bringToFrontMenuItem.Click += (s, e) => BringArrowToFront(arrowContainer);
+            contextMenu.Items.Add(bringToFrontMenuItem);
+
+            // Пункт "Перенести на задний план"
+            MenuItem sendToBackMenuItem = new MenuItem
+            {
+                Header = "Перенести на задний план",
+                Icon = new TextBlock { Text = "⬇", FontSize = 14 }
+            };
+            sendToBackMenuItem.Click += (s, e) => SendArrowToBack(arrowContainer);
+            contextMenu.Items.Add(sendToBackMenuItem);
 
             arrowContainer.Line.ContextMenu = contextMenu;
         }
@@ -5002,20 +5366,8 @@ namespace Graphic_Editor
 
             try
             {
-                // Создаем копию стрелки для стека отмены
-                var arrowCopy = new Polyline
-                {
-                    Stroke = arrowContainer.Line.Stroke?.CloneCurrentValue() ?? Brushes.Black,
-                    StrokeThickness = arrowContainer.Line.StrokeThickness,
-                    StrokeLineJoin = arrowContainer.Line.StrokeLineJoin,
-                    StrokeStartLineCap = arrowContainer.Line.StrokeStartLineCap,
-                    StrokeEndLineCap = arrowContainer.Line.StrokeEndLineCap,
-                    Points = new PointCollection(arrowContainer.Line.Points ?? new PointCollection()),
-                    Cursor = Cursors.Hand
-                };
-
-                undoStack?.Push(arrowCopy);
-                redoStack?.Clear();
+                // Сохраняем стрелку как удаление
+                SaveToUndoStack(arrowContainer.Line, UndoActionType.Remove);
             }
             catch (Exception ex)
             {
@@ -5073,10 +5425,28 @@ namespace Graphic_Editor
             }
         }
 
+        private void CursorButton_Click(object sender, RoutedEventArgs e)
+        {
+            isCursor = !isCursor;
+            isActiveCursor();
+        }
+
         // Обработчик для кнопки пера на панели инструментов
         private void PenButton_Click(object sender, RoutedEventArgs e)
         {
             ToggleArrowMode(); //изменить название кнопки
+        }
+
+        private void isActiveCursor()
+        {
+            if (isCursor)
+            {
+                cursor.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
+            }
+            else
+            {
+                cursor.Background = Brushes.Transparent;
+            }
         }
 
         // Метод для создания треугольника-наконечника
