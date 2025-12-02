@@ -41,11 +41,6 @@ namespace Graphic_Editor
         {
             InitializeComponent();
             MakeAllShapesDraggable();
-<<<<<<< Updated upstream
-        }
-
-        // Меню "Файл" - Обновленные
-=======
 
             InitializeGrid(); // Инициализируем сетку
             InitializePanels();
@@ -344,7 +339,6 @@ namespace Graphic_Editor
         }
 
         // Меню "Файл"
->>>>>>> Stashed changes
         private void NewFile_Click(object sender, RoutedEventArgs e)
         {
             // Очищаем холст

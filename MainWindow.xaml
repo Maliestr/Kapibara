@@ -88,15 +88,9 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Background="Transparent">
                     <Image Source="/Icons/L.png" Width="25.82" Height="25.82" Margin="15,11,15,3"/>
 
-<<<<<<< Updated upstream
-                    <Menu Background="Transparent" FontSize="12" Foreground="#FFEEEEEE" 
-                          WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Center" Margin="0,8,0,0">
-                        <MenuItem Header="Файл" VerticalAlignment="Center" Margin="0,0,18,0">
-=======
                     <Menu Background="Transparent" FontSize="12" Foreground="Black" 
                           WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom" Height="34">
                         <MenuItem Header="Файл" Margin="0,2,18,0" Height="32" Click="MenuItem_Click_1">
->>>>>>> Stashed changes
                             <MenuItem Header="Новый" Click="NewFile_Click"/>
                             <MenuItem Header="Открыть..." Click="OpenFile_Click"/>
                             <MenuItem Header="Сохранить" Click="SaveFile_Click"/>
@@ -113,11 +107,8 @@
                             <MenuItem Header="Сбросить масштаб" Click="ResetZoom_Click"/>
                         </MenuItem>
 
-<<<<<<< Updated upstream
-                        <MenuItem Header="Правка" Margin="0,0,18,0">
-=======
                         <MenuItem Header="Правка" Margin="0,2,18,0" Height="32">
->>>>>>> Stashed changes
+
                             <MenuItem Header="Отменить" InputGestureText="Ctrl+Z" Click="Undo_Click"/>
                             <MenuItem Header="Повторить" InputGestureText="Ctrl+Y" Click="Redo_Click"/>
                             <Separator/>
@@ -164,15 +155,10 @@
             </Grid>
         </Border>
 
-        <!-- Content Area -->
-        <Border Grid.Row="1" Background="#FF1E1E1E"/>
-
-<<<<<<< Updated upstream
-        <Border Grid.Row="1" Grid.ColumnSpan="2">
+        <Border Grid.Row="1" Grid.ColumnSpan="2" Background="#FF1E1E1E">
             <!--мои изменения тут -->
             <Grid>
-=======
-            <!-- Основной Canvas для всех элементов -->
+                <!-- Основной Canvas для всех элементов -->
             <Canvas x:Name="MainCanvas" Background="#252525" 
         Grid.Row="1" Grid.ColumnSpan="3" Loaded="MainCanvas_Loaded">
                 <Canvas.LayoutTransform>
@@ -181,7 +167,7 @@
             </Canvas>
 
             <!-- Элемент для отображения текущего масштаба -->
-            <TextBlock x:Name="ZoomTextBlock" 
+                <TextBlock x:Name="ZoomTextBlock" 
            Grid.Row="1" Grid.Column="1"
            Text="100%"
            Foreground="White"
@@ -192,11 +178,6 @@
            Background="#80000000"
            Padding="5,2"
            Visibility="Collapsed"/>
->>>>>>> Stashed changes
-
-                <!-- Основная рабочая область -->
-                <Canvas x:Name="MainCanvas"
-    Margin="10,0,10,20"/>
 
                 <!-- Прямоугольная панель снизу -->
                 <Border CornerRadius="11.72" 
@@ -897,56 +878,3 @@
         </Border>
     </Grid>
 </Window>
-
-
-<!--<Style x:Key="CloseButtonStyle" TargetType="Button">
-                    <Setter Property="Foreground" Value="White"/>
-                    <Setter Property="Background" Value="Transparent"/>
-                    <Setter Property="BorderThickness" Value="0"/>
-                    <Setter Property="Width" Value="46"/>
-                    <Setter Property="Height" Value="32"/>
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="bd" Background="{TemplateBinding Background}">
-                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="bd" Property="Background" Value="#e81123"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                </Style>-->
-
-<!--<Style x:Key="CloseBtn" TargetType="Button">
-                    
-                </Style>-->
-
-<!--<StackPanel Grid.Column="7" Orientation="Horizontal">
-                
-                    <Button x:Name="MinimizeBtn" Background="Transparent" BorderBrush="#00000000">
-                        <Image Source="/Icons/Line 3.png" Width="12" Height="12" Margin="16,8,16,0"/>
-                    </Button>
-
-                    <Button x:Name="MaximizeBtn" Background="Transparent" BorderBrush="#00000000">
-                        <Image Source="/Icons/Group 2.png" Width="12" Height="12" Margin="16,8,16,0"/>
-                    </Button>
-
-                    <Button x:Name="CloseBtn" Background="Transparent" BorderBrush="#00000000">
-                        <Image Source="/Icons/Group 1.png" Width="12" Height="12" Margin="16,8,24,0"/>
-                    </Button>
-                </StackPanel> -->
-
-
-<!--</Grid>
-        </Border>
-        <Button x:Name="escButton" Background="Transparent" BorderBrush="Transparent" 
-                IsCancel="True" Click="escButton_Click" Grid.Column="6"
-                Margin="1144,8,0,8">
-            <Image Source="/Icons/Group 1.png" Width="12" Height="12"/>
-        </Button>
-    </Grid>
-</Window>-->
