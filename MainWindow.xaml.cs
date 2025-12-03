@@ -24,7 +24,7 @@ using System.Windows.Shapes;
 using System.Windows.Shell;
 using System.Xml;
 using System.Xml.Linq;
-
+//есть тесты
 namespace Graphic_Editor
 {
     public partial class MainWindow : Window
