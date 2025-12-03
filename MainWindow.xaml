@@ -19,7 +19,7 @@
         Background="#FF252525"
         FontFamily="Gotham Pro">
     <!--Widht и Height нужны для правильной визуализации окна-->
-    
+    <!--есть тесты-->
     <Window.Resources>
         <!-- Общий стиль для кнопок заголовка (минимизация/максимизация) с подсветкой при наведении -->
         <Style x:Key="TitleBarButtonStyle" TargetType="Button">
