@@ -94,6 +94,27 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Стиль для всех ToolTip -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="#565656"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                BorderThickness="0">
+                            <ContentPresenter Content="{TemplateBinding Content}"
+                                            Margin="{TemplateBinding Padding}"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <WindowChrome.WindowChrome>
@@ -567,6 +588,7 @@
                     </Grid>
                 </StackPanel>
             </Border>
+
 
             <!-- Панель с размерами -->
             <Border x:Name="DimensionsPanel" CornerRadius="10"
