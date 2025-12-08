@@ -306,8 +306,12 @@
                                          StrokeThickness="3"
                                          Grid.Column="0"
                                          Cursor="Hand" HorizontalAlignment="Center" 
-                                         VerticalAlignment="Center"/>
-                            
+                                         VerticalAlignment="Center">
+                                    <Ellipse.ToolTip>
+                                        <ToolTip Content="Начальное состояние/узел"/>
+                                    </Ellipse.ToolTip>
+                                </Ellipse>
+
                                 <Ellipse x:Name="SimpleRing"
                                          Width="70"
                                          Height="70"
@@ -315,8 +319,12 @@
                                          StrokeThickness="3"
                                          Fill="Transparent"
                                          Grid.Column="1" HorizontalAlignment="Center" 
-                                         VerticalAlignment="Center" Cursor="Hand"/>
-                            
+                                         VerticalAlignment="Center" Cursor="Hand">
+                                    <Ellipse.ToolTip>
+                                        <ToolTip Content="Круг"/>
+                                    </Ellipse.ToolTip>
+                                </Ellipse>
+
                                 <!-- Кольцо -->
                                 <Ellipse x:Name="Ellipse"
                                         Stroke="White"
@@ -324,7 +332,11 @@
                                         Fill="Transparent" Grid.Column="1" Grid.Row="1"
                                          HorizontalAlignment="Center" 
                                         VerticalAlignment="Center"
-                                        Cursor="Hand" Height="42" Width="90"/>
+                                        Cursor="Hand" Height="42" Width="90">
+                                    <Ellipse.ToolTip>
+                                        <ToolTip Content="Активное состояние"/>
+                                    </Ellipse.ToolTip>
+                                </Ellipse>
 
                                 <Border x:Name="UmlInitialNode" 
                                         Width="70" 
@@ -336,14 +348,16 @@
                                         VerticalAlignment="Center"
                                         CornerRadius="35" Grid.Column="0" Grid.Row="1"
                                         Cursor="Hand">
-
+                                    <Border.ToolTip>
+                                        <ToolTip Content="Конечное состояние/узел"/>
+                                    </Border.ToolTip>
                                     <Ellipse Width="56"
                                         Height="56"
                                         Fill="White"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"/>
                                 </Border>
-                                
+
                                 <Border x:Name="Square"
                                         Width="60"
                                         Height="60"
@@ -353,15 +367,23 @@
                                         HorizontalAlignment="Center" 
                                         VerticalAlignment="Center" 
                                         Grid.Column="0" Grid.Row="2"
-                                        Cursor="Hand"/>
-                                
+                                        Cursor="Hand">
+                                    <Border.ToolTip>
+                                        <ToolTip Content="Комментарий"/>
+                                    </Border.ToolTip>
+                                </Border>
+
                                 <Border x:Name="Rectangle"
                                         Background="Transparent"
                                         BorderBrush="White"
                                         HorizontalAlignment="Center" 
                                         VerticalAlignment="Center"
                                         BorderThickness="3" Grid.Column="1" Grid.Row="2"
-                                        Cursor="Hand" RenderTransformOrigin="0.506,0.529" Height="38" Width="80"/>
+                                        Cursor="Hand" RenderTransformOrigin="0.506,0.529" Height="38" Width="80">
+                                    <Border.ToolTip>
+                                        <ToolTip Content="Активное состояние"/>
+                                    </Border.ToolTip>
+                                </Border>
 
                                 <!-- Прямоугольник -->
                                 <Border x:Name="SuperEllipse"
@@ -370,8 +392,12 @@
                                         BorderThickness="3"
                                         CornerRadius="25" Grid.Column="0" Grid.Row="3" 
                                         Cursor="Hand" RenderTransformOrigin="0.506,0.529" Height="38" Width="80" 
-                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                
+                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Border.ToolTip>
+                                        <ToolTip Content="Активное состояние"/>
+                                    </Border.ToolTip>
+                                </Border>
+
                                 <Border x:Name="ResizableSquare"
                                         Width="50"
                                         Height="50"
@@ -381,6 +407,9 @@
                                         VerticalAlignment="Center"
                                         CornerRadius="0" Grid.Column="1" Grid.Row="3"
                                         Cursor="Hand" RenderTransformOrigin="0.557,0.5">
+                                    <Border.ToolTip>
+                                        <ToolTip Content="Принятие/узел решения"/>
+                                    </Border.ToolTip>
                                     <Border.RenderTransform>
                                         <TransformGroup>
                                             <ScaleTransform/>
@@ -396,12 +425,17 @@
                                         BorderThickness="3" HorizontalAlignment="Center" 
                                         VerticalAlignment="Center"
                                         Grid.ColumnSpan="2" Grid.Row="4"
-                                        Cursor="Hand" Height="6" Width="150"/>
+                                        Cursor="Hand" Height="6" Width="150">
+                                    <Border.ToolTip>
+                                        <ToolTip Content="Разветвитель/узел разделения"/>
+                                    </Border.ToolTip>
+                                </Border>
 
                             </Grid>
                         </Canvas>
                     </ScrollViewer>
                 </Grid>
+
 
             </Border>
             <!-- Прямоугольная панель снизу -->
@@ -435,7 +469,8 @@
                                 Background="#FF343434"
                                 BorderBrush="Transparent"
                                 FocusVisualStyle="{x:Null}" 
-                                HorizontalAlignment="Center">
+                                HorizontalAlignment="Center"
+                                ToolTip="Выделение и перемещение элементов">
                             <Image Source="/Icons/Cursor.png"
                                    Width="30" 
                                    Height="30"
@@ -451,7 +486,8 @@
                                 Grid.Column="2"
                                 Background="#FF343434"
                                 BorderBrush="Transparent"
-                                FocusVisualStyle="{x:Null}">
+                                FocusVisualStyle="{x:Null}"
+                                ToolTip="Перо - рисование стрелок">
                             <Image Source="/Icons/Pencil.png"
                                    Width="30" 
                                    Height="30"
@@ -467,7 +503,8 @@
                                 Grid.Column="3"
                                 Background="#FF343434"
                                 BorderBrush="Transparent"
-                                FocusVisualStyle="{x:Null}">
+                                FocusVisualStyle="{x:Null}"
+                                ToolTip="">
                             <Image Source="/Icons/Rectangle.png"
                                    Width="30" 
                                    Height="30"
@@ -484,7 +521,8 @@
                                 Background="#FF343434"
                                 BorderBrush="Transparent"
                                 FocusVisualStyle="{x:Null}"
-                                Click="TextButton_Click">
+                                Click="TextButton_Click"
+                                ToolTip="Текст">
                             <Image Source="/Icons/Writing.png"
                                 Width="30" 
                                 Height="30"
@@ -500,7 +538,8 @@
                             Grid.Column="5"
                             Background="#FF343434"
                             BorderBrush="Transparent"
-                            FocusVisualStyle="{x:Null}">
+                            FocusVisualStyle="{x:Null}"
+                            ToolTip="Комментарий">
                             <Image Source="/Icons/Com.png"
                                 Width="30" 
                                 Height="30"
@@ -516,7 +555,8 @@
                             Grid.Column="6"
                             Background="#FF343434"
                             BorderBrush="Transparent"
-                            FocusVisualStyle="{x:Null}">
+                            FocusVisualStyle="{x:Null}"
+                            ToolTip="">
                             <Image Source="/Icons/dashboard.png"
                                 Width="30" 
                                 Height="30"
