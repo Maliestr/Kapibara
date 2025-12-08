@@ -21,6 +21,8 @@ namespace Graphic_Editor
         private FrameworkElement frameworkElement;
         private bool handlesVisible;
         private double startChildWidth, startChildHeight; // Начальные размеры внутреннего элемента
+        private Func<Point, Point> snapToGridFunction; // Функция привязки к сетке
+        private bool isSnapToGridEnabled; // Флаг включения привязки к сетке
 
         private enum ResizeDirection
         {
@@ -35,13 +37,22 @@ namespace Graphic_Editor
             BottomRight
         }
 
-        public ResizableElement(UIElement element, Canvas canvas)
+        public ResizableElement(UIElement element, Canvas canvas, Func<Point, Point> snapToGridFunction = null, bool isSnapToGridEnabled = false)
         {
             this.element = element;
             this.canvas = canvas;
+            this.snapToGridFunction = snapToGridFunction;
+            this.isSnapToGridEnabled = isSnapToGridEnabled;
             frameworkElement = element as FrameworkElement;
             AttachElementEvents();
             InitializeResizeHandles();
+        }
+        
+        // Метод для обновления функции привязки к сетке
+        public void UpdateSnapToGrid(Func<Point, Point> snapToGridFunction, bool isSnapToGridEnabled)
+        {
+            this.snapToGridFunction = snapToGridFunction;
+            this.isSnapToGridEnabled = isSnapToGridEnabled;
         }
 
         private void AttachElementEvents()
@@ -448,6 +459,25 @@ namespace Graphic_Editor
             // Гарантируем минимальный размер
             newWidth = Math.Max(minSize, newWidth);
             newHeight = Math.Max(minSize, newHeight);
+            
+            // Применяем привязку к сетке если включена
+            if (isSnapToGridEnabled && snapToGridFunction != null)
+            {
+                // Привязываем позицию к сетке
+                Point snappedPosition = snapToGridFunction(new Point(newLeft, newTop));
+                newLeft = snappedPosition.X;
+                newTop = snappedPosition.Y;
+                
+                // Привязываем размеры к сетке (округление до ближайшего размера сетки)
+                // Используем ту же логику, что и для позиции
+                Point snappedSize = snapToGridFunction(new Point(newWidth, newHeight));
+                newWidth = snappedSize.X;
+                newHeight = snappedSize.Y;
+                
+                // Гарантируем минимальный размер после привязки
+                newWidth = Math.Max(minSize, newWidth);
+                newHeight = Math.Max(minSize, newHeight);
+            }
 
             ApplyNewSize(newWidth, newHeight, newLeft, newTop);
         }
