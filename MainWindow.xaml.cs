@@ -674,6 +674,11 @@ namespace Graphic_Editor
                     panel.Visibility = Visibility.Collapsed;
                 }
             }
+            // Скрываем панель ширины обводки
+            if (StrokeWidthPanel != null)
+            {
+                StrokeWidthPanel.Visibility = Visibility.Collapsed;
+            }
         }
 
         // Показать все панели
@@ -686,12 +691,22 @@ namespace Graphic_Editor
                 DimensionsPanel.Visibility = Visibility.Visible;
                 FillPanel.Visibility = Visibility.Visible;
                 StrokePanel.Visibility = Visibility.Visible;
+                // Показываем панель ширины обводки только если элемент НЕ в нотации
+                if (!IsElementInNotation(selectedElement))
+                {
+                    StrokeWidthPanel.Visibility = Visibility.Visible;
+                }
             }
             else if (selectedElement is TextBlock textBlock)
             {
                 DimensionsPanel.Visibility = Visibility.Visible;
                 StrokePanel.Visibility = Visibility.Visible;
                 TextPanel.Visibility = Visibility.Visible;
+                // Показываем панель ширины обводки только если элемент НЕ в нотации
+                if (!IsElementInNotation(selectedElement))
+                {
+                    StrokeWidthPanel.Visibility = Visibility.Visible;
+                }
             }
 
             //foreach (var panel in panels)
@@ -1333,6 +1348,13 @@ namespace Graphic_Editor
         // Метод для показа/скрытия панели толщины обводки
         private void UpdateStrokeWidthPanelVisibility() //Интересно
         {
+            // Если все панели скрыты - не показываем панель ширины обводки
+            if (TogglePanelsButton.IsChecked == true)
+            {
+                StrokeWidthPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
             if (selectedElement != null)
             {
                 // Показываем панель толщины только для элементов, у которых есть обводка
@@ -1622,8 +1644,11 @@ namespace Graphic_Editor
                 // Обновляем комбо-боксы в соответствии с цветами фигуры
                 UpdateColorComboBoxesFromShape(element);
 
-                // ПОКАЗЫВАЕМ ПАНЕЛЬ ТОЛЩИНЫ ОБВОДКИ
-                UpdateStrokeWidthPanelVisibility();
+                // ПОКАЗЫВАЕМ ПАНЕЛЬ ТОЛЩИНЫ ОБВОДКИ только если элемент НЕ в нотации
+                if (!IsElementInNotation(element))
+                {
+                    UpdateStrokeWidthPanelVisibility();
+                }
                 // Обновляем панель текста, если элемент является текстовым
                 UpdateTextPanelForSelectedElement(element);
 
@@ -1638,6 +1663,7 @@ namespace Graphic_Editor
                 DimensionsPanel.Visibility = Visibility.Visible;
                 StrokePanel.Visibility = Visibility.Visible;
                 TextPanel.Visibility = Visibility.Visible;
+                StrokeWidthPanel.Visibility = Visibility.Visible;
             }
         }
 
