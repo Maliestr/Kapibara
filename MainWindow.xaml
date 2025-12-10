@@ -276,15 +276,7 @@
                                                 BorderThickness="1"
                                                 CornerRadius="6"
                                                 Padding="4">
-                                            <!-- Тень для выпадающего меню -->
-                                            <Border.Effect>
-                                                <DropShadowEffect ShadowDepth="2" 
-                                                                  Direction="315" 
-                                                                  Color="Black" 
-                                                                  Opacity="0.3" 
-                                                                  BlurRadius="4"/>
-                                            </Border.Effect>
-                                            
+
                                             <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
                                         </Border>
                                     </Popup>
