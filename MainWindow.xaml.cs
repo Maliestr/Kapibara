@@ -59,6 +59,9 @@ namespace Graphic_Editor
         //Система автосохранения
         private AutoSave autoSave; //Система автоматического сохранения проекта
 
+        //Система масштабирования
+        private ZoomController zoomController; //Система масштабирования рабочего пространства
+
         //Система отмены/повтора
         private enum UndoActionType
         {
@@ -138,6 +141,11 @@ namespace Graphic_Editor
         private Point arrowOffset;
         private Point arrowDragStartPoint;
 
+        // Система панорамирования (перемещения по рабочей области)
+        private bool isPanning = false; // Идёт ли процесс панорамирования
+        private Point panStartPoint; // Начальная точка панорамирования
+        private Point panStartOffset; // Начальное смещение при начале панорамирования
+
         private bool isCursor = true;
 
         public class TextFormatting //Класс для форматирования текста
@@ -187,6 +195,8 @@ namespace Graphic_Editor
                                                 //Ctrl+G - переключение сетки
                                                 //Ctrl+S - привязка к сетке
                                                 //F12/Ctrl+H - скрытие панелей
+                                                //Space - панорамирование
+            this.KeyUp += MainWindow_KeyUp; // Обработка отпускания клавиш
 
             // Добавляем обработчик клика по Canvas для сброса выделения
             MainCanvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
@@ -206,7 +216,7 @@ namespace Graphic_Editor
 
             // Инициализация системы автосохранения (интервал 60 секунд)
             autoSave = new AutoSave(MainCanvas, intervalSeconds: 60, enabled: true);
-
+            
             // Обработчик закрытия окна для очистки ресурсов
             this.Closing += MainWindow_Closing;
         }
@@ -290,12 +300,15 @@ namespace Graphic_Editor
                 IsHitTestVisible = false // Сетка не должна мешать взаимодействию
             };
 
-            // Добавляем сетку на Canvas, но скрываем
-            MainCanvas.Children.Add(gridPath);
+            // Устанавливаем минимальный Z-index, чтобы сетка всегда была на заднем плане
+            Canvas.SetZIndex(gridPath, int.MinValue);
+
+            // Добавляем сетку в начало коллекции, чтобы она была на заднем плане
+            MainCanvas.Children.Insert(0, gridPath);
             gridPath.Visibility = Visibility.Collapsed;
         }
 
-        // Создание сетки
+        // Создание безграничной сетки с учетом масштаба и смещения
         private void CreateGrid()
         {
             if (MainCanvas.ActualWidth == 0 || MainCanvas.ActualHeight == 0)
@@ -303,20 +316,64 @@ namespace Graphic_Editor
 
             var geometryGroup = new GeometryGroup();
 
-            // Вертикальные линии
-            for (double x = 0; x < MainCanvas.ActualWidth; x += GridSize)
+            // Вычисляем видимую область с учетом масштаба и смещения
+            double visibleWidth = MainCanvas.ActualWidth;
+            double visibleHeight = MainCanvas.ActualHeight;
+            
+            // Если есть контроллер масштабирования, учитываем его
+            double offsetX = 0;
+            double offsetY = 0;
+            double scale = 1.0;
+            
+            if (zoomController != null)
             {
-                geometryGroup.Children.Add(new LineGeometry(
-                    new Point(x, 0),
-                    new Point(x, MainCanvas.ActualHeight)));
+                var offset = zoomController.GetOffset();
+                offsetX = offset.X;
+                offsetY = offset.Y;
+                scale = zoomController.CurrentZoom;
             }
 
-            // Горизонтальные линии
-            for (double y = 0; y < MainCanvas.ActualHeight; y += GridSize)
+            // Вычисляем реальные координаты видимой области на Canvas
+            // Учитываем, что при масштабировании видимая область меняется
+            double startX = -offsetX / scale;
+            double startY = -offsetY / scale;
+            double endX = (visibleWidth - offsetX) / scale;
+            double endY = (visibleHeight - offsetY) / scale;
+
+            // Добавляем запас для плавного отображения при перемещении
+            double margin = Math.Max(visibleWidth, visibleHeight) / scale;
+            startX -= margin;
+            startY -= margin;
+            endX += margin;
+            endY += margin;
+
+            // Округляем до ближайших линий сетки
+            double gridStartX = Math.Floor(startX / GridSize) * GridSize;
+            double gridStartY = Math.Floor(startY / GridSize) * GridSize;
+            double gridEndX = Math.Ceiling(endX / GridSize) * GridSize;
+            double gridEndY = Math.Ceiling(endY / GridSize) * GridSize;
+
+            // Ограничиваем сетку только областью Canvas (y >= 0, чтобы не перекрывать заголовок)
+            // Также ограничиваем по ширине и высоте Canvas
+            gridStartY = Math.Max(0, gridStartY); // Не рисуем сетку выше y=0
+            gridEndY = Math.Min(MainCanvas.ActualHeight, gridEndY); // Не рисуем сетку ниже высоты Canvas
+            gridStartX = Math.Max(0, gridStartX); // Не рисуем сетку левее x=0
+            gridEndX = Math.Min(MainCanvas.ActualWidth, gridEndX); // Не рисуем сетку правее ширины Canvas
+
+            // Вертикальные линии (только в пределах Canvas)
+            for (double x = gridStartX; x <= gridEndX; x += GridSize)
             {
                 geometryGroup.Children.Add(new LineGeometry(
-                    new Point(0, y),
-                    new Point(MainCanvas.ActualWidth, y)));
+                    new Point(x, gridStartY),
+                    new Point(x, gridEndY)));
+            }
+
+            // Горизонтальные линии (только в пределах Canvas)
+            for (double y = gridStartY; y <= gridEndY; y += GridSize)
+            {
+                geometryGroup.Children.Add(new LineGeometry(
+                    new Point(gridStartX, y),
+                    new Point(gridEndX, y)));
             }
 
             gridPath.Data = geometryGroup;
@@ -326,12 +383,14 @@ namespace Graphic_Editor
         private void GridToggleMenuItem_Click(object sender, RoutedEventArgs e)
         {
             ToggleGridVisibility();
+            UpdateWindowTitle(); // Сохраняем заголовок окна
         }
 
         // Обработчик переключения привязки к сетке
         private void SnapToGridMenuItem_Click(object sender, RoutedEventArgs e)
         {
             ToggleSnapToGrid();
+            UpdateWindowTitle(); // Сохраняем заголовок окна
         }
 
         // Метод переключения сетки
@@ -439,9 +498,65 @@ namespace Graphic_Editor
         // Обновляем сетку когда Canvas полностью загружен и проинициализирован
         private void MainCanvas_Loaded(object sender, RoutedEventArgs e)
         {
+            // Инициализация системы масштабирования
+            if (zoomController == null)
+            {
+                zoomController = new ZoomController(MainCanvas);
+                
+                // Подписываемся на изменение масштаба для обновления сетки
+                zoomController.ZoomChanged += (newZoom, oldZoom) =>
+                {
+                    if (isGridEnabled && gridPath != null)
+                    {
+                        CreateGrid();
+                    }
+                };
+            }
+
             if (isGridEnabled)
             {
                 CreateGrid();
+            }
+
+            // Добавляем обработчик колесика мыши для масштабирования
+            MainCanvas.PreviewMouseWheel += MainCanvas_PreviewMouseWheel;
+            
+            // Добавляем обработчики для панорамирования
+            MainCanvas.MouseMove += MainCanvas_MouseMove_Pan;
+            MainCanvas.MouseRightButtonUp += MainCanvas_MouseRightButtonUp;
+            MainCanvas.MouseLeave += MainCanvas_MouseLeave;
+            
+            // Обновляем сетку при изменении размера Canvas
+            MainCanvas.SizeChanged += (s, args) =>
+            {
+                if (isGridEnabled && gridPath != null)
+                {
+                    CreateGrid();
+                }
+            };
+        }
+
+        // Обработчик колесика мыши для масштабирования
+        private void MainCanvas_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (zoomController == null) return;
+
+            // Проверяем, что зажата клавиша Ctrl (стандартное поведение для масштабирования)
+            if (Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                e.Handled = true;
+                Point mousePosition = e.GetPosition(MainCanvas);
+                
+                if (e.Delta > 0)
+                {
+                    // Прокрутка вверх - увеличиваем масштаб
+                    zoomController.ZoomInToPoint(mousePosition);
+                }
+                else
+                {
+                    // Прокрутка вниз - уменьшаем масштаб
+                    zoomController.ZoomOutToPoint(mousePosition);
+                }
             }
         }
 
@@ -454,6 +569,14 @@ namespace Graphic_Editor
                 CompleteArrow();
                 e.Handled = true;
                 return; // return чтобы не мешать другим обработкам
+            }
+            // Обработка пробела для панорамирования (курсор меняется на руку)
+            else if (e.Key == Key.Space && !isDragging && !isSelecting && !isArrowModeActive && !isTextModeActive)
+            {
+                if (zoomController != null)
+                {
+                    MainCanvas.Cursor = Cursors.Hand;
+                }
             }
             else if (e.Key == Key.G && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
@@ -475,6 +598,28 @@ namespace Graphic_Editor
                 // Ctrl+H - альтернативная горячая клавиша
                 TogglePanelsVisibility();
                 e.Handled = true;
+            }
+        }
+
+        // Обработчик отпускания клавиш
+        private void MainWindow_KeyUp(object sender, KeyEventArgs e)
+        {
+            // Завершаем панорамирование при отпускании пробела
+            if (e.Key == Key.Space && isPanning)
+            {
+                isPanning = false;
+                MainCanvas.Cursor = Cursors.Arrow;
+                
+                // Обновляем сетку после панорамирования
+                if (isGridEnabled && gridPath != null)
+                {
+                    CreateGrid();
+                }
+            }
+            // Возвращаем курсор в нормальное состояние при отпускании пробела
+            else if (e.Key == Key.Space && !isDragging && !isSelecting && !isArrowModeActive && !isTextModeActive)
+            {
+                MainCanvas.Cursor = Cursors.Arrow;
             }
         }
 
@@ -995,17 +1140,32 @@ namespace Graphic_Editor
         // Меню "Вид"
         private void ZoomIn_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Увеличить");
+            if (zoomController != null)
+            {
+                // Увеличиваем масштаб относительно центра Canvas
+                zoomController.ZoomInToCenter();
+            }
+            UpdateWindowTitle(); // Сохраняем заголовок окна
         }
 
         private void ZoomOut_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Уменьшить");
+            if (zoomController != null)
+            {
+                // Уменьшаем масштаб относительно центра Canvas
+                zoomController.ZoomOutToCenter();
+            }
+            UpdateWindowTitle(); // Сохраняем заголовок окна
         }
 
         private void ResetZoom_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Сбросить масштаб");
+            if (zoomController != null)
+            {
+                // Сбрасываем масштаб и смещение
+                zoomController.Reset();
+            }
+            UpdateWindowTitle(); // Сохраняем заголовок окна
         }
 
         // Меню "Правка" - Обновленные
@@ -4147,12 +4307,14 @@ namespace Graphic_Editor
         private void GridToggleMenuItem_Click(object sender, RoutedEventArgs e)
         {
             ToggleGridVisibility();
+            UpdateWindowTitle(); // Сохраняем заголовок окна
         }
 
         // Обработчик переключения привязки к сетке
         private void SnapToGridMenuItem_Click(object sender, RoutedEventArgs e)
         {
             ToggleSnapToGrid();
+            UpdateWindowTitle(); // Сохраняем заголовок окна
         }
 
         // Метод переключения сетки
@@ -5546,6 +5708,119 @@ namespace Graphic_Editor
                 // Завершаем рисование стрелки по правой кнопке
                 CompleteArrow();
                 e.Handled = true;
+                return;
+            }
+
+            // Начинаем панорамирование правой кнопкой мыши
+            if (zoomController != null && !isDragging && !isSelecting && !isArrowModeActive && !isTextModeActive)
+            {
+                isPanning = true;
+                panStartPoint = e.GetPosition(MainCanvas);
+                panStartOffset = zoomController.GetOffset();
+                MainCanvas.Cursor = Cursors.Hand;
+                MainCanvas.CaptureMouse();
+                e.Handled = true;
+            }
+        }
+
+        // Обработчик отпускания правой кнопки мыши (завершение панорамирования)
+        private void MainCanvas_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (isPanning)
+            {
+                isPanning = false;
+                MainCanvas.Cursor = Cursors.Arrow;
+                MainCanvas.ReleaseMouseCapture();
+                
+                // Обновляем сетку после панорамирования
+                if (isGridEnabled && gridPath != null)
+                {
+                    CreateGrid();
+                }
+                e.Handled = true;
+            }
+        }
+
+        // Обработчик движения мыши для панорамирования
+        private void MainCanvas_MouseMove_Pan(object sender, MouseEventArgs e)
+        {
+            // Панорамирование правой кнопкой мыши
+            if (isPanning && e.RightButton == MouseButtonState.Pressed && zoomController != null)
+            {
+                Point currentPoint = e.GetPosition(MainCanvas);
+                double deltaX = currentPoint.X - panStartPoint.X;
+                double deltaY = currentPoint.Y - panStartPoint.Y;
+
+                // Обновляем смещение
+                double newOffsetX = panStartOffset.X + deltaX;
+                double newOffsetY = panStartOffset.Y + deltaY;
+                zoomController.SetOffset(newOffsetX, newOffsetY);
+
+                // Обновляем сетку в реальном времени
+                if (isGridEnabled && gridPath != null)
+                {
+                    CreateGrid();
+                }
+            }
+            // Панорамирование пробелом + левая кнопка мыши
+            else if (Keyboard.IsKeyDown(Key.Space) && e.LeftButton == MouseButtonState.Pressed && 
+                     zoomController != null && !isDragging && !isSelecting && !isArrowModeActive && !isTextModeActive)
+            {
+                if (!isPanning)
+                {
+                    // Начинаем панорамирование
+                    isPanning = true;
+                    panStartPoint = e.GetPosition(MainCanvas);
+                    panStartOffset = zoomController.GetOffset();
+                    MainCanvas.Cursor = Cursors.Hand;
+                }
+                else
+                {
+                    // Продолжаем панорамирование
+                    Point currentPoint = e.GetPosition(MainCanvas);
+                    double deltaX = currentPoint.X - panStartPoint.X;
+                    double deltaY = currentPoint.Y - panStartPoint.Y;
+
+                    // Обновляем смещение
+                    double newOffsetX = panStartOffset.X + deltaX;
+                    double newOffsetY = panStartOffset.Y + deltaY;
+                    zoomController.SetOffset(newOffsetX, newOffsetY);
+
+                    // Обновляем сетку в реальном времени
+                    if (isGridEnabled && gridPath != null)
+                    {
+                        CreateGrid();
+                    }
+                }
+            }
+            else if (isPanning && !Keyboard.IsKeyDown(Key.Space) && e.LeftButton != MouseButtonState.Pressed)
+            {
+                // Завершаем панорамирование пробелом
+                isPanning = false;
+                MainCanvas.Cursor = Cursors.Arrow;
+                
+                // Обновляем сетку после панорамирования
+                if (isGridEnabled && gridPath != null)
+                {
+                    CreateGrid();
+                }
+            }
+        }
+
+        // Обработчик выхода мыши за пределы Canvas (завершение панорамирования)
+        private void MainCanvas_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (isPanning)
+            {
+                isPanning = false;
+                MainCanvas.Cursor = Cursors.Arrow;
+                MainCanvas.ReleaseMouseCapture();
+                
+                // Обновляем сетку после панорамирования
+                if (isGridEnabled && gridPath != null)
+                {
+                    CreateGrid();
+                }
             }
         }
     }

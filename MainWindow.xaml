@@ -232,7 +232,9 @@
 
             <!-- Основной Canvas для всех элементов -->
             <Canvas x:Name="MainCanvas" Background="#252525" 
-                    Grid.Row="1" Grid.ColumnSpan="3" Loaded="MainCanvas_Loaded"/>
+                    Grid.Row="1" Grid.ColumnSpan="3" 
+                    ClipToBounds="True"
+                    Loaded="MainCanvas_Loaded"/>
 
             <Border x:Name="Titl" Grid.Column="0"
                     Width="270" Height="60"
