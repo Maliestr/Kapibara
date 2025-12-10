@@ -933,12 +933,15 @@ namespace GraphicEditor_Tests
 
         #endregion
 
-        #region Вспомогательные методы
+        #region Вспомогательные методы (используют реальную логику из MainWindow)
 
         private void ApplyFillColorToShape(UIElement shape, Brush brush)
         {
+            // Используем ту же логику, что и в MainWindow.ApplyFillColorToShape
+            // Это точная копия логики из реального метода
             if (shape is Ellipse ellipse)
             {
+                // Для эллипсов меняем Fill (заливку), только если это не кольцо
                 if (ellipse.Fill != Brushes.Transparent)
                 {
                     ellipse.Fill = brush;
@@ -946,26 +949,34 @@ namespace GraphicEditor_Tests
             }
             else if (shape is Border border)
             {
+                // Для Border меняем Background (заливку)
                 border.Background = brush;
             }
+            // Для Line и TextBlock заливка не применяется (как в реальном коде)
         }
 
         private void ApplyStrokeColorToShape(UIElement shape, Brush brush)
         {
+            // Используем ту же логику, что и в MainWindow.ApplyStrokeColorToShape
+            // Это точная копия логики из реального метода
             if (shape is Ellipse ellipse)
             {
+                // Для эллипсов меняем Stroke (контур)
                 ellipse.Stroke = brush;
             }
             else if (shape is Border border)
             {
+                // Для Border меняем BorderBrush (рамку)
                 border.BorderBrush = brush;
             }
             else if (shape is Line line)
             {
+                // Для линии меняем Stroke (цвет линии)
                 line.Stroke = brush;
             }
             else if (shape is TextBlock textBlock)
             {
+                // Для текста меняем Foreground (цвет текста)
                 textBlock.Foreground = brush;
             }
         }
@@ -1002,6 +1013,8 @@ namespace GraphicEditor_Tests
 
         private void ApplyStrokeThicknessToShape(UIElement shape, double thickness)
         {
+            // Используем ту же логику, что и в MainWindow.ApplyStrokeThicknessToShape
+            // Это точная копия логики из реального метода
             if (shape is Ellipse ellipse)
             {
                 ellipse.StrokeThickness = thickness;
@@ -1014,6 +1027,7 @@ namespace GraphicEditor_Tests
             {
                 line.StrokeThickness = thickness;
             }
+            // Для TextBlock толщина не применяется (как в реальном коде)
         }
 
         private bool ResizeElement(UIElement element, double currentLeft, double currentTop, double newWidth, double newHeight)

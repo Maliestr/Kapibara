@@ -1557,7 +1557,7 @@ namespace Graphic_Editor
         }
 
         // Вспомогательный метод для применения толщины обводки к конкретной фигуре
-        private void ApplyStrokeThicknessToShape(UIElement shape, double thickness)
+        internal void ApplyStrokeThicknessToShape(UIElement shape, double thickness)
         {
             UpdateStrokeThicknessInAllReferences(shape, thickness);
             if (shape is Ellipse ellipse)
@@ -4313,7 +4313,7 @@ namespace Graphic_Editor
         }
 
         // Вспомогательный метод для применения цвета заливки
-        private void ApplyFillColorToShape(UIElement shape, Brush brush)
+        internal void ApplyFillColorToShape(UIElement shape, Brush brush)
         {
             if (shape is Ellipse ellipse)
             {
@@ -5112,7 +5112,7 @@ namespace Graphic_Editor
         }
 
         // Вспомогательный метод для применения цвета обводки к конкретной фигуре
-        private void ApplyStrokeColorToShape(UIElement shape, Brush brush)
+        internal void ApplyStrokeColorToShape(UIElement shape, Brush brush)
         {
             if (shape is Ellipse ellipse)
             {

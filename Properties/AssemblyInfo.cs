@@ -50,3 +50,6 @@ using System.Windows;
 //
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
+
+// Разрешаем тестовому проекту доступ к internal методам
+[assembly: InternalsVisibleTo("GraphicEditor_Tests")]
