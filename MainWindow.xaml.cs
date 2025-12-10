@@ -175,9 +175,21 @@ namespace Graphic_Editor
             public Brush OriginalArrowheadStroke { get; set; }
         }
 
-        public MainWindow()
+        private string fileToOpenOnLoad = null; // Путь к файлу для открытия при загрузке
+
+        public MainWindow() : this(null)
+        {
+        }
+
+        public MainWindow(string filePath)
         {
             InitializeComponent(); //Инициализация WPF компонентов
+
+            // Сохраняем путь к файлу для открытия после загрузки окна
+            if (!string.IsNullOrEmpty(filePath) && System.IO.File.Exists(filePath))
+            {
+                fileToOpenOnLoad = filePath;
+            }
 
             MakeAllShapesDraggable(); //Делает фигуры в панели инструментов перетаскиваемыми
             //ClearColorComboBoxesOnStartup(); // Очищаем блоки свойств заливки и обводки при запуске
@@ -534,6 +546,30 @@ namespace Graphic_Editor
                     CreateGrid();
                 }
             };
+
+            // Открываем файл, если он был передан через командную строку
+            if (!string.IsNullOrEmpty(fileToOpenOnLoad))
+            {
+                // Используем Dispatcher для открытия файла после полной загрузки окна
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    try
+                    {
+                        LoadFromFile(fileToOpenOnLoad);
+                        currentFilePath = fileToOpenOnLoad;
+                        UpdateWindowTitle();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Ошибка при открытии файла: {ex.Message}", "Ошибка", 
+                            MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                    finally
+                    {
+                        fileToOpenOnLoad = null; // Очищаем после использования
+                    }
+                }), System.Windows.Threading.DispatcherPriority.Loaded);
+            }
         }
 
         // Обработчик колесика мыши для масштабирования

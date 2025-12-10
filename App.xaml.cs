@@ -13,5 +13,18 @@ namespace Graphic_Editor
     /// </summary>
     public partial class App : Application
     {
+        private void App_Startup(object sender, StartupEventArgs e)
+        {
+            // Получаем аргументы командной строки
+            string filePath = null;
+            if (e.Args != null && e.Args.Length > 0)
+            {
+                filePath = e.Args[0];
+            }
+
+            // Создаем главное окно и передаем путь к файлу, если он был передан
+            MainWindow mainWindow = new MainWindow(filePath);
+            mainWindow.Show();
+        }
     }
 }
