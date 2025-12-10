@@ -61,6 +61,9 @@ namespace Graphic_Editor
 
         //Система масштабирования
         private ZoomController zoomController; //Система масштабирования рабочего пространства
+        
+        //Система панорамирования
+        private PanController panController; //Система перемещения по рабочей области
 
         //Система отмены/повтора
         private enum UndoActionType
@@ -140,11 +143,6 @@ namespace Graphic_Editor
         private ArrowContainer draggedArrowContainer;
         private Point arrowOffset;
         private Point arrowDragStartPoint;
-
-        // Система панорамирования (перемещения по рабочей области)
-        private bool isPanning = false; // Идёт ли процесс панорамирования
-        private Point panStartPoint; // Начальная точка панорамирования
-        private Point panStartOffset; // Начальное смещение при начале панорамирования
 
         private bool isCursor = true;
 
@@ -533,10 +531,20 @@ namespace Graphic_Editor
             // Добавляем обработчик колесика мыши для масштабирования
             MainCanvas.PreviewMouseWheel += MainCanvas_PreviewMouseWheel;
             
-            // Добавляем обработчики для панорамирования
-            MainCanvas.MouseMove += MainCanvas_MouseMove_Pan;
-            MainCanvas.MouseRightButtonUp += MainCanvas_MouseRightButtonUp;
-            MainCanvas.MouseLeave += MainCanvas_MouseLeave;
+            // Инициализация системы панорамирования
+            if (panController == null && zoomController != null)
+            {
+                panController = new PanController(MainCanvas, zoomController);
+                panController.CanStartPanning = () => !isDragging && !isSelecting && !isArrowModeActive && !isTextModeActive;
+                panController.OnPanEnded += () =>
+                {
+                    if (isGridEnabled && gridPath != null)
+                    {
+                        CreateGrid();
+                    }
+                };
+                panController.Initialize();
+            }
             
             // Обновляем сетку при изменении размера Canvas
             MainCanvas.SizeChanged += (s, args) =>
@@ -607,11 +615,11 @@ namespace Graphic_Editor
                 return; // return чтобы не мешать другим обработкам
             }
             // Обработка пробела для панорамирования (курсор меняется на руку)
-            else if (e.Key == Key.Space && !isDragging && !isSelecting && !isArrowModeActive && !isTextModeActive)
+            else if (e.Key == Key.Space)
             {
-                if (zoomController != null)
+                if (panController != null)
                 {
-                    MainCanvas.Cursor = Cursors.Hand;
+                    panController.HandleSpaceKeyDown();
                 }
             }
             else if (e.Key == Key.G && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
@@ -640,22 +648,13 @@ namespace Graphic_Editor
         // Обработчик отпускания клавиш
         private void MainWindow_KeyUp(object sender, KeyEventArgs e)
         {
-            // Завершаем панорамирование при отпускании пробела
-            if (e.Key == Key.Space && isPanning)
+            // Обработка отпускания пробела для панорамирования
+            if (e.Key == Key.Space)
             {
-                isPanning = false;
-                MainCanvas.Cursor = Cursors.Arrow;
-                
-                // Обновляем сетку после панорамирования
-                if (isGridEnabled && gridPath != null)
+                if (panController != null)
                 {
-                    CreateGrid();
+                    panController.HandleSpaceKeyUp();
                 }
-            }
-            // Возвращаем курсор в нормальное состояние при отпускании пробела
-            else if (e.Key == Key.Space && !isDragging && !isSelecting && !isArrowModeActive && !isTextModeActive)
-            {
-                MainCanvas.Cursor = Cursors.Arrow;
             }
         }
 
@@ -5748,114 +5747,12 @@ namespace Graphic_Editor
             }
 
             // Начинаем панорамирование правой кнопкой мыши
-            if (zoomController != null && !isDragging && !isSelecting && !isArrowModeActive && !isTextModeActive)
+            if (panController != null)
             {
-                isPanning = true;
-                panStartPoint = e.GetPosition(MainCanvas);
-                panStartOffset = zoomController.GetOffset();
-                MainCanvas.Cursor = Cursors.Hand;
-                MainCanvas.CaptureMouse();
-                e.Handled = true;
-            }
-        }
-
-        // Обработчик отпускания правой кнопки мыши (завершение панорамирования)
-        private void MainCanvas_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (isPanning)
-            {
-                isPanning = false;
-                MainCanvas.Cursor = Cursors.Arrow;
-                MainCanvas.ReleaseMouseCapture();
-                
-                // Обновляем сетку после панорамирования
-                if (isGridEnabled && gridPath != null)
+                Point mousePosition = e.GetPosition(MainCanvas);
+                if (panController.StartPanningRightButton(mousePosition))
                 {
-                    CreateGrid();
-                }
-                e.Handled = true;
-            }
-        }
-
-        // Обработчик движения мыши для панорамирования
-        private void MainCanvas_MouseMove_Pan(object sender, MouseEventArgs e)
-        {
-            // Панорамирование правой кнопкой мыши
-            if (isPanning && e.RightButton == MouseButtonState.Pressed && zoomController != null)
-            {
-                Point currentPoint = e.GetPosition(MainCanvas);
-                double deltaX = currentPoint.X - panStartPoint.X;
-                double deltaY = currentPoint.Y - panStartPoint.Y;
-
-                // Обновляем смещение
-                double newOffsetX = panStartOffset.X + deltaX;
-                double newOffsetY = panStartOffset.Y + deltaY;
-                zoomController.SetOffset(newOffsetX, newOffsetY);
-
-                // Обновляем сетку в реальном времени
-                if (isGridEnabled && gridPath != null)
-                {
-                    CreateGrid();
-                }
-            }
-            // Панорамирование пробелом + левая кнопка мыши
-            else if (Keyboard.IsKeyDown(Key.Space) && e.LeftButton == MouseButtonState.Pressed && 
-                     zoomController != null && !isDragging && !isSelecting && !isArrowModeActive && !isTextModeActive)
-            {
-                if (!isPanning)
-                {
-                    // Начинаем панорамирование
-                    isPanning = true;
-                    panStartPoint = e.GetPosition(MainCanvas);
-                    panStartOffset = zoomController.GetOffset();
-                    MainCanvas.Cursor = Cursors.Hand;
-                }
-                else
-                {
-                    // Продолжаем панорамирование
-                    Point currentPoint = e.GetPosition(MainCanvas);
-                    double deltaX = currentPoint.X - panStartPoint.X;
-                    double deltaY = currentPoint.Y - panStartPoint.Y;
-
-                    // Обновляем смещение
-                    double newOffsetX = panStartOffset.X + deltaX;
-                    double newOffsetY = panStartOffset.Y + deltaY;
-                    zoomController.SetOffset(newOffsetX, newOffsetY);
-
-                    // Обновляем сетку в реальном времени
-                    if (isGridEnabled && gridPath != null)
-                    {
-                        CreateGrid();
-                    }
-                }
-            }
-            else if (isPanning && !Keyboard.IsKeyDown(Key.Space) && e.LeftButton != MouseButtonState.Pressed)
-            {
-                // Завершаем панорамирование пробелом
-                isPanning = false;
-                MainCanvas.Cursor = Cursors.Arrow;
-                
-                // Обновляем сетку после панорамирования
-                if (isGridEnabled && gridPath != null)
-                {
-                    CreateGrid();
-                }
-            }
-        }
-
-        // Обработчик выхода мыши за пределы Canvas (завершение панорамирования)
-        private void MainCanvas_MouseLeave(object sender, MouseEventArgs e)
-        {
-            if (isPanning)
-            {
-                isPanning = false;
-                MainCanvas.Cursor = Cursors.Arrow;
-                MainCanvas.ReleaseMouseCapture();
-                
-                // Обновляем сетку после панорамирования
-                if (isGridEnabled && gridPath != null)
-                {
-                    CreateGrid();
+                    e.Handled = true;
                 }
             }
         }
