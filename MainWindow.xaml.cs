@@ -5173,26 +5173,6 @@ namespace Graphic_Editor
                 Padding = new Thickness(5)
             };
 
-            // Пункт "Изменить цвет"
-            MenuItem colorMenuItem = new MenuItem
-            {
-                Header = "Изменить цвет",
-                Icon = new TextBlock { Text = "🎨", FontSize = 14 }
-            };
-            colorMenuItem.Click += (s, e) => ChangeArrowColor(arrowContainer);
-            contextMenu.Items.Add(colorMenuItem);
-
-            // Пункт "Изменить толщину"
-            MenuItem thicknessMenuItem = new MenuItem
-            {
-                Header = "Изменить толщину",
-                Icon = new TextBlock { Text = "📏", FontSize = 14 }
-            };
-            thicknessMenuItem.Click += (s, e) => ChangeArrowThickness(arrowContainer);
-            contextMenu.Items.Add(thicknessMenuItem);
-
-            contextMenu.Items.Add(new Separator());
-
             // Пункт "Удалить"
             MenuItem deleteMenuItem = new MenuItem
             {
@@ -5300,25 +5280,6 @@ namespace Graphic_Editor
             cancelButton.Click += (s, e) => dialog.DialogResult = false;
 
             dialog.ShowDialog();
-        }
-
-        // Изменение толщины стрелки
-        private void ChangeArrowThickness(ArrowContainer arrowContainer)
-        {
-            var inputDialog = new InputDialog("Толщина стрелки", "Введите толщину:", arrowContainer.Line.StrokeThickness.ToString());
-            if (inputDialog.ShowDialog() == true)
-            {
-                if (double.TryParse(inputDialog.Answer, out double thickness) && thickness > 0)
-                {
-                    arrowContainer.Line.StrokeThickness = thickness;
-                    arrowContainer.OriginalThickness = thickness;
-
-                    if (selectedArrowContainer == arrowContainer)
-                    {
-                        ApplyArrowSelectionVisual(arrowContainer);
-                    }
-                }
-            }
         }
 
         // Удаление стрелки
