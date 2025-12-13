@@ -2793,23 +2793,6 @@ namespace Graphic_Editor
             }
         }
 
-        // Метод для сброса комбо-боксов цветов
-        private void ResetColorComboBoxes()
-        {
-            if (FillColorComboBox != null)
-                FillColorComboBox.SelectedIndex = -1;
-
-            if (StrokeColorComboBox != null)
-                StrokeColorComboBox.SelectedIndex = -1;
-
-            // Сбрасываем превью цветов к значениям по умолчанию
-            if (FillColorPreview != null)
-                FillColorPreview.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFC44141"));
-
-            if (StrokeColorPreview != null)
-                StrokeColorPreview.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF000000"));
-        }
-
         private void DeselectElement(UIElement element)
         {
             if (element == null) return;
@@ -2986,30 +2969,6 @@ namespace Graphic_Editor
             if (selectedShape != null && !selectionManager.IsElementSelected(selectedShape))
             {
                 ApplyFillColorToShape(selectedShape, newBrush);
-            }
-        }
-
-        // Удаление визуального выделения
-        private void RemoveSelectionVisual(UIElement element)
-        {
-            if (element is Ellipse ellipse)
-            {
-                ellipse.StrokeThickness -= 2;
-                ellipse.Opacity = 1.0;
-            }
-            else if (element is Border border)
-            {
-                border.BorderThickness = new Thickness(2);
-                border.Opacity = 1.0;
-            }
-            else if (element is Line line)
-            {
-                line.StrokeThickness -= 2;
-                line.Opacity = 1.0;
-            }
-            else if (element is TextBlock textBlock)
-            {
-                textBlock.Effect = null;
             }
         }
 
@@ -3320,76 +3279,6 @@ namespace Graphic_Editor
             return 0;
         }
 
-        private void CopySelectedElements()
-        {
-            var selectedElements = selectionManager?.SelectedElements?.ToList() ?? new List<UIElement>();
-            if (selectedElements.Count > 0)
-            {
-                // Сохраняем копии выделенных элементов
-                copiedElements = selectedElements.Select(CloneUIElement)
-                                               .Cast<UIElement>()
-                                               .ToList();
-            }
-        }
-
-        private void PasteElements()
-        {
-            if (copiedElements != null && copiedElements.Count > 0)
-            {
-                var newElements = new List<UIElement>();
-
-                foreach (var copiedElement in copiedElements)
-                {
-                    // Создаем копию со смещением
-                    UIElement newElement = CloneUIElement(copiedElement);
-
-                    // Смещаем новую копию на 20 пикселей
-                    double currentLeft = Canvas.GetLeft(newElement);
-                    double currentTop = Canvas.GetTop(newElement);
-
-                    double newLeft = currentLeft + 20;
-                    double newTop = currentTop + 20;
-                    
-                    // Применяем привязку к сетке если включена
-                    if (isSnapToGridEnabled)
-                    {
-                        Point snappedPoint = SnapToGrid(new Point(newLeft, newTop));
-                        newLeft = snappedPoint.X;
-                        newTop = snappedPoint.Y;
-                    }
-
-                    Canvas.SetLeft(newElement, newLeft);
-                    Canvas.SetTop(newElement, newTop);
-
-                    // Добавляем на холст
-                    MainCanvas.Children.Add(newElement);
-                    canvasElements.Add(newElement);
-                    MakeCanvasShapeDraggable(newElement);
-
-                    // Перемещаем на передний план
-                    if (newElement is FrameworkElement frameworkElement)
-                    {
-                        BringToFront(frameworkElement);
-                    }
-
-                    newElements.Add(newElement);
-
-                    // Сохраняем в стек отмены
-                    SaveToUndoStack(newElement);
-                }
-
-                // Выделяем вставленные элементы
-                ClearSelection();
-                foreach (var element in newElements)
-                {
-                    if (element is FrameworkElement frameworkElement)
-                    {
-                        SelectElement(frameworkElement);
-                    }
-                }
-            }
-        }
-
         // Добавляем поле для хранения скопированных элементов
         private List<UIElement> copiedElements = new List<UIElement>();
 
@@ -3577,15 +3466,6 @@ namespace Graphic_Editor
             selectionManager?.UpdateOriginalStrokeColor(shape, brush);
         }
 
-        // Метод для очистки комбо-боксов при запуске программы
-        private void ClearColorComboBoxesOnStartup()
-        {
-            FillColorComboBox.SelectedIndex = -1;
-            StrokeColorComboBox.SelectedIndex = -1;
-            FillColorPreview.Background = Brushes.Transparent;
-            StrokeColorPreview.Background = Brushes.Transparent;
-        }
-
         private void AnimateShapeAppearance(UIElement shape)
         {
             // Сохраняем оригинальную трансформацию перед анимацией
@@ -3609,6 +3489,7 @@ namespace Graphic_Editor
             transformGroup.Children[1].BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnimation);
             transformGroup.Children[1].BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnimation);
         }
+
         // Обработчик кнопки комментариев
         private void CommentButton_Click(object sender, RoutedEventArgs e)
         {
@@ -3813,6 +3694,7 @@ namespace Graphic_Editor
                 }));
             };
         }
+
         // Удаление комментария
         private void DeleteComment(Comment comment)
         {
@@ -3826,7 +3708,6 @@ namespace Graphic_Editor
             }
             comments.Remove(comment);
         }
-
 
         private void UpdateArrowPropertiesInPanels(ArrowContainer arrowContainer)
         {
