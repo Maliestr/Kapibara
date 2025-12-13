@@ -20,6 +20,9 @@ namespace Graphic_Editor
         private double startWidth, startHeight, startLeft, startTop;
         private FrameworkElement frameworkElement;
         private bool handlesVisible;
+        private double startChildWidth, startChildHeight; // Начальные размеры внутреннего элемента
+        private Func<Point, Point> snapToGridFunction; // Функция привязки к сетке
+        private bool isSnapToGridEnabled; // Флаг включения привязки к сетке
 
         private enum ResizeDirection
         {
@@ -34,13 +37,22 @@ namespace Graphic_Editor
             BottomRight
         }
 
-        public ResizableElement(UIElement element, Canvas canvas)
+        public ResizableElement(UIElement element, Canvas canvas, Func<Point, Point> snapToGridFunction = null, bool isSnapToGridEnabled = false)
         {
             this.element = element;
             this.canvas = canvas;
+            this.snapToGridFunction = snapToGridFunction;
+            this.isSnapToGridEnabled = isSnapToGridEnabled;
             frameworkElement = element as FrameworkElement;
             AttachElementEvents();
             InitializeResizeHandles();
+        }
+        
+        // Метод для обновления функции привязки к сетке
+        public void UpdateSnapToGrid(Func<Point, Point> snapToGridFunction, bool isSnapToGridEnabled)
+        {
+            this.snapToGridFunction = snapToGridFunction;
+            this.isSnapToGridEnabled = isSnapToGridEnabled;
         }
 
         private void AttachElementEvents()
@@ -327,6 +339,20 @@ namespace Graphic_Editor
                 if (double.IsNaN(startLeft)) startLeft = 0;
                 if (double.IsNaN(startTop)) startTop = 0;
 
+                // Сохраняем начальные размеры внутреннего элемента (если есть)
+                if (element is Border border && border.Child is FrameworkElement child)
+                {
+                    startChildWidth = child.Width;
+                    startChildHeight = child.Height;
+                    if (double.IsNaN(startChildWidth)) startChildWidth = child.ActualWidth;
+                    if (double.IsNaN(startChildHeight)) startChildHeight = child.ActualHeight;
+                }
+                else
+                {
+                    startChildWidth = 0;
+                    startChildHeight = 0;
+                }
+
                 resizeElement.CaptureMouse();
                 e.Handled = true;
 
@@ -379,18 +405,21 @@ namespace Graphic_Editor
 
                 case ResizeDirection.Left:
                     newWidth = Math.Max(minSize, startWidth - deltaX);
-                    newLeft = startLeft + deltaX;
+                    // Сохраняем правую сторону на месте: newLeft + newWidth = startLeft + startWidth
+                    newLeft = startLeft + startWidth - newWidth;
                     break;
 
                 case ResizeDirection.Top:
                     newHeight = Math.Max(minSize, startHeight - deltaY);
-                    newTop = startTop + deltaY;
+                    // Сохраняем нижнюю сторону на месте: newTop + newHeight = startTop + startHeight
+                    newTop = startTop + startHeight - newHeight;
                     break;
 
                 case ResizeDirection.TopRight:
                     newWidth = Math.Max(minSize, startWidth + deltaX);
                     newHeight = Math.Max(minSize, startHeight - deltaY);
-                    newTop = startTop + deltaY;
+                    // Сохраняем нижнюю левую точку на месте: newTop + newHeight = startTop + startHeight
+                    newTop = startTop + startHeight - newHeight;
                     break;
 
                 case ResizeDirection.BottomRight:
@@ -401,14 +430,16 @@ namespace Graphic_Editor
                 case ResizeDirection.TopLeft:
                     newWidth = Math.Max(minSize, startWidth - deltaX);
                     newHeight = Math.Max(minSize, startHeight - deltaY);
-                    newLeft = startLeft + deltaX;
-                    newTop = startTop + deltaY;
+                    // Сохраняем правую нижнюю точку на месте
+                    newLeft = startLeft + startWidth - newWidth;
+                    newTop = startTop + startHeight - newHeight;
                     break;
 
                 case ResizeDirection.BottomLeft:
                     newWidth = Math.Max(minSize, startWidth - deltaX);
                     newHeight = Math.Max(minSize, startHeight + deltaY);
-                    newLeft = startLeft + deltaX;
+                    // Сохраняем правую верхнюю точку на месте
+                    newLeft = startLeft + startWidth - newWidth;
                     break;
             }
 
@@ -428,6 +459,25 @@ namespace Graphic_Editor
             // Гарантируем минимальный размер
             newWidth = Math.Max(minSize, newWidth);
             newHeight = Math.Max(minSize, newHeight);
+            
+            // Применяем привязку к сетке если включена
+            if (isSnapToGridEnabled && snapToGridFunction != null)
+            {
+                // Привязываем позицию к сетке
+                Point snappedPosition = snapToGridFunction(new Point(newLeft, newTop));
+                newLeft = snappedPosition.X;
+                newTop = snappedPosition.Y;
+                
+                // Привязываем размеры к сетке (округление до ближайшего размера сетки)
+                // Используем ту же логику, что и для позиции
+                Point snappedSize = snapToGridFunction(new Point(newWidth, newHeight));
+                newWidth = snappedSize.X;
+                newHeight = snappedSize.Y;
+                
+                // Гарантируем минимальный размер после привязки
+                newWidth = Math.Max(minSize, newWidth);
+                newHeight = Math.Max(minSize, newHeight);
+            }
 
             ApplyNewSize(newWidth, newHeight, newLeft, newTop);
         }
@@ -446,6 +496,32 @@ namespace Graphic_Editor
                     if (textBlock.TextWrapping == TextWrapping.NoWrap)
                     {
                         textBlock.TextWrapping = TextWrapping.Wrap;
+                    }
+                }
+                else if (element is Border border)
+                {
+                    // Для Border устанавливаем размеры
+                    frameworkElement.Width = width;
+                    frameworkElement.Height = height;
+                    
+                    // Масштабируем внутренний элемент пропорционально
+                    if (border.Child is FrameworkElement child && startChildWidth > 0 && startChildHeight > 0 && startWidth > 0 && startHeight > 0)
+                    {
+                        double scaleX = width / startWidth;
+                        double scaleY = height / startHeight;
+                        
+                        double newChildWidth = startChildWidth * scaleX;
+                        double newChildHeight = startChildHeight * scaleY;
+                        
+                        child.Width = newChildWidth;
+                        child.Height = newChildHeight;
+                        
+                        // Обновляем CornerRadius для Border, если это круг (UmlInitialNode)
+                        if (border.CornerRadius.TopLeft > 0)
+                        {
+                            double newRadius = Math.Min(width, height) / 2;
+                            border.CornerRadius = new CornerRadius(newRadius);
+                        }
                     }
                 }
                 else

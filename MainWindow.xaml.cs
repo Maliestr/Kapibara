@@ -511,10 +511,6 @@ namespace Graphic_Editor
                 double elementWidth = GetElementWidth(element);
                 double elementHeight = GetElementHeight(element);
 
-                // Ограничиваем перемещение рабочей областью
-                double elementWidth = GetElementWidth(element);
-                double elementHeight = GetElementHeight(element);
-
                 double maxTop = MainCanvas.ActualHeight - elementHeight - WorkAreaBottom;
 
                 newLeft = Math.Max(0, Math.Min(newLeft, MainCanvas.ActualWidth - elementWidth));
@@ -3074,10 +3070,6 @@ namespace Graphic_Editor
                 {
                     double newLeft = currentPosition.X - (GetElementWidth(shapeCopy) / 2);
                     double newTop = currentPosition.Y - (GetElementHeight(shapeCopy) / 2);
-                    // Дополнительные ограничения для копии
-                    double elementWidth = GetElementWidth(shapeCopy);
-                    double elementHeight = GetElementHeight(shapeCopy);
-
                     // Дополнительные ограничения для копии
                     double elementWidth = GetElementWidth(shapeCopy);
                     double elementHeight = GetElementHeight(shapeCopy);
