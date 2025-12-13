@@ -816,7 +816,7 @@
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center"/>
                         </Button>
-                        <!-- Квадратики -->
+                        <!-- Пулы (Swimlanes) -->
                         <Button x:Name="dash" Style="{StaticResource ControlButtonStyle}"
                             Width="34" 
                             Height="34"
@@ -825,7 +825,7 @@
                             Background="#FF343434"
                             BorderBrush="Transparent"
                             FocusVisualStyle="{x:Null}"
-                            ToolTip="">
+                            ToolTip="Пулы (Swimlanes) - создание разделителей участников">
                             <Image Source="/Icons/dashboard.png"
                                 Width="30" 
                                 Height="30"

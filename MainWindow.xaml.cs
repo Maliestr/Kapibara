@@ -43,6 +43,7 @@ namespace Graphic_Editor
         private DragManager dragManager; // Система перемещения объектов
         private GridManager gridManager; // Система сетки
         private ClipboardManager clipboardManager; // Система буфера обмена и отмены/повтора
+        private PoolManager poolManager; // Система управления пулами (swimlanes)
         private AutoSave autoSave; // Система автоматического сохранения проекта
 
         // Константы
@@ -107,6 +108,7 @@ namespace Graphic_Editor
             InitializeFileManager(); // Инициализация менеджера файлов
             InitializeCommentManager(); // Инициализация менеджера комментариев
             InitializeClipboardManager(); // Инициализация менеджера буфера обмена и отмены/повтора
+            InitializePoolManager(); // Инициализация менеджера пулов
         }
 
         private void InitializeDragManager()
@@ -168,6 +170,7 @@ namespace Graphic_Editor
             gridManager.OnSnapToggled += (isEnabled) =>
             {
                 // Обновляем состояние в других менеджерах, если нужно
+                poolManager?.UpdateSnapToGrid(isEnabled);
             };
         }
 
@@ -258,6 +261,12 @@ namespace Graphic_Editor
             }
 
             if (commentManager != null && commentManager.HandleMouseClick(e.GetPosition(MainCanvas), e.OriginalSource))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            if (poolManager != null && poolManager.HandleMouseClick(e.GetPosition(MainCanvas), e.OriginalSource))
             {
                 e.Handled = true;
                 return;
@@ -437,6 +446,7 @@ namespace Graphic_Editor
             canvasElements.Clear();
             currentFilePath = null;
             commentManager?.ClearAllComments();
+            poolManager?.ClearAllPools();
 
             // Сбрасываем имя файла на "Untitled"
             if (FileNameTextBox != null)
@@ -1493,6 +1503,38 @@ namespace Graphic_Editor
         private void FileNameTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             UpdateWindowTitle();
+        }
+
+        #endregion
+
+        #region Пулы (Swimlanes)
+
+        private void InitializePoolManager()
+        {
+            poolManager = new PoolManager(
+                MainCanvas,
+                dash, // Кнопка dash на нижней панели
+                gridManager.IsSnapToGridEnabled, // Используем свойство GridManager
+                gridManager.SnapToGrid, // Используем метод GridManager
+                (element, actionType) => clipboardManager?.SaveToUndoStack(element, actionType)
+            );
+
+            // Подписываемся на события
+            poolManager.PoolModeChanged += (isActive) =>
+            {
+                // Дополнительная логика при изменении режима пулов
+            };
+
+            poolManager.PoolCreated += (pool) =>
+            {
+                // Логика при создании пула
+                SaveToUndoStack(pool.Container, UndoActionType.Add);
+            };
+
+            poolManager.PoolDeleted += (pool) =>
+            {
+                // Логика при удалении пула
+            };
         }
 
         #endregion
