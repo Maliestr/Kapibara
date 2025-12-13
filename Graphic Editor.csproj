@@ -62,7 +62,7 @@
     <Compile Include="functions\Help.cs" />
     <Compile Include="functions\AutoSave.cs" />
     <Compile Include="functions\ResizableElement.cs" />
-    <Compile Include="functions\selection\SelectionManager.cs" />
+    <Compile Include="functions\SelectionManager.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
