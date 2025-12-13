@@ -58,9 +58,10 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="functions\ArrowManager.cs" />
+    <Compile Include="functions\fileSystem\FileManager.cs" />
     <Compile Include="functions\FillStrokeManager.cs" />
     <Compile Include="functions\Help.cs" />
-    <Compile Include="functions\AutoSave.cs" />
+    <Compile Include="functions\fileSystem\AutoSave.cs" />
     <Compile Include="functions\ResizableElement.cs" />
     <Compile Include="functions\SelectionManager.cs" />
     <Page Include="MainWindow.xaml">
