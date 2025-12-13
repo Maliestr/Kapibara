@@ -26,6 +26,13 @@ using System.Xml;
 using System.Xml.Linq;
 namespace Graphic_Editor
 {
+    // Тип действия для системы отмены/повтора
+    public enum UndoActionType
+    {
+        Add,    // Элемент был добавлен
+        Remove  // Элемент был удален
+    }
+
     public partial class MainWindow : Window
     {
         //Состояние перетаскивания
@@ -52,11 +59,6 @@ namespace Graphic_Editor
         private AutoSave autoSave; //Система автоматического сохранения проекта
 
         //Система отмены/повтора
-        private enum UndoActionType
-        {
-            Add,    // Элемент был добавлен
-            Remove  // Элемент был удален
-        }
 
         private class UndoAction
         {
@@ -81,16 +83,6 @@ namespace Graphic_Editor
         private System.Windows.Shapes.Path gridPath; //Отрисовка линий сетки
         private const double GridSize = 20; //Размер ячейки сетки в пикселях
 
-        //Режим текста
-        private bool isTextModeActive = false; //Активация режима ввода текста - нет
-        private TextBox textBox; //Временное текстовое поле для ввода
-        private Dictionary<UIElement, TextFormatting> textFormatting = new Dictionary<UIElement, TextFormatting>(); //Система форматирования текста (хранит шрифт, размер, стиль)
-
-        //Временные настройки текста
-        private string currentFontFamily = "Gotham Pro"; //Текущий шрифт
-        private double currentFontSize = 14; //Текущий размер шрифта
-        private FontStyle currentFontStyle = FontStyles.Normal; //Текущий стиль
-        private FontWeight currentFontWeight = FontWeights.Normal; //Текущая насыщенность
 
         //Система сохранения оригинальных стилей (теперь управляется SelectionManager)
         // Все операции с оригинальными стилями выполняются через selectionManager
@@ -104,39 +96,16 @@ namespace Graphic_Editor
         private List<Comment> comments = new List<Comment>(); //Список всех комментариев на холсте
 
         //Система рисования стрелок
-        private bool isArrowModeActive = false; //Активен ли режим рисования стрелок - нет
-        private Polyline currentArrow; //Текущая рисуемая стрелка
-        private Point arrowStartPoint; //Начальная точка стрелки
-        private List<ArrowContainer> arrows = new List<ArrowContainer>(); //Все стрелки на холсте
-        private ArrowContainer selectedArrowContainer; //Выделенная стрелка
-        private Polygon draggedArrowhead; //Перетаскиваемый наконечник
-        private PointCollection originalArrowPoints; //Оригинальные точки стрелки перед перетаскиванием
-        private Dictionary<Polyline, Polygon> arrowToArrowheadMap = new Dictionary<Polyline, Polygon>(); //Связь стрелка-наконечник
+        private ArrowManager arrowManager;
 
-        //Нужно разобраться
-        private List<Polyline> lines = new List<Polyline>(); //Список линий
-        private List<Polygon> arrowheads = new List<Polygon>(); //Список наконечников
-        //private List<UIElement> arrows = new List<UIElement>(); //Хранение всех стрелок на холсте в виде коллекции UIElement
+        //Система управления текстом
+        private TextManager textManager;
 
         //Не работает
         private const double WorkAreaTop = 40;    // Отступ сверху (под меню)
         private const double WorkAreaBottom = 100; // Отступ снизу (над панелью инструментов)
 
-        // Добавляем в класс MainWindow новые поля для системы перемещения стрелок
-        private bool isArrowDragging = false;
-        private ArrowContainer draggedArrowContainer;
-        private Point arrowOffset;
-        private Point arrowDragStartPoint;
-
         private bool isCursor = true;
-
-        public class TextFormatting //Класс для форматирования текста
-        {
-            public FontFamily FontFamily { get; set; }
-            public double FontSize { get; set; }
-            public FontStyle FontStyle { get; set; }
-            public FontWeight FontWeight { get; set; }
-        }
 
         public class Comment //Класс для комментирования
         {
@@ -146,16 +115,6 @@ namespace Graphic_Editor
             public Point Position { get; set; }
         }
 
-        public class ArrowContainer //Класс для хранения стрелки и её наконечника вместе
-        {
-            public Polyline Line { get; set; }
-            public Polygon Arrowhead { get; set; }
-            public PointCollection OriginalPoints { get; set; }
-            public Brush OriginalStroke { get; set; }
-            public double OriginalThickness { get; set; }
-            public Brush OriginalArrowheadFill { get; set; }
-            public Brush OriginalArrowheadStroke { get; set; }
-        }
 
         public MainWindow()
         {
@@ -167,7 +126,9 @@ namespace Graphic_Editor
             InitializeGrid(); //Создает и инициализирует визуальную сетку
             InitializePanels(); //Находит и регистрирует все панели выделения
             InitializePropertyBlocks(); //Скрывает блоки свойств при загрузке приложения
+            InitializeArrowManager(); //Инициализация менеджера стрелок
             InitializeSelectionSystem(); //Настраивает систему выделения через SelectionManager
+            InitializeTextManager(); //Инициализация менеджера текста
             isActiveCursor();
 
             // Обработка горячих клавиш
@@ -589,9 +550,9 @@ namespace Graphic_Editor
         private void MainWindow_KeyDown(object sender, KeyEventArgs e)
         {
             // Обработка Escape для завершения стрелки
-            if (e.Key == Key.Escape && isArrowModeActive && currentArrow != null)
+            if (e.Key == Key.Escape && arrowManager != null && arrowManager.IsArrowModeActive && arrowManager.CurrentArrow != null)
             {
-                CompleteArrow();
+                arrowManager.CompleteArrow();
                 e.Handled = true;
                 return; // return чтобы не мешать другим обработкам
             }
@@ -932,7 +893,7 @@ namespace Graphic_Editor
         {
             MainCanvas.Children.Clear();
             canvasElements.Clear();
-            arrows.Clear();
+            arrowManager?.ClearAllArrows();
 
             using (StreamReader reader = new StreamReader(filePath))
             {
@@ -971,7 +932,7 @@ namespace Graphic_Editor
                             CreateLineFromData(parts);
                             break;
                         case "ARROW":
-                            CreateArrowFromData(parts);
+                            arrowManager?.CreateArrowFromData(parts);
                             break;
                     }
                 }
@@ -1270,9 +1231,9 @@ namespace Graphic_Editor
             }
 
             // Удаление выделенной стрелки по клавише Delete
-            if (e.Key == Key.Delete && selectedArrowContainer != null)
+            if (e.Key == Key.Delete && arrowManager != null && arrowManager.SelectedArrowContainer != null)
             {
-                DeleteArrow(selectedArrowContainer.Line);
+                arrowManager.DeleteArrow(arrowManager.SelectedArrowContainer.Line);
                 e.Handled = true;
             }
         }
@@ -1438,53 +1399,6 @@ namespace Graphic_Editor
             MainCanvas.Children.Insert(0, element);
         }
 
-        // Перенести стрелку на передний план (линия и наконечник вместе)
-        private void BringArrowToFront(ArrowContainer arrowContainer)
-        {
-            if (arrowContainer?.Line == null) return;
-
-            int maxZIndex = GetMaxZIndex();
-
-            // Перемещаем линию на передний план
-            if (MainCanvas.Children.Contains(arrowContainer.Line))
-            {
-                Canvas.SetZIndex(arrowContainer.Line, maxZIndex + 1);
-                MainCanvas.Children.Remove(arrowContainer.Line);
-                MainCanvas.Children.Add(arrowContainer.Line);
-            }
-
-            // Перемещаем наконечник на передний план (выше линии)
-            if (arrowContainer.Arrowhead != null && MainCanvas.Children.Contains(arrowContainer.Arrowhead))
-            {
-                Canvas.SetZIndex(arrowContainer.Arrowhead, maxZIndex + 2);
-                MainCanvas.Children.Remove(arrowContainer.Arrowhead);
-                MainCanvas.Children.Add(arrowContainer.Arrowhead);
-            }
-        }
-
-        // Перенести стрелку на задний план (линия и наконечник вместе)
-        private void SendArrowToBack(ArrowContainer arrowContainer)
-        {
-            if (arrowContainer?.Line == null) return;
-
-            int minZIndex = GetMinZIndex();
-
-            // Перемещаем наконечник на задний план (сначала наконечник, чтобы он был выше линии)
-            if (arrowContainer.Arrowhead != null && MainCanvas.Children.Contains(arrowContainer.Arrowhead))
-            {
-                Canvas.SetZIndex(arrowContainer.Arrowhead, minZIndex - 1);
-                MainCanvas.Children.Remove(arrowContainer.Arrowhead);
-                MainCanvas.Children.Insert(0, arrowContainer.Arrowhead);
-            }
-
-            // Перемещаем линию на задний план
-            if (MainCanvas.Children.Contains(arrowContainer.Line))
-            {
-                Canvas.SetZIndex(arrowContainer.Line, minZIndex - 2);
-                MainCanvas.Children.Remove(arrowContainer.Line);
-                MainCanvas.Children.Insert(0, arrowContainer.Line);
-            }
-        }
 
         // Метод для показа/скрытия панели толщины обводки
         private void UpdateStrokeWidthPanelVisibility() //Интересно
@@ -2198,640 +2112,10 @@ namespace Graphic_Editor
         // Обработчик для кнопки текста на панели инструментов
         private void TextButton_Click(object sender, RoutedEventArgs e)
         {
-            if (isTextModeActive) return;
-            ActivateTextMode();
+            if (textManager?.IsTextModeActive == true) return;
+            textManager?.ActivateTextMode();
         }
 
-        // Активация режима ввода текста
-        private void ActivateTextMode()
-        {
-            isTextModeActive = true;
-            // Создаем текстовое поле с настройками
-            textBox = new TextBox
-            {
-                Width = 200,
-                Height = 30,
-                Background = Brushes.Transparent,
-                Foreground = Brushes.White,
-                BorderBrush = Brushes.Gray,
-                FontSize = 14,
-                Text = "",
-                CaretBrush = Brushes.White,
-                FocusVisualStyle = null
-            };
-            // Центрируем текстовое поле на холсте
-            double left = Math.Max(MainCanvas.ActualWidth / 2 - 100, 0);
-            double top = Math.Max(MainCanvas.ActualHeight / 2 - 15, 0);
-            // Устанавливаем позицию на холсте
-            Canvas.SetLeft(textBox, left);
-            Canvas.SetTop(textBox, top);
-            // Добавляем текстовое поле на холст
-            MainCanvas.Children.Add(textBox);
-            // Устанавливаем фокус и выделяем весь текст для удобства редактирования
-            textBox.Focus();
-            textBox.SelectAll();
-            // Обработчик нажатия клавиш в текстовом поле
-            textBox.KeyDown += (s, e) =>
-            {
-                if (e.Key == Key.Enter)
-                {
-                    DeactivateTextMode();
-                    e.Handled = true;
-                }
-                else if (e.Key == Key.Escape)
-                {
-                    isTextModeActive = false;
-                    MainCanvas.Children.Remove(textBox);
-                    textBox = null;
-                    e.Handled = true;
-                }
-            };
-            textBox.LostFocus += (s, e) => DeactivateTextMode();
-        }
-
-        // Деактивация режима ввода текста
-        private void DeactivateTextMode()
-        {
-            if (textBox == null) return;
-            // Сохраняем текст только если он не пустой
-            if (!string.IsNullOrWhiteSpace(textBox.Text))
-            {
-                CreateTextElement(textBox.Text, Canvas.GetLeft(textBox), Canvas.GetTop(textBox));
-            }
-            // Удаляем временное текстовое поле
-            MainCanvas.Children.Remove(textBox);
-            textBox = null;
-            isTextModeActive = false;
-
-            // Сбрасываем комбо-боксы текста после создания текстового элемента
-            ResetTextComboBoxesToEmpty();
-        }
-
-        // Создание текстового элемента с цветом по умолчанию
-        private void CreateTextElement(string text, double left, double top)
-        {
-            CreateTextElementWithColor(text, left, top, Brushes.White);
-        }
-
-        // Создание текстового элемента с указанным цветом
-        private void CreateTextElementWithColor(string text, double left, double top, Brush color)
-        {
-            // Используем значения по умолчанию если текущие не установлены
-            string fontFamily = string.IsNullOrEmpty(currentFontFamily) ? "Gotham Pro" : currentFontFamily;
-            double fontSize = currentFontSize == 0 ? 14 : currentFontSize;
-            FontStyle fontStyle = currentFontStyle;
-            FontWeight fontWeight = currentFontWeight;
-
-            var textBlock = new TextBlock
-            {
-                Text = text,
-                Foreground = color,
-                FontFamily = new FontFamily(fontFamily),
-                FontSize = fontSize,
-                FontStyle = fontStyle,
-                FontWeight = fontWeight,
-                Cursor = Cursors.Hand,
-                FocusVisualStyle = null,
-                Background = Brushes.Transparent,
-                // Устанавливаем начальные размеры для возможности изменения размера
-                Width = double.NaN, // Автоматический размер
-                Height = double.NaN // Автоматический размер
-            };
-
-            // Применяем привязку к сетке если включена
-            if (isSnapToGridEnabled)
-            {
-                Point snappedPoint = SnapToGrid(new Point(left, top));
-                left = snappedPoint.X;
-                top = snappedPoint.Y;
-            }
-            
-            // Устанавливаем позицию на холсте
-            Canvas.SetLeft(textBlock, left);
-            Canvas.SetTop(textBlock, top);
-            Canvas.SetZIndex(textBlock, 1000);
-
-            // Сохраняем оригинальные настройки
-            selectionManager?.UpdateOriginalStrokeColor(textBlock, color);
-            SaveTextFormatting(textBlock);
-
-            // Добавляем текстовый элемент на холст
-            MainCanvas.Children.Add(textBlock);
-            BringToFront(textBlock);
-
-            textBlock.MouseLeftButtonDown += TextElement_MouseLeftButtonDown;
-            MakeCanvasShapeDraggable(textBlock);
-            SelectElement(textBlock);
-            SelectShape(textBlock);
-        }
-
-        // Сохранение форматирования текстового элемента
-        private void SaveTextFormatting(TextBlock textBlock)
-        {
-            if (!textFormatting.ContainsKey(textBlock))
-            {
-                textFormatting[textBlock] = new TextFormatting
-                {
-                    FontFamily = textBlock.FontFamily,
-                    FontSize = textBlock.FontSize,
-                    FontStyle = textBlock.FontStyle,
-                    FontWeight = textBlock.FontWeight
-                };
-            }
-        }
-
-        // Обработчик нажатия левой кнопки мыши на текстовом элементе
-        private void TextElement_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            var textBlock = sender as TextBlock;
-            if (textBlock == null) return;
-            DeselectAll();
-            // Сохраняем оригинальный цвет если он еще не сохранен
-            if (selectionManager?.GetOriginalStrokeColor(textBlock) == null)
-            {
-                selectionManager?.UpdateOriginalStrokeColor(textBlock, textBlock.Foreground);
-            }
-            SelectElement(textBlock);
-            SelectShape(textBlock);
-            if (e.ClickCount == 2)
-            {
-                EditTextElement(textBlock);
-                e.Handled = true;
-            }
-            else
-            {
-                StartTextDrag(textBlock, e);
-            }
-        }
-
-        // Начало перемещения текстового элемента
-        private void StartTextDrag(UIElement element, MouseButtonEventArgs e)
-        {
-            // Убедимся, что цвета сохранены перед началом перетаскивания
-            if (element is TextBlock textBlock && selectionManager?.GetOriginalStrokeColor(element) == null)
-            {
-                selectionManager?.UpdateOriginalStrokeColor(element, textBlock.Foreground);
-            }
-
-            isDragging = true;
-            draggedElement = element;
-            element.CaptureMouse();
-            offset = e.GetPosition(element);
-
-            // СКРЫВАЕМ РУЧКИ ИЗМЕНЕНИЯ РАЗМЕРА ДЛЯ ТЕКСТА
-            if (resizableElements.ContainsKey(element))
-            {
-                resizableElements[element].HideResizeHandles();
-            }
-
-            if (element is TextBlock tb)
-            {
-                tb.Opacity = 0.7;
-            }
-
-            element.MouseMove += TextElement_MouseMove;
-            element.MouseLeftButtonUp += TextElement_MouseLeftButtonUp;
-        }
-
-        // Обработчик перемещения мыши при перетаскивании текстового элемента
-        private void TextElement_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (isDragging && draggedElement != null && e.LeftButton == MouseButtonState.Pressed)
-            {
-                Point currentPosition = e.GetPosition(MainCanvas);
-
-                // ВАЖНО: Привязываем курсор к сетке
-                if (isSnapToGridEnabled)
-                {
-                    currentPosition = SnapToGrid(currentPosition);
-                }
-
-                // Вычисляем новую позицию элемента с учетом смещения
-                double newLeft = currentPosition.X - offset.X;
-                double newTop = currentPosition.Y - offset.Y;
-
-                // Получаем размеры элемента для корректного ограничения перемещения
-                double elementWidth = draggedElement.RenderSize.Width;
-                double elementHeight = draggedElement.RenderSize.Height;
-
-                if (elementWidth == 0 || double.IsNaN(elementWidth)) elementWidth = 100;
-                if (elementHeight == 0 || double.IsNaN(elementHeight)) elementHeight = 30;
-
-                // Определяем рабочую область 
-                double workAreaLeft = 300;
-                double workAreaTop = 26;
-                double workAreaRight = MainCanvas.ActualWidth - 264;
-                double workAreaBottom = MainCanvas.ActualHeight - 100;
-
-                // Ограничиваем перемещение рабочей областью
-                newLeft = Math.Max(workAreaLeft, Math.Min(newLeft, workAreaRight - elementWidth));
-                newTop = Math.Max(workAreaTop, Math.Min(newTop, workAreaBottom - elementHeight));
-
-                // ДОПОЛНИТЕЛЬНО ПРИВЯЗЫВАЕМ ФИНАЛЬНУЮ ПОЗИЦИЮ
-                if (isSnapToGridEnabled)
-                {
-                    Point snappedPosition = SnapToGrid(new Point(newLeft, newTop));
-                    newLeft = snappedPosition.X;
-                    newTop = snappedPosition.Y;
-                }
-
-                Canvas.SetLeft(draggedElement, newLeft);
-                Canvas.SetTop(draggedElement, newTop);
-            }
-        }
-
-        // Обработчик отпускания левой кнопки мыши при перетаскивании
-        private void TextElement_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            // Восстанавливаем прозрачность текстового элемента
-            if (draggedElement is TextBlock textBlock)
-            {
-                textBlock.Opacity = 1.0;
-
-                // ПОКАЗЫВАЕМ РУЧКИ ИЗМЕНЕНИЯ РАЗМЕРА ДЛЯ ТЕКСТА
-                if (resizableElements.ContainsKey(draggedElement))
-                {
-                    resizableElements[draggedElement].ShowResizeHandles();
-                }
-            }
-            if (draggedElement != null)
-            {
-                draggedElement.MouseMove -= TextElement_MouseMove;
-                draggedElement.MouseLeftButtonUp -= TextElement_MouseLeftButtonUp;
-            }
-            // Сбрасываем флаги состояния
-            isDragging = false;
-            draggedElement?.ReleaseMouseCapture();
-            draggedElement = null;
-        }
-
-        // Редактирование существующего текстового элемента
-        private void EditTextElement(TextBlock textBlock)
-        {
-            // Проверяем, что элемент существует на холсте
-            if (MainCanvas.Children.Contains(textBlock))
-            {
-                // Получаем оригинальный цвет текста
-                Brush originalStrokeColor = selectionManager?.GetOriginalStrokeColor(textBlock) ?? textBlock.Foreground;
-
-                // Создаем TextBox для редактирования с сохранением форматирования
-                var editTextBox = new TextBox
-                {
-                    Width = Math.Max(textBlock.ActualWidth, 200),
-                    Height = Math.Max(textBlock.ActualHeight, 30),
-                    Background = Brushes.White,
-                    Foreground = Brushes.Black,
-                    BorderBrush = Brushes.Gray,
-                    FontFamily = textBlock.FontFamily,
-                    FontSize = textBlock.FontSize,
-                    FontStyle = textBlock.FontStyle,
-                    FontWeight = textBlock.FontWeight,
-                    Text = textBlock.Text,
-                    CaretBrush = Brushes.Black,
-                    FocusVisualStyle = null,
-                    TextWrapping = TextWrapping.Wrap
-                };
-
-                double left = Canvas.GetLeft(textBlock);
-                double top = Canvas.GetTop(textBlock);
-
-                MainCanvas.Children.Remove(textBlock);
-                Canvas.SetLeft(editTextBox, left);
-                Canvas.SetTop(editTextBox, top);
-                MainCanvas.Children.Add(editTextBox);
-                editTextBox.Focus();
-                editTextBox.SelectAll();
-
-                // Обработчик клавиш при редактировании
-                editTextBox.KeyDown += (s, e) =>
-                {
-                    if (e.Key == Key.Enter)
-                    {
-                        FinishEditWithFormatting(editTextBox, left, top, originalStrokeColor);
-                        FinishEdit(editTextBox, left, top, originalStrokeColor); // Передаем оригинальный цвет
-                        e.Handled = true;
-                    }
-                    else if (e.Key == Key.Escape)
-                    {
-                        CancelTextEditing(editTextBox, textBlock.Text, left, top, originalStrokeColor);
-                        MainCanvas.Children.Remove(editTextBox);
-                        CreateTextElementWithColor(textBlock.Text, left, top, originalStrokeColor); // Передаем оригинальный цвет
-                        e.Handled = true;
-                    }
-                };
-                editTextBox.LostFocus += (s, e) => FinishEdit(editTextBox, left, top, originalStrokeColor); // Передаем оригинальный цвет
-
-                // Обработчик потери фокуса - сохраняем изменения
-                editTextBox.LostFocus += (s, e) => FinishEditWithFormatting(editTextBox, left, top, originalStrokeColor);
-            }
-        }
-        
-        // Завершение редактирования с сохранением форматирования
-        private void FinishEditWithFormatting(TextBox editTextBox, double left, double top, Brush originalColor)
-        {
-            if (MainCanvas.Children.Contains(editTextBox))
-            {
-                string newText = string.IsNullOrWhiteSpace(editTextBox.Text) ? "Текст" : editTextBox.Text;
-                MainCanvas.Children.Remove(editTextBox);
-
-                // Создаем новый текстовый элемент с форматированием из TextBox
-                var textBlock = new TextBlock
-                {
-                    Text = newText,
-                    Foreground = originalColor,
-                    FontFamily = editTextBox.FontFamily,
-                    FontSize = editTextBox.FontSize,
-                    FontStyle = editTextBox.FontStyle,
-                    FontWeight = editTextBox.FontWeight,
-                    Cursor = Cursors.Hand,
-                    FocusVisualStyle = null,
-                    Background = Brushes.Transparent,
-                    // Устанавливаем начальные размеры для возможности изменения размера
-                    Width = double.NaN, // Автоматический размер
-                    Height = double.NaN // Автоматический размер
-                };
-
-                Canvas.SetLeft(textBlock, left);
-                Canvas.SetTop(textBlock, top);
-                Canvas.SetZIndex(textBlock, 1000);
-
-                selectionManager?.UpdateOriginalStrokeColor(textBlock, originalColor);
-                SaveTextFormatting(textBlock);
-
-                MainCanvas.Children.Add(textBlock);
-                BringToFront(textBlock);
-                textBlock.MouseLeftButtonDown += TextElement_MouseLeftButtonDown;
-                MakeCanvasShapeDraggable(textBlock);
-                SelectElement(textBlock);
-                SelectShape(textBlock);
-            }
-        }
-
-        // Отмена редактирования
-        private void CancelTextEditing(TextBox editTextBox, string originalText, double left, double top, Brush originalColor)
-        {
-            if (MainCanvas.Children.Contains(editTextBox))
-            {
-                MainCanvas.Children.Remove(editTextBox);
-                CreateTextElementWithColor(originalText, left, top, originalColor);
-            }
-        }
-
-        // Завершение редактирования текстового элемента
-        private void FinishEdit(TextBox editTextBox, double left, double top, Brush originalColor)
-        {
-            if (MainCanvas.Children.Contains(editTextBox))
-            {
-                string newText = string.IsNullOrWhiteSpace(editTextBox.Text) ? "Текст" : editTextBox.Text;
-                MainCanvas.Children.Remove(editTextBox);
-                CreateTextElementWithColor(newText, left, top, originalColor);
-            }
-        }
-
-        // Обработчик изменения шрифта
-        private void FontComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (FontComboBox.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content != null)
-            {
-                currentFontFamily = selectedItem.Content.ToString();
-                ApplyTextFormattingToSelected();
-            }
-            else if (FontComboBox.SelectedItem == null)
-            {
-                // Не сбрасываем currentFontFamily, если элемент уже выбран
-                // Это позволяет сохранить текущее значение при программном изменении
-            }
-        }
-
-        // Обработчик изменения стиля шрифта
-        private void FontStyleComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (FontStyleComboBox.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content != null)
-            {
-                switch (selectedItem.Content.ToString())
-                {
-                    case "Regular":
-                        currentFontStyle = FontStyles.Normal;
-                        currentFontWeight = FontWeights.Normal;
-                        break;
-                    case "Bold":
-                        currentFontStyle = FontStyles.Normal;
-                        currentFontWeight = FontWeights.Bold;
-                        break;
-                    case "Italic":
-                        currentFontStyle = FontStyles.Italic;
-                        currentFontWeight = FontWeights.Normal;
-                        break;
-                    case "Bold Italic":
-                        currentFontStyle = FontStyles.Italic;
-                        currentFontWeight = FontWeights.Bold;
-                        break;
-                }
-                ApplyTextFormattingToSelected();
-            }
-            else if (FontStyleComboBox.SelectedItem == null)
-            {
-                // Не сбрасываем значения при программном изменении
-            }
-        }
-
-        // Обработчик изменения размера шрифта
-        private void FontSizeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (FontSizeComboBox.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content != null)
-            {
-                if (double.TryParse(selectedItem.Content.ToString(), out double size))
-                {
-                    currentFontSize = size;
-                    ApplyTextFormattingToSelected();
-                }
-            }
-            else if (FontSizeComboBox.SelectedItem == null)
-            {
-                // Не сбрасываем значение при программном изменении
-            }
-        }
-
-        // Применение форматирования к выбранному текстовому элементу
-        private void ApplyTextFormattingToSelected()
-        {
-            // Применяем изменения только если есть выбранный текстовый элемент
-            var selectedElement = selectionManager?.SelectedElement;
-            if (selectedElement is TextBlock textBlock)
-            {
-                // Применяем шрифт, если он выбран
-                if (!string.IsNullOrEmpty(currentFontFamily))
-                {
-                    try
-                    {
-                        textBlock.FontFamily = new FontFamily(currentFontFamily);
-                    }
-                    catch
-                    {
-                        // Игнорируем ошибки при создании FontFamily
-                    }
-                }
-
-                // Применяем размер шрифта, если он выбран
-                if (currentFontSize > 0)
-                {
-                    textBlock.FontSize = currentFontSize;
-                }
-
-                // Применяем стиль и вес шрифта
-                textBlock.FontStyle = currentFontStyle;
-                textBlock.FontWeight = currentFontWeight;
-
-                // Сохраняем новые настройки
-                SaveCurrentTextFormatting(textBlock);
-            }
-        }
-
-        // Обновление панели текста для выбранного элемента
-        private void UpdateTextPanelForSelectedElement(FrameworkElement element)
-        {
-            if (element == null) return;
-            
-            if (element is TextBlock textBlock)
-            {
-                // Показываем панель текста
-                //TextPanel.Visibility = Visibility.Visible;
-
-                // Обновляем комбо-боксы значениями из текстового элемента
-                UpdateTextComboBoxes(textBlock);
-
-                // Сохраняем текущие настройки для применения изменений
-                SaveCurrentTextFormatting(textBlock);
-            }
-            else
-            {
-                // Скрываем панель текста для не-текстовых элементов
-                //TextPanel.Visibility = Visibility.Collapsed;
-
-                // Сбрасываем комбо-боксы к пустым значениям
-                ResetTextComboBoxesToEmpty();
-            }
-        }
-
-        // Обновление комбо-боксов текста значениями из TextBlock
-        private void UpdateTextComboBoxes(TextBlock textBlock)
-        {
-            if (textBlock == null) return;
-            
-            // Обновляем шрифт
-            string fontFamilySource = textBlock.FontFamily?.Source ?? "";
-            foreach (ComboBoxItem item in FontComboBox.Items)
-            {
-                if (item.Content != null && item.Content.ToString() == fontFamilySource)
-                {
-                    // Временно отключаем обработчик, чтобы избежать рекурсии
-                    FontComboBox.SelectionChanged -= FontComboBox_SelectionChanged;
-                    FontComboBox.SelectedItem = item;
-                    FontComboBox.SelectionChanged += FontComboBox_SelectionChanged;
-                    currentFontFamily = fontFamilySource;
-                    break;
-                }
-            }
-            
-            // Если шрифт не найден в списке, устанавливаем значение напрямую
-            if (string.IsNullOrEmpty(currentFontFamily) && !string.IsNullOrEmpty(fontFamilySource))
-            {
-                currentFontFamily = fontFamilySource;
-            }
-
-            // Обновляем размер шрифта
-            bool fontSizeFound = false;
-            foreach (ComboBoxItem item in FontSizeComboBox.Items)
-            {
-                if (item.Content != null && double.TryParse(item.Content.ToString(), out double size) &&
-                    Math.Abs(size - textBlock.FontSize) < 0.1)
-                {
-                    // Временно отключаем обработчик, чтобы избежать рекурсии
-                    FontSizeComboBox.SelectionChanged -= FontSizeComboBox_SelectionChanged;
-                    FontSizeComboBox.SelectedItem = item;
-                    FontSizeComboBox.SelectionChanged += FontSizeComboBox_SelectionChanged;
-                    currentFontSize = textBlock.FontSize;
-                    fontSizeFound = true;
-                    break;
-                }
-            }
-
-            // Если размер не найден в списке, добавляем его
-            if (!fontSizeFound && textBlock.FontSize > 0)
-            {
-                var newItem = new ComboBoxItem { Content = textBlock.FontSize.ToString("0") };
-                FontSizeComboBox.Items.Add(newItem);
-                // Временно отключаем обработчик
-                FontSizeComboBox.SelectionChanged -= FontSizeComboBox_SelectionChanged;
-                FontSizeComboBox.SelectedItem = newItem;
-                FontSizeComboBox.SelectionChanged += FontSizeComboBox_SelectionChanged;
-                currentFontSize = textBlock.FontSize;
-            }
-            else if (!fontSizeFound && textBlock.FontSize > 0)
-            {
-                currentFontSize = textBlock.FontSize;
-            }
-
-            // Обновляем стиль шрифта
-            string styleName = GetFontStyleName(textBlock.FontStyle, textBlock.FontWeight);
-            foreach (ComboBoxItem item in FontStyleComboBox.Items)
-            {
-                if (item.Content != null && item.Content.ToString() == styleName)
-                {
-                    // Временно отключаем обработчик, чтобы избежать рекурсии
-                    FontStyleComboBox.SelectionChanged -= FontStyleComboBox_SelectionChanged;
-                    FontStyleComboBox.SelectedItem = item;
-                    FontStyleComboBox.SelectionChanged += FontStyleComboBox_SelectionChanged;
-                    currentFontStyle = textBlock.FontStyle;
-                    currentFontWeight = textBlock.FontWeight;
-                    break;
-                }
-            }
-        }
-
-        // Получение имени стиля для комбо-бокса
-        private string GetFontStyleName(FontStyle style, FontWeight weight)
-        {
-            if (style == FontStyles.Italic && weight == FontWeights.Bold)
-                return "Bold Italic";
-            else if (weight == FontWeights.Bold)
-                return "Bold";
-            else if (style == FontStyles.Italic)
-                return "Italic";
-            else
-                return "Regular";
-        }
-        // Сохранение текущего форматирования текстового элемента
-        private void SaveCurrentTextFormatting(TextBlock textBlock)
-        {
-            if (!textFormatting.ContainsKey(textBlock))
-            {
-                textFormatting[textBlock] = new TextFormatting();
-            }
-
-            textFormatting[textBlock].FontFamily = textBlock.FontFamily;
-            textFormatting[textBlock].FontSize = textBlock.FontSize;
-            textFormatting[textBlock].FontStyle = textBlock.FontStyle;
-            textFormatting[textBlock].FontWeight = textBlock.FontWeight;
-        }
-
-        // Сброс комбо-боксов текста к пустым значениям
-        private void ResetTextComboBoxesToEmpty()
-        {
-            // Сбрасываем выбранные элементы
-            FontComboBox.SelectedItem = null;
-            FontStyleComboBox.SelectedItem = null;
-            FontSizeComboBox.SelectedItem = null;
-
-            // Очищаем текущие значения
-            currentFontFamily = null;
-            currentFontSize = 0;
-            currentFontStyle = FontStyles.Normal;
-            currentFontWeight = FontWeights.Normal;
-
-            // Скрываем панель текста
-            //TextPanel.Visibility = Visibility.Collapsed;
-        }
 
         private void MakeAllShapesDraggable()
         {
@@ -3446,17 +2730,17 @@ namespace Graphic_Editor
         // Добавьте метод для снятия выделения при клике на пустую область Canvas
         private void MainCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (isArrowModeActive)
+            if (arrowManager != null && arrowManager.IsArrowModeActive)
             {
                 Point clickPoint = e.GetPosition(MainCanvas);
 
-                if (currentArrow == null)
+                if (arrowManager.CurrentArrow == null)
                 {
-                    StartArrowDrawing(clickPoint);
+                    arrowManager.StartArrowDrawing(clickPoint);
                 }
                 else
                 {
-                    AddArrowSegment(clickPoint);
+                    arrowManager.AddArrowSegment(clickPoint);
                 }
 
                 e.Handled = true;
@@ -3597,11 +2881,11 @@ namespace Graphic_Editor
         private void MainCanvas_MouseMove(object sender, MouseEventArgs e)
         {
             // Обработка рисования стрелки
-            if (isArrowModeActive)
+            if (arrowManager != null && arrowManager.IsArrowModeActive)
             {
-                if (currentArrow != null)
+                if (arrowManager.CurrentArrow != null)
                 {
-                    UpdateArrowDrawing(e.GetPosition(MainCanvas));
+                    arrowManager.UpdateArrowDrawing(e.GetPosition(MainCanvas));
                 }
 
                 e.Handled = true;
@@ -3631,7 +2915,7 @@ namespace Graphic_Editor
 
         private void MainCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            if (isArrowModeActive)
+            if (arrowManager != null && arrowManager.IsArrowModeActive)
             {
                 e.Handled = true;
                 return;
@@ -3823,6 +3107,26 @@ namespace Graphic_Editor
             }
         }
 
+        // Инициализация менеджера стрелок
+        private void InitializeArrowManager()
+        {
+            arrowManager = new ArrowManager(
+                MainCanvas,
+                pencil,
+                isSnapToGridEnabled,
+                WorkAreaTop,
+                WorkAreaBottom,
+                (element) => { if (element is FrameworkElement fe) BringToFront(fe); },
+                (element, actionType) => SaveToUndoStack(element, actionType),
+                DeselectAll,
+                (element) => { if (element is FrameworkElement fe) { SelectElement(fe); return true; } return false; },
+                SnapToGrid,
+                GetMaxZIndex,
+                GetMinZIndex,
+                UpdateArrowPropertiesInPanels
+            );
+        }
+
         // Инициализация системы выделения
         private void InitializeSelectionSystem()
         {
@@ -3830,7 +3134,7 @@ namespace Graphic_Editor
             selectionManager = new SelectionManager(MainCanvas, this);
             
             // Настраиваем делегат для снятия выделения стрелки
-            selectionManager.OnDeselectArrow = DeselectArrow;
+            selectionManager.OnDeselectArrow = () => arrowManager.DeselectArrow();
 
             // Подписываемся на события выделения для обновления панелей свойств
             selectionManager.OnElementSelected += (element) =>
@@ -3847,7 +3151,7 @@ namespace Graphic_Editor
                     }
 
                     // Обновляем панель текста, если элемент является текстовым
-                    UpdateTextPanelForSelectedElement(element);
+                    textManager?.UpdateTextPanelForSelectedElement(element);
 
                     // Показываем ручки изменения размера
                     ShowResizeHandlesForElement(element);
@@ -3872,6 +3176,33 @@ namespace Graphic_Editor
             MainCanvas.MouseMove += MainCanvas_MouseMove;
             MainCanvas.MouseLeftButtonUp += MainCanvas_MouseLeftButtonUp;
             MainCanvas.MouseRightButtonDown += MainCanvas_MouseRightButtonDown;
+        }
+
+        // Инициализация менеджера текста
+        private void InitializeTextManager()
+        {
+            var fontComboBox = FindName("FontComboBox") as ComboBox;
+            var fontStyleComboBox = FindName("FontStyleComboBox") as ComboBox;
+            var fontSizeComboBox = FindName("FontSizeComboBox") as ComboBox;
+            var textPanel = FindName("TextPanel") as Border;
+
+            textManager = new TextManager(
+                MainCanvas,
+                selectionManager,
+                fontComboBox,
+                fontStyleComboBox,
+                fontSizeComboBox,
+                textPanel,
+                resizableElements,
+                isSnapToGridEnabled,
+                (element) => { if (element is FrameworkElement fe) BringToFront(fe); },
+                (element) => { if (element is FrameworkElement fe) SelectElement(fe); },
+                (element) => { if (element is UIElement ue) SelectShape(ue); },
+                DeselectAll,
+                MakeCanvasShapeDraggable,
+                SnapToGrid,
+                (element) => SaveToUndoStack(element, UndoActionType.Add)
+            );
         }
 
         private void ClearSelection()
@@ -4176,573 +3507,6 @@ namespace Graphic_Editor
             }
         }*/
 
-        // Переключение режима рисования стрелок
-        private void ToggleArrowMode()
-        {
-            isArrowModeActive = !isArrowModeActive;
-
-            if (isArrowModeActive)
-            {
-                // Активируем режим рисования
-                MainCanvas.Cursor = Cursors.Cross;
-                pencil.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
-            }
-            else
-            {
-                // Деактивируем режим рисования
-                MainCanvas.Cursor = Cursors.Arrow;
-                pencil.Background = Brushes.Transparent;
-
-                if (currentArrow != null)
-                {
-                    CompleteArrow();
-                }
-            }
-        }
-
-        // Методы для рисования стрелок
-        private void StartArrowDrawing(Point startPoint)
-        {
-            arrowStartPoint = startPoint;
-
-            currentArrow = new Polyline
-            {
-                Stroke = Brushes.Black,
-                StrokeThickness = 4,
-                StrokeLineJoin = PenLineJoin.Round,
-                StrokeStartLineCap = PenLineCap.Flat,
-                StrokeEndLineCap = PenLineCap.Triangle,
-                Points = new PointCollection { startPoint, startPoint }
-            };
-
-            MainCanvas.Children.Add(currentArrow);
-            Canvas.SetZIndex(currentArrow, 500);
-        }
-
-        // Метод обновления рисования ломаной стрелки
-        private void UpdateArrowDrawing(Point currentPoint)
-        {
-            if (currentArrow != null && currentArrow.Points.Count >= 1)
-            {
-                // Для ломаной линии добавляем новую точку при перемещении мыши
-                // или обновляем последнюю точку для плавного рисования
-
-                if (currentArrow.Points.Count == 1)
-                {
-                    // Первое перемещение - добавляем вторую точку
-                    currentArrow.Points.Add(currentPoint);
-                }
-                else
-                {
-                    // Обновляем последнюю точку для плавного рисования
-                    currentArrow.Points[currentArrow.Points.Count - 1] = currentPoint;
-                }
-            }
-        }
-        // Метод добавления излома (нового сегмента)
-        private void AddArrowSegment(Point point)
-        {
-            if (currentArrow != null && currentArrow.Points.Count >= 2)
-            {
-                // Добавляем новую точку для создания излома
-                currentArrow.Points.Add(point);
-            }
-        }
-
-        private void CompleteArrow()
-        {
-            if (currentArrow != null && currentArrow.Points.Count >= 2)
-            {
-                // Удаляем последнюю точку если она совпадает с предыдущей
-                if (currentArrow.Points.Count > 2)
-                {
-                    Point lastPoint = currentArrow.Points[currentArrow.Points.Count - 1];
-                    Point prevPoint = currentArrow.Points[currentArrow.Points.Count - 2];
-
-                    if (lastPoint == prevPoint)
-                    {
-                        currentArrow.Points.RemoveAt(currentArrow.Points.Count - 1);
-                    }
-                }
-
-                // Получаем точки для наконечника
-                Point lineStart = currentArrow.Points[currentArrow.Points.Count - 2];
-                Point lineEnd = currentArrow.Points[currentArrow.Points.Count - 1];
-
-                // Создаем контейнер стрелки с наконечником
-                var arrowContainer = new ArrowContainer
-                {
-                    Line = currentArrow,
-                    Arrowhead = CreateArrowhead(lineStart, lineEnd, currentArrow.Stroke)
-                };
-
-                // Добавляем наконечник на холст
-                if (arrowContainer.Arrowhead != null)
-                {
-                    MainCanvas.Children.Add(arrowContainer.Arrowhead);
-                }
-
-                // Регистрируем стрелку
-                RegisterArrowContainer(arrowContainer);
-
-                // Перемещаем стрелку и наконечник на передний план
-                BringToFront(currentArrow);
-                if (arrowContainer.Arrowhead != null)
-                {
-                    BringToFront(arrowContainer.Arrowhead);
-                }
-
-                // Сохраняем в стек отмены
-                SaveToUndoStack(currentArrow);
-
-                currentArrow = null;
-                ToggleArrowMode();
-            }
-        }
-
-        private void RegisterArrowContainer(ArrowContainer arrowContainer)
-        {
-            if (arrowContainer == null || arrowContainer.Line == null) return;
-
-            CaptureArrowOriginalAppearance(arrowContainer);
-            arrows.Add(arrowContainer);
-            MakeArrowDraggable(arrowContainer);
-            MakeArrowPointsDraggable(arrowContainer);
-        }
-
-        private void CaptureArrowOriginalAppearance(ArrowContainer arrowContainer)
-        {
-            if (arrowContainer?.Line == null) return;
-
-            try
-            {
-                arrowContainer.OriginalStroke = arrowContainer.Line.Stroke?.CloneCurrentValue();
-                arrowContainer.OriginalThickness = arrowContainer.Line.StrokeThickness;
-
-                if (arrowContainer.Arrowhead != null)
-                {
-                    arrowContainer.OriginalArrowheadFill = arrowContainer.Arrowhead.Fill?.CloneCurrentValue();
-                    arrowContainer.OriginalArrowheadStroke = arrowContainer.Arrowhead.Stroke?.CloneCurrentValue();
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в CaptureArrowOriginalAppearance: {ex.Message}");
-            }
-        }
-
-        private void ApplyArrowSelectionVisual(ArrowContainer arrowContainer)
-        {
-            if (arrowContainer?.Line == null) return;
-
-            try
-            {
-                // Более заметное выделение - как у блоков
-                arrowContainer.Line.Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#AC1C1C"));
-                arrowContainer.Line.StrokeThickness = (arrowContainer.OriginalThickness > 0 ? arrowContainer.OriginalThickness : 4) + 2;
-
-                if (arrowContainer.Arrowhead != null)
-                {
-                    arrowContainer.Arrowhead.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#AC1C1C"));
-                    arrowContainer.Arrowhead.Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#AC1C1C"));
-                    arrowContainer.Arrowhead.StrokeThickness = 2;
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в ApplyArrowSelectionVisual: {ex.Message}");
-            }
-        }
-
-        private void RestoreArrowAppearance(ArrowContainer arrowContainer)
-        {
-            if (arrowContainer?.Line == null) return;
-
-            try
-            {
-                if (arrowContainer.OriginalStroke != null)
-                    arrowContainer.Line.Stroke = arrowContainer.OriginalStroke.CloneCurrentValue();
-                else
-                    arrowContainer.Line.Stroke = Brushes.Black; // Значение по умолчанию
-
-                arrowContainer.Line.StrokeThickness = arrowContainer.OriginalThickness > 0 ? arrowContainer.OriginalThickness : 4;
-                arrowContainer.Line.Opacity = 1.0;
-
-                if (arrowContainer.Arrowhead != null)
-                {
-                    if (arrowContainer.OriginalArrowheadFill != null)
-                        arrowContainer.Arrowhead.Fill = arrowContainer.OriginalArrowheadFill.CloneCurrentValue();
-                    else
-                        arrowContainer.Arrowhead.Fill = Brushes.Black;
-
-                    if (arrowContainer.OriginalArrowheadStroke != null)
-                        arrowContainer.Arrowhead.Stroke = arrowContainer.OriginalArrowheadStroke.CloneCurrentValue();
-                    else
-                        arrowContainer.Arrowhead.Stroke = Brushes.Black;
-
-                    arrowContainer.Arrowhead.Opacity = 1.0;
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в RestoreArrowAppearance: {ex.Message}");
-            }
-        }
-
-        private void DeselectArrow()
-        {
-            if (selectedArrowContainer != null)
-            {
-                RestoreArrowAppearance(selectedArrowContainer);
-                selectedArrowContainer = null;
-            }
-        }
-
-        private void SetArrowDragVisual(ArrowContainer arrowContainer, bool isDragging)
-        {
-            if (arrowContainer?.Line == null) return;
-
-            if (isDragging)
-            {
-                // Визуальный фидбэк при перетаскивании - как у блоков
-                arrowContainer.Line.Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
-                arrowContainer.Line.StrokeThickness = (arrowContainer.OriginalThickness > 0 ? arrowContainer.OriginalThickness : 4) + 1;
-
-                if (arrowContainer.Arrowhead != null)
-                {
-                    arrowContainer.Arrowhead.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939")); ;
-                    arrowContainer.Arrowhead.Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939")); ;
-                }
-            }
-            else
-            {
-                if (selectedArrowContainer == arrowContainer)
-                {
-                    ApplyArrowSelectionVisual(arrowContainer);
-                }
-                else
-                {
-                    RestoreArrowAppearance(arrowContainer);
-                }
-            }
-        }
-
-        // Делаем стрелку перетаскиваемой
-        private void MakeArrowDraggable(ArrowContainer arrowContainer)
-        {
-            if (arrowContainer == null || arrowContainer.Line == null) return;
-
-            // Обработчики для линии стрелки
-            arrowContainer.Line.MouseLeftButtonDown += Arrow_MouseLeftButtonDown;
-            arrowContainer.Line.MouseMove += Arrow_MouseMove;
-            arrowContainer.Line.MouseLeftButtonUp += Arrow_MouseLeftButtonUp;
-
-            // Обработчики для наконечника
-            if (arrowContainer.Arrowhead != null)
-            {
-                arrowContainer.Arrowhead.MouseLeftButtonDown += Arrowhead_MouseLeftButtonDown;
-                arrowContainer.Arrowhead.MouseMove += Arrow_MouseMove;
-                arrowContainer.Arrowhead.MouseLeftButtonUp += Arrow_MouseLeftButtonUp;
-            }
-
-            // Добавляем контекстное меню
-            arrowContainer.Line.MouseRightButtonDown += (s, e) =>
-            {
-                CreateArrowContextMenu(arrowContainer);
-                e.Handled = true;
-            };
-        }
-
-        private void Arrowhead_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (isArrowModeActive) return;
-
-            var arrowhead = sender as Polygon;
-            if (arrowhead == null) return;
-
-            // Находим контейнер стрелки по наконечнику
-            var arrowContainer = arrows?.FirstOrDefault(a => a?.Arrowhead == arrowhead);
-            if (arrowContainer == null) return;
-
-            // Выделяем стрелку
-            SelectArrow(arrowContainer.Line);
-
-            // Начинаем перетаскивание
-            StartArrowDrag(arrowContainer, e);
-            e.Handled = true;
-
-
-        }
-
-        // Обновленный метод для начала перетаскивания стрелки
-        private void StartArrowDrag(ArrowContainer arrowContainer, MouseButtonEventArgs e)
-        {
-            if (arrowContainer == null || arrowContainer.Line == null || MainCanvas == null) return;
-
-            try
-            {
-                // Сохраняем ссылку на перетаскиваемую стрелку
-                draggedArrowContainer = arrowContainer;
-                isArrowDragging = true;
-
-                // Захватываем мышь
-                arrowContainer.Line.CaptureMouse();
-                if (arrowContainer.Arrowhead != null)
-                {
-                    arrowContainer.Arrowhead.CaptureMouse();
-                }
-
-                // Сохраняем начальную позицию
-                arrowDragStartPoint = e.GetPosition(MainCanvas);
-
-                // Сохраняем оригинальные точки стрелки
-                arrowContainer.OriginalPoints = new PointCollection(arrowContainer.Line.Points);
-
-                // Визуальный фидбэк - поднимаем наверх
-                Canvas.SetZIndex(arrowContainer.Line, 1000);
-                if (arrowContainer.Arrowhead != null)
-                {
-                    Canvas.SetZIndex(arrowContainer.Arrowhead, 1001);
-                }
-
-                // Визуальное выделение при перетаскивании
-                SetArrowDragVisual(arrowContainer, true);
-
-                e.Handled = true;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в StartArrowDrag: {ex.Message}");
-                // Сбрасываем состояние в случае ошибки
-                isArrowDragging = false;
-                draggedArrowContainer = null;
-            }
-        }
-
-        // Обработчики событий для перетаскивания стрелок
-        private void Arrow_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (isArrowModeActive) return;
-
-            try
-            {
-                var arrow = sender as Polyline;
-                if (arrow == null) return;
-
-                // Находим контейнер стрелки
-                var arrowContainer = arrows?.FirstOrDefault(a => a?.Line == arrow);
-                if (arrowContainer == null) return;
-
-                // Выделяем стрелку
-                SelectArrow(arrow);
-
-                // Начинаем перетаскивание
-                StartArrowDrag(arrowContainer, e);
-                e.Handled = true;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в Arrow_MouseLeftButtonDown: {ex.Message}");
-            }
-        }
-
-        private void Arrow_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (!isArrowDragging || draggedArrowContainer == null || draggedArrowContainer.Line == null) return;
-            if (e.LeftButton != MouseButtonState.Pressed) return;
-
-            try
-            {
-                Point currentPosition = e.GetPosition(MainCanvas);
-
-                // Вычисляем смещение от начальной точки
-                double deltaX = currentPosition.X - arrowDragStartPoint.X;
-                double deltaY = currentPosition.Y - arrowDragStartPoint.Y;
-
-                // Проверяем что есть оригинальные точки
-                if (draggedArrowContainer.OriginalPoints == null) return;
-
-                // Создаем новую коллекцию точек с применением смещения
-                var newPoints = new PointCollection();
-                foreach (Point point in draggedArrowContainer.OriginalPoints)
-                {
-                    double newX = point.X + deltaX;
-                    double newY = point.Y + deltaY;
-
-                    // Ограничиваем перемещение рабочей областью
-                    newX = Math.Max(0, Math.Min(newX, MainCanvas.ActualWidth - 10));
-                    newY = Math.Max(WorkAreaTop, Math.Min(newY, MainCanvas.ActualHeight - WorkAreaBottom - 10));
-
-                    // ПРИМЕНЯЕМ ПРИВЯЗКУ К СЕТКЕ К КАЖДОЙ ТОЧКЕ В РЕАЛЬНОМ ВРЕМЕНИ
-                    if (isSnapToGridEnabled)
-                    {
-                        Point snappedPoint = SnapToGrid(new Point(newX, newY));
-                        newX = snappedPoint.X;
-                        newY = snappedPoint.Y;
-                    }
-
-                    newPoints.Add(new Point(newX, newY));
-                }
-
-                // Обновляем точки стрелки
-                draggedArrowContainer.Line.Points = newPoints;
-
-                // Синхронно обновляем позицию наконечника
-                if (draggedArrowContainer.Arrowhead != null)
-                {
-                    UpdateArrowheadPosition(draggedArrowContainer);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в Arrow_MouseMove: {ex.Message}");
-            }
-        }
-
-        private void MakeArrowPointsDraggable(ArrowContainer arrowContainer)
-        {
-            // Создаем невидимые маркеры для точек излома
-            for (int i = 1; i < arrowContainer.Line.Points.Count - 1; i++)
-            {
-                var pointMarker = new Ellipse
-                {
-                    Width = 10,
-                    Height = 10,
-                    Fill = Brushes.Transparent,
-                    Stroke = Brushes.Transparent,
-                    Cursor = Cursors.SizeAll,
-                    Tag = i // Сохраняем индекс точки
-                };
-
-                // Позиционируем маркер на точке
-                Point point = arrowContainer.Line.Points[i];
-                Canvas.SetLeft(pointMarker, point.X - 5);
-                Canvas.SetTop(pointMarker, point.Y - 5);
-
-                MainCanvas.Children.Add(pointMarker);
-
-                // Обработчики для перетаскивания точки
-                pointMarker.MouseLeftButtonDown += (s, e) =>
-                {
-                    var marker = s as Ellipse;
-                    if (marker != null && marker.Tag is int pointIndex)
-                    {
-                        isDragging = true;
-                        draggedElement = marker;
-                        marker.CaptureMouse();
-                        dragStartPoint = e.GetPosition(MainCanvas);
-
-                        // Сохраняем оригинальные точки
-                        arrowContainer.OriginalPoints = new PointCollection(arrowContainer.Line.Points);
-                        e.Handled = true;
-                    }
-                };
-
-                pointMarker.MouseMove += (s, e) =>
-                {
-                    var marker = s as Ellipse;
-                    if (isDragging && marker != null && marker.Tag is int pointIndex &&
-                        arrowContainer.OriginalPoints != null)
-                    {
-                        Point currentPosition = e.GetPosition(MainCanvas);
-
-                        // Обновляем конкретную точку в стрелке
-                        var newPoints = new PointCollection(arrowContainer.Line.Points);
-                        newPoints[pointIndex] = currentPosition;
-
-                        arrowContainer.Line.Points = newPoints;
-
-                        // Обновляем позицию маркера
-                        Canvas.SetLeft(marker, currentPosition.X - 5);
-                        Canvas.SetTop(marker, currentPosition.Y - 5);
-
-                        // Обновляем наконечник если это последняя точка
-                        if (pointIndex == arrowContainer.Line.Points.Count - 2)
-                        {
-                            UpdateArrowheadPosition(arrowContainer);
-                        }
-                    }
-                };
-
-                pointMarker.MouseLeftButtonUp += (s, e) =>
-                {
-                    var marker = s as Ellipse;
-                    if (marker != null)
-                    {
-                        isDragging = false;
-                        marker.ReleaseMouseCapture();
-                        arrowContainer.OriginalPoints = null;
-                        draggedElement = null;
-                        e.Handled = true;
-                    }
-                };
-            }
-        }
-
-        private void Arrow_MouseLeftButtonUp(object sender, MouseEventArgs e)
-        {
-            if (!isArrowDragging || draggedArrowContainer == null) return;
-
-            try
-            {
-                // Завершаем перетаскивание
-                isArrowDragging = false;
-
-                // Освобождаем захват мыши
-                if (draggedArrowContainer.Line != null)
-                {
-                    draggedArrowContainer.Line.ReleaseMouseCapture();
-                    // Возвращаем нормальный ZIndex
-                    Canvas.SetZIndex(draggedArrowContainer.Line, 500);
-                }
-
-                if (draggedArrowContainer.Arrowhead != null)
-                {
-                    draggedArrowContainer.Arrowhead.ReleaseMouseCapture();
-                    Canvas.SetZIndex(draggedArrowContainer.Arrowhead, 501);
-                }
-
-                // Применяем привязку к сетке при завершении перетаскивания
-                if (isSnapToGridEnabled && draggedArrowContainer.Line.Points != null)
-                {
-                    PointCollection snappedPoints = new PointCollection();
-                    foreach (Point point in draggedArrowContainer.Line.Points)
-                    {
-                        snappedPoints.Add(SnapToGrid(point));
-                    }
-                    draggedArrowContainer.Line.Points = snappedPoints;
-                    
-                    // Синхронно обновляем позицию наконечника
-                    if (draggedArrowContainer.Arrowhead != null)
-                    {
-                        UpdateArrowheadPosition(draggedArrowContainer);
-                    }
-                }
-
-                // Восстанавливаем визуальное оформление
-                if (selectedArrowContainer == draggedArrowContainer)
-                {
-                    ApplyArrowSelectionVisual(draggedArrowContainer);
-                }
-                else
-                {
-                    RestoreArrowAppearance(draggedArrowContainer);
-                }
-
-                // Очищаем временные данные
-                draggedArrowContainer.OriginalPoints = null;
-                draggedArrowContainer = null;
-
-                e.Handled = true;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в Arrow_MouseLeftButtonUp: {ex.Message}");
-                // Принудительно сбрасываем состояние
-                isArrowDragging = false;
-                draggedArrowContainer = null;
-            }
-        }
 
         // Метод обновления комбо-бокса на основе цвета фигуры
         private void UpdateColorComboBoxFromShape(UIElement shape)
@@ -5063,28 +3827,6 @@ namespace Graphic_Editor
             comments.Remove(comment);
         }
 
-        // Выделение стрелки
-        private void SelectArrow(Polyline arrow)
-        {
-            if (arrow == null) return;
-
-            // Снимаем выделение с других элементов
-            DeselectAll();
-            DeselectArrow();
-
-            // Находим контейнер стрелки
-            var arrowContainer = arrows?.FirstOrDefault(a => a?.Line == arrow);
-            if (arrowContainer == null) return;
-
-            selectedArrowContainer = arrowContainer;
-            ApplyArrowSelectionVisual(arrowContainer);
-
-            // Создаем контекстное меню
-            CreateArrowContextMenu(arrowContainer);
-
-            // Показываем информацию о стрелке в панелях свойств
-            UpdateArrowPropertiesInPanels(arrowContainer);
-        }
 
         private void UpdateArrowPropertiesInPanels(ArrowContainer arrowContainer)
         {
@@ -5127,227 +3869,11 @@ namespace Graphic_Editor
             }
         }
 
-        // Контекстное меню для стрелки
-        private void CreateArrowContextMenu(ArrowContainer arrowContainer)
+        private void PenButton_Click(object sender, RoutedEventArgs e)
         {
-            ContextMenu contextMenu = new ContextMenu
+            if (arrowManager != null)
             {
-                Background = Brushes.White,
-                Foreground = Brushes.Black,
-                FontSize = 12,
-                Padding = new Thickness(5)
-            };
-
-            // Пункт "Удалить"
-            MenuItem deleteMenuItem = new MenuItem
-            {
-                Header = "Удалить",
-                Icon = new TextBlock { Text = "🗑", FontSize = 14 }
-            };
-            deleteMenuItem.Click += (s, e) => DeleteArrow(arrowContainer.Line);
-            contextMenu.Items.Add(deleteMenuItem);
-
-            contextMenu.Items.Add(new Separator());
-
-            // Пункт "Перенести на передний план"
-            MenuItem bringToFrontMenuItem = new MenuItem
-            {
-                Header = "Перенести на передний план",
-                Icon = new TextBlock { Text = "⬆", FontSize = 14 }
-            };
-            bringToFrontMenuItem.Click += (s, e) => BringArrowToFront(arrowContainer);
-            contextMenu.Items.Add(bringToFrontMenuItem);
-
-            // Пункт "Перенести на задний план"
-            MenuItem sendToBackMenuItem = new MenuItem
-            {
-                Header = "Перенести на задний план",
-                Icon = new TextBlock { Text = "⬇", FontSize = 14 }
-            };
-            sendToBackMenuItem.Click += (s, e) => SendArrowToBack(arrowContainer);
-            contextMenu.Items.Add(sendToBackMenuItem);
-
-            arrowContainer.Line.ContextMenu = contextMenu;
-        }
-
-        // Изменение цвета стрелки
-        private void ChangeArrowColor(ArrowContainer arrowContainer)
-        {
-            var dialog = new Window
-            {
-                Title = "Выбор цвета",
-                Width = 300,
-                Height = 400,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner
-            };
-
-            var stackPanel = new StackPanel();
-
-            // ComboBox с основными цветами
-            var colorComboBox = new ComboBox
-            {
-                Margin = new Thickness(10),
-                ItemsSource = new[]
-                {
-                    new { Name = "Красный", Color = Colors.Red },
-                    new { Name = "Синий", Color = Colors.Blue },
-                    new { Name = "Зеленый", Color = Colors.Green },
-                    new { Name = "Черный", Color = Colors.Black },
-                    new { Name = "Белый", Color = Colors.White }
-                },
-                DisplayMemberPath = "Name"
-            };
-
-            // Кнопки
-            var okButton = new Button { Content = "OK", Width = 80 };
-            var cancelButton = new Button { Content = "Отмена", Width = 80 };
-
-            var buttonPanel = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Margin = new Thickness(10)
-            };
-            buttonPanel.Children.Add(okButton);
-            buttonPanel.Children.Add(cancelButton);
-
-            stackPanel.Children.Add(colorComboBox);
-            stackPanel.Children.Add(buttonPanel);
-            dialog.Content = stackPanel;
-
-            okButton.Click += (s, e) =>
-            {
-                if (colorComboBox.SelectedValue != null)
-                {
-                    var selectedColor = (colorComboBox.SelectedValue as dynamic)?.Color;
-                    Brush newBrush = new SolidColorBrush(selectedColor);
-
-                    // Применяем цвет к линии
-                    arrowContainer.Line.Stroke = newBrush;
-
-                    // Применяем цвет к наконечнику
-                    if (arrowContainer.Arrowhead != null)
-                    {
-                        arrowContainer.Arrowhead.Fill = newBrush;
-                        arrowContainer.Arrowhead.Stroke = newBrush;
-                    }
-
-                    CaptureArrowOriginalAppearance(arrowContainer);
-
-                    if (selectedArrowContainer == arrowContainer)
-                    {
-                        ApplyArrowSelectionVisual(arrowContainer);
-                    }
-                }
-                dialog.DialogResult = true;
-            };
-
-            cancelButton.Click += (s, e) => dialog.DialogResult = false;
-
-            dialog.ShowDialog();
-        }
-
-        // Удаление стрелки
-        private void DeleteArrow(Polyline arrow)
-        {
-            if (arrow == null) return;
-
-            try
-            {
-                var arrowContainer = arrows?.FirstOrDefault(a => a?.Line == arrow);
-                if (arrowContainer == null) return;
-
-                // Сохраняем в стек отмены
-                SaveArrowToUndoStack(arrowContainer);
-
-                if (selectedArrowContainer == arrowContainer)
-                {
-                    DeselectArrow();
-                }
-
-                // Удаляем с холста
-                if (MainCanvas != null)
-                {
-                    if (MainCanvas.Children.Contains(arrowContainer.Line))
-                    {
-                        MainCanvas.Children.Remove(arrowContainer.Line);
-                    }
-                    if (arrowContainer.Arrowhead != null && MainCanvas.Children.Contains(arrowContainer.Arrowhead))
-                    {
-                        MainCanvas.Children.Remove(arrowContainer.Arrowhead);
-                    }
-                }
-
-                arrows?.Remove(arrowContainer);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в DeleteArrow: {ex.Message}");
-            }
-        }
-
-        private void SaveArrowToUndoStack(ArrowContainer arrowContainer)
-        {
-            if (arrowContainer?.Line == null) return;
-
-            try
-            {
-                // Сохраняем стрелку как удаление
-                SaveToUndoStack(arrowContainer.Line, UndoActionType.Remove);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Ошибка в SaveArrowToUndoStack: {ex.Message}");
-            }
-        }
-
-        // Создание стрелки из данных файла
-        private void CreateArrowFromData(string[] data)
-        {
-            if (data.Length >= 4)
-            {
-                var arrow = new Polyline
-                {
-                    Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString(data[2])),
-                    StrokeThickness = double.Parse(data[3]),
-                    StrokeLineJoin = PenLineJoin.Round,
-                    StrokeStartLineCap = PenLineCap.Round,
-                    StrokeEndLineCap = PenLineCap.Triangle,
-                    Points = new PointCollection(),
-                    Cursor = Cursors.Hand
-                };
-
-                // Парсим точки
-                string[] pointStrings = data[1].Split(';');
-                foreach (string pointStr in pointStrings)
-                {
-                    string[] coords = pointStr.Split(',');
-                    if (coords.Length == 2)
-                    {
-                        arrow.Points.Add(new Point(double.Parse(coords[0]), double.Parse(coords[1])));
-                    }
-                }
-
-                // Создаем контейнер стрелки
-                var arrowContainer = new ArrowContainer { Line = arrow };
-
-                // Создаем наконечник для загруженной стрелки
-                if (arrow.Points.Count >= 2)
-                {
-                    Point lineStart = arrow.Points[arrow.Points.Count - 2];
-                    Point lineEnd = arrow.Points[arrow.Points.Count - 1];
-                    arrowContainer.Arrowhead = CreateArrowhead(lineStart, lineEnd, arrow.Stroke);
-                }
-
-                // Добавляем на холст
-                MainCanvas.Children.Add(arrow);
-                if (arrowContainer.Arrowhead != null)
-                {
-                    MainCanvas.Children.Add(arrowContainer.Arrowhead);
-                }
-
-                // Добавляем в список и делаем перетаскиваемой
-                RegisterArrowContainer(arrowContainer);
+                arrowManager.ToggleArrowMode();
             }
         }
 
@@ -5355,12 +3881,6 @@ namespace Graphic_Editor
         {
             isCursor = !isCursor;
             isActiveCursor();
-        }
-
-        // Обработчик для кнопки пера на панели инструментов
-        private void PenButton_Click(object sender, RoutedEventArgs e)
-        {
-            ToggleArrowMode(); //изменить название кнопки
         }
 
         private void isActiveCursor()
@@ -5375,102 +3895,12 @@ namespace Graphic_Editor
             }
         }
 
-        // Метод для создания треугольника-наконечника
-        private Polygon CreateArrowhead(Point startPoint, Point endPoint, Brush color)
-        {
-            // Вычисляем направление стрелки
-            double dx = endPoint.X - startPoint.X;
-            double dy = endPoint.Y - startPoint.Y;
-            double length = Math.Sqrt(dx * dx + dy * dy);
-
-            if (length == 0) return null;
-
-            // Нормализуем вектор направления
-            dx /= length;
-            dy /= length;
-
-            // Размеры наконечника
-            double arrowLength = 20;
-            double arrowWidth = 12;
-
-            // Вычисляем точки треугольника
-            Point arrowTip = endPoint;
-            Point arrowLeft = new Point(
-                endPoint.X - dx * arrowLength + dy * arrowWidth,
-                endPoint.Y - dy * arrowLength - dx * arrowWidth
-            );
-            Point arrowRight = new Point(
-                endPoint.X - dx * arrowLength - dy * arrowWidth,
-                endPoint.Y - dy * arrowLength + dx * arrowWidth
-            );
-
-            // Создаем треугольник
-            Polygon arrowhead = new Polygon
-            {
-                Points = new PointCollection { arrowTip, arrowLeft, arrowRight },
-                Fill = color,
-                Stroke = color,
-                StrokeThickness = 1,
-                Cursor = Cursors.Hand
-            };
-
-            return arrowhead;
-        }
-        private void UpdateArrowheadPosition(ArrowContainer arrowContainer)
-        {
-            if (arrowContainer.Line.Points.Count < 2 || arrowContainer.Arrowhead == null) return;
-
-            // Находим последний сегмент стрелки
-            Point lineStart = arrowContainer.Line.Points[arrowContainer.Line.Points.Count - 2];
-            Point lineEnd = arrowContainer.Line.Points[arrowContainer.Line.Points.Count - 1];
-
-            // ОБНОВЛЯЕМ ГЕОМЕТРИЮ НАКОНЕЧНИКА НА МЕСТЕ
-            UpdateArrowheadGeometry(arrowContainer.Arrowhead, lineStart, lineEnd, arrowContainer.Line.Stroke);
-        }
-
-        // Метод для обновления геометрии наконечника
-        private void UpdateArrowheadGeometry(Polygon arrowhead, Point lineStart, Point lineEnd, Brush color)
-        {
-            // Вычисляем направление стрелки
-            double dx = lineEnd.X - lineStart.X;
-            double dy = lineEnd.Y - lineStart.Y;
-            double length = Math.Sqrt(dx * dx + dy * dy);
-
-            if (length == 0) return;
-
-            // Нормализуем вектор направления
-            dx /= length;
-            dy /= length;
-
-            // Размеры наконечника
-            double arrowLength = 20;
-            double arrowWidth = 12;
-
-            // Вычисляем точки треугольника
-            Point arrowTip = lineEnd;
-
-            // Боковые точки наконечника
-            Point arrowLeft = new Point(
-                lineEnd.X - dx * arrowLength + dy * arrowWidth,
-                lineEnd.Y - dy * arrowLength - dx * arrowWidth
-            );
-            Point arrowRight = new Point(
-                lineEnd.X - dx * arrowLength - dy * arrowWidth,
-                lineEnd.Y - dy * arrowLength + dx * arrowWidth
-            );
-
-            // Обновляем точки наконечника
-            arrowhead.Points = new PointCollection { arrowTip, arrowLeft, arrowRight };
-            arrowhead.Fill = color;
-            arrowhead.Stroke = color;
-        }
-
         private void MainCanvas_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (isArrowModeActive && currentArrow != null)
+            if (arrowManager != null && arrowManager.IsArrowModeActive && arrowManager.CurrentArrow != null)
             {
                 // Завершаем рисование стрелки по правой кнопке
-                CompleteArrow();
+                arrowManager.CompleteArrow();
                 e.Handled = true;
             }
         }

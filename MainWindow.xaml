@@ -1155,7 +1155,7 @@
                               FontSize="11"
                               VerticalContentAlignment="Center"
                               Padding="5,0"
-                              SelectionChanged="FontComboBox_SelectionChanged">
+                              >
                                     <ComboBoxItem Content="Gotham Pro" IsSelected="True"/>
                                     <ComboBoxItem Content="Arial"/>
                                     <ComboBoxItem Content="Times New Roman"/>
@@ -1189,7 +1189,7 @@
                                   VerticalContentAlignment="Center"
                                   Padding="5,0" 
                                   Margin="0,0,-8,0"
-                                  SelectionChanged="FontStyleComboBox_SelectionChanged">
+                                  >
                                         <ComboBoxItem Content="Regular" IsSelected="True"/>
                                         <ComboBoxItem Content="Bold"/>
                                         <ComboBoxItem Content="Italic"/>
@@ -1215,7 +1215,7 @@
                                   FontSize="11"
                                   VerticalContentAlignment="Center"
                                   Padding="5,0"
-                                  SelectionChanged="FontSizeComboBox_SelectionChanged">
+                                  >
                                         <ComboBoxItem Content="8"/>
                                         <ComboBoxItem Content="9"/>
                                         <ComboBoxItem Content="10" IsSelected="True"/>
