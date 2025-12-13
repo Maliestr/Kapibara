@@ -41,16 +41,9 @@ namespace Graphic_Editor
         private List<UIElement> canvasElements = new List<UIElement>(); //Список всех элементов на холсте
 
         //Система выделения
-        private FrameworkElement selectedElement; //Текущий выделенный элемент (для операций)
-        private UIElement selectedShape; //Выделенная фигура (альтернативная система выделения)
+        private SelectionManager selectionManager; //Менеджер системы выделения
         private FrameworkElement copiedElement; //Элемент в буфере обмена для копирования/вставки
         private Point lastMousePosition; //Последняя позиция мыши (для отслеживания движения)
-
-        //Система прямоугольного выделения
-        private bool isSelecting = false; //Идёт ли процесс выделения - нет
-        private Point selectionStart; //Начальная точка выделения
-        private Rectangle selectionRect; //Визуальный прямоугольник выделения
-        private List<UIElement> selectedElements = new List<UIElement>(); //Список выделенных элементов
         private Dictionary<UIElement, ResizableElement> resizableElements = 
             new Dictionary<UIElement, ResizableElement>(); //Хранит связь между элементами на холсте и их контроллерами изменения размера
         private ResizableElement currentResizableElement; //Текущий активный изменяемый в размерах элемент
@@ -99,10 +92,8 @@ namespace Graphic_Editor
         private FontStyle currentFontStyle = FontStyles.Normal; //Текущий стиль
         private FontWeight currentFontWeight = FontWeights.Normal; //Текущая насыщенность
 
-        //Система сохранения оригинальных стилей
-        private Dictionary<UIElement, Brush> originalStrokeColors = new Dictionary<UIElement, Brush>(); //Исходные цвета контуров
-        private Dictionary<UIElement, Brush> originalFillColors = new Dictionary<UIElement, Brush>(); //Исходные цвета заливки
-        private Dictionary<UIElement, double> originalStrokeThickness = new Dictionary<UIElement, double>(); //Оригинальная толщина обводки
+        //Система сохранения оригинальных стилей (теперь управляется SelectionManager)
+        // Все операции с оригинальными стилями выполняются через selectionManager
 
         //Управление интерфейсом
         private bool arePanelsVisible = true; //Видимость всех панелей инструментов
@@ -176,7 +167,7 @@ namespace Graphic_Editor
             InitializeGrid(); //Создает и инициализирует визуальную сетку
             InitializePanels(); //Находит и регистрирует все панели выделения
             InitializePropertyBlocks(); //Скрывает блоки свойств при загрузке приложения
-            InitializeSelectionSystem(); //Настраивает систему прямоугольного выделения
+            InitializeSelectionSystem(); //Настраивает систему выделения через SelectionManager
             isActiveCursor();
 
             // Обработка горячих клавиш
@@ -259,6 +250,7 @@ namespace Graphic_Editor
 
         private void ApplyDimensionsFromTextboxes()
         {
+            var selectedShape = selectionManager?.SelectedShape;
             if (selectedShape == null) return;
 
             if (double.TryParse(WidthTextBox.Text, out double width) &&
@@ -834,6 +826,7 @@ namespace Graphic_Editor
         {
             NotationCard.Visibility = Visibility.Visible;
 
+            var selectedElement = selectionManager?.SelectedElement;
             if (selectedElement is Ellipse ellipse || selectedElement is Border border || selectedElement is Line line)
             {
                 DimensionsPanel.Visibility = Visibility.Visible;
@@ -1269,6 +1262,7 @@ namespace Graphic_Editor
             }
             
             // Удаление выделенного элемента по клавише Delete
+            var selectedElement = selectionManager?.SelectedElement;
             if (e.Key == Key.Delete && selectedElement != null)
             {
                 DeleteSelectedElement();
@@ -1286,10 +1280,11 @@ namespace Graphic_Editor
         // Новые методы для работы с множественным выделением
         private void CutSelectedElements()
         {
+            var selectedElements = selectionManager?.SelectedElements.ToList() ?? new List<UIElement>();
             if (selectedElements.Count > 0)
             {
                 // Сохраняем копии для буфера обмена
-                var elementsToCut = selectedElements.ToList();
+                var elementsToCut = selectedElements;
 
                 foreach (var element in elementsToCut)
                 {
@@ -1501,6 +1496,7 @@ namespace Graphic_Editor
                 return;
             }
 
+            var selectedElement = selectionManager?.SelectedElement;
             if (selectedElement != null)
             {
                 // Показываем панель толщины только для элементов, у которых есть обводка
@@ -1541,15 +1537,18 @@ namespace Graphic_Editor
         // Метод применения толщины обводки к выделенной фигуре
         private void ApplyStrokeThicknessToSelectedShape(double thickness)
         {
+            var selectedElement = selectionManager?.SelectedElement;
             if (selectedElement != null)
             {
                 ApplyStrokeThicknessToShape(selectedElement, thickness);
 
                 // Сохраняем новую толщину как оригинальную
-                originalStrokeThickness[selectedElement] = thickness;
+                selectionManager?.UpdateOriginalStrokeThickness(selectedElement, thickness);
+                
+                var selectedShape = selectionManager?.SelectedShape;
                 if (selectedShape != null)
                 {
-                    originalStrokeThickness[selectedShape] = thickness;
+                    selectionManager?.UpdateOriginalStrokeThickness(selectedShape, thickness);
                 }
             }
         }
@@ -1576,7 +1575,7 @@ namespace Graphic_Editor
             }
 
             // Сохраняем толщину в словарь оригинальных толщин
-            originalStrokeThickness[shape] = thickness;
+            selectionManager?.UpdateOriginalStrokeThickness(shape, thickness);
         }
 
         // Метод обновления комбо-бокса толщины на основе фигуры
@@ -1619,55 +1618,10 @@ namespace Graphic_Editor
             StrokeWidthComboBox.SelectedIndex = 0;
         }
 
-        // Сохранение оригинальных цветов и толщины
+        // Сохранение оригинальных цветов и толщины (делегируется в SelectionManager)
         private void SaveOriginalColors(UIElement shape)
         {
-            if (shape == null) return;
-            
-            // Если элемент уже выделен (толщина увеличена), восстанавливаем базовую толщину перед сохранением
-            bool isCurrentlySelected = selectedElements.Contains(shape);
-            double savedThickness = originalStrokeThickness.ContainsKey(shape) ? originalStrokeThickness[shape] : 0;
-            
-            if (shape is Ellipse ellipse)
-            {
-                // Если элемент выделен, восстанавливаем базовую толщину перед сохранением
-                if (isCurrentlySelected && savedThickness > 0)
-                {
-                    ellipse.StrokeThickness = savedThickness;
-                }
-                // Сохраняем текущие цвета и толщину
-                originalStrokeColors[shape] = ellipse.Stroke;
-                originalFillColors[shape] = ellipse.Fill;
-                originalStrokeThickness[shape] = ellipse.StrokeThickness;
-            }
-            else if (shape is Border border)
-            {
-                // Если элемент выделен, восстанавливаем базовую толщину перед сохранением
-                if (isCurrentlySelected && savedThickness > 0)
-                {
-                    border.BorderThickness = new Thickness(savedThickness);
-                }
-                // Сохраняем текущие цвета и толщину
-                originalStrokeColors[shape] = border.BorderBrush;
-                originalFillColors[shape] = border.Background;
-                originalStrokeThickness[shape] = border.BorderThickness.Left;
-            }
-            else if (shape is Line line)
-            {
-                // Если элемент выделен, восстанавливаем базовую толщину перед сохранением
-                if (isCurrentlySelected && savedThickness > 0)
-                {
-                    line.StrokeThickness = savedThickness;
-                }
-                // Сохраняем текущие цвета и толщину
-                originalStrokeColors[shape] = line.Stroke;
-                originalStrokeThickness[shape] = line.StrokeThickness;
-            }
-            else if (shape is TextBlock textBlock)
-            {
-                // Сохраняем текущие цвета
-                originalStrokeColors[shape] = textBlock.Foreground;
-            }
+            selectionManager?.SaveOriginalColors(shape);
         }
 
         // Обновите метод RestoreOriginalAppearance для восстановления толщины
@@ -1676,9 +1630,10 @@ namespace Graphic_Editor
             if (element is Ellipse ellipse)
             {
                 // Возвращаем сохраненный цвет обводки
-                if (originalStrokeColors.ContainsKey(element))
+                var strokeColor = selectionManager?.GetOriginalStrokeColor(element);
+                if (strokeColor != null)
                 {
-                    ellipse.Stroke = originalStrokeColors[element];
+                    ellipse.Stroke = strokeColor;
                 }
                 else
                 {
@@ -1692,9 +1647,10 @@ namespace Graphic_Editor
                     }
                 }
                 // Возвращаем сохраненную толщину
-                if (originalStrokeThickness.ContainsKey(element))
+                double thickness = selectionManager?.GetOriginalStrokeThickness(element) ?? 0;
+                if (thickness > 0)
                 {
-                    ellipse.StrokeThickness = originalStrokeThickness[element];
+                    ellipse.StrokeThickness = thickness;
                 }
                 else
                 {
@@ -1704,18 +1660,20 @@ namespace Graphic_Editor
             }
             else if (element is Border border)
             {
-                if (originalStrokeColors.ContainsKey(element))
+                var strokeColor = selectionManager?.GetOriginalStrokeColor(element);
+                if (strokeColor != null)
                 {
-                    border.BorderBrush = originalStrokeColors[element];
+                    border.BorderBrush = strokeColor;
                 }
                 else
                 {
                     border.BorderBrush = Brushes.White;
                 }
                 // Возвращаем сохраненную толщину
-                if (originalStrokeThickness.ContainsKey(element))
+                double thickness = selectionManager?.GetOriginalStrokeThickness(element) ?? 0;
+                if (thickness > 0)
                 {
-                    border.BorderThickness = new Thickness(originalStrokeThickness[element]);
+                    border.BorderThickness = new Thickness(thickness);
                 }
                 else
                 {
@@ -1725,18 +1683,20 @@ namespace Graphic_Editor
             }
             else if (element is Line line)
             {
-                if (originalStrokeColors.ContainsKey(element))
+                var strokeColor = selectionManager?.GetOriginalStrokeColor(element);
+                if (strokeColor != null)
                 {
-                    line.Stroke = originalStrokeColors[element];
+                    line.Stroke = strokeColor;
                 }
                 else
                 {
                     line.Stroke = Brushes.White;
                 }
                 // Возвращаем сохраненную толщину
-                if (originalStrokeThickness.ContainsKey(element))
+                double thickness = selectionManager?.GetOriginalStrokeThickness(element) ?? 0;
+                if (thickness > 0)
                 {
-                    line.StrokeThickness = originalStrokeThickness[element];
+                    line.StrokeThickness = thickness;
                 }
                 else
                 {
@@ -1746,9 +1706,10 @@ namespace Graphic_Editor
             }
             else if (element is TextBlock textBlock)
             {
-                if (originalStrokeColors.ContainsKey(element))
+                var strokeColor = selectionManager?.GetOriginalStrokeColor(element);
+                if (strokeColor != null)
                 {
-                    textBlock.Foreground = originalStrokeColors[element];
+                    textBlock.Foreground = strokeColor;
                 }
                 textBlock.Background = Brushes.Transparent;
                 textBlock.Opacity = 1.0;
@@ -1760,49 +1721,7 @@ namespace Graphic_Editor
         private void SelectElement(FrameworkElement element)
         {
             if (element == null) return;
-
-            if (!Keyboard.IsKeyDown(Key.LeftCtrl))
-            {
-                DeselectAll();
-            }
-
-            // Если элемент уже выделен и нажат Ctrl - снимаем выделение
-            if (selectedElements.Contains(element) && Keyboard.IsKeyDown(Key.LeftCtrl))
-            {
-                DeselectElement(element);
-                return;
-            }
-
-            // Если элемент не выделен - выделяем его
-            if (!selectedElements.Contains(element))
-            {
-                // ВАЖНО: Сохраняем текущие цвета ПЕРЕД выделением
-                // Но сначала нужно убедиться, что элемент не выделен (толщина не увеличена)
-                // Если элемент был выделен ранее, его цвета уже сохранены в originalStrokeColors
-                // Поэтому просто используем текущие цвета элемента
-                SaveOriginalColors(element);
-                selectedElement = element;
-                ApplySelectionVisualFeedback(element, true);
-
-                // Создаем контекстное меню для выделенного элемента
-                CreateContextMenu(element);
-
-                // Обновляем комбо-боксы в соответствии с цветами фигуры
-                UpdateColorComboBoxesFromShape(element);
-
-                // ПОКАЗЫВАЕМ ПАНЕЛЬ ТОЛЩИНЫ ОБВОДКИ только если элемент НЕ в нотации
-                if (!IsElementInNotation(element))
-                {
-                    UpdateStrokeWidthPanelVisibility();
-                }
-                // Обновляем панель текста, если элемент является текстовым
-                UpdateTextPanelForSelectedElement(element);
-
-                selectedElements.Add(element);
-
-                // Показываем ручки изменения размера
-                ShowResizeHandlesForElement(element);
-            }
+            selectionManager?.SelectElement(element);
 
             if (TogglePanelsButton.IsChecked == false && element is TextBlock textBlock)
             {
@@ -1815,22 +1734,7 @@ namespace Graphic_Editor
 
         private void DeselectAll()
         {
-            // Снимаем выделение со всех элементов
-            foreach (var element in selectedElements.ToList())
-            {
-                DeselectElement(element);
-            }
-
-            // Снимаем выделение со стрелки
-            DeselectArrow();
-
-            // Скрываем панели свойств
-            StrokeWidthPanel.Visibility = Visibility.Collapsed;
-
-            DimensionsPanel.Visibility = Visibility.Collapsed;
-            FillPanel.Visibility = Visibility.Collapsed;
-            StrokePanel.Visibility = Visibility.Collapsed;
-            TextPanel.Visibility = Visibility.Collapsed;
+            selectionManager?.DeselectAll();
         }
 
         private void ClearColorComboBoxes()
@@ -1844,6 +1748,7 @@ namespace Graphic_Editor
         // Копирование выделенного элемента
         private void CopySelectedElement()
         {
+            var selectedElement = selectionManager?.SelectedElement;
             if (selectedElement != null)
             {
                 copiedElement = CloneUIElement(selectedElement);
@@ -1853,6 +1758,7 @@ namespace Graphic_Editor
         // Вырезание выделенного элемента
         private void CutSelectedElement()
         {
+            var selectedElement = selectionManager?.SelectedElement;
             if (selectedElement != null)
             {
                 // Сохраняем копию для буфера обмена
@@ -1927,6 +1833,7 @@ namespace Graphic_Editor
         // Удаление выделенного элемента
         private void DeleteSelectedElement()
         {
+            var selectedElement = selectionManager?.SelectedElement;
             if (selectedElement != null)
             {
                 // Сохраняем в стек отмены как удаление
@@ -2190,66 +2097,36 @@ namespace Graphic_Editor
         {
             if (original == null || copy == null) return;
             
+            // Используем метод копирования из SelectionManager
+            selectionManager?.CopyOriginalStyles(original, copy);
+            
+            // Если оригинальные стили не были сохранены, сохраняем текущие
             if (original is Ellipse originalEllipse && copy is Ellipse copyEllipse)
             {
-                if (originalStrokeColors.ContainsKey(original))
+                if (!selectionManager?.HasOriginalStrokeThickness(copy) ?? true)
                 {
-                    originalStrokeColors[copy] = originalStrokeColors[original];
-                }
-                else
-                {
-                    originalStrokeColors[copy] = originalEllipse.Stroke;
-                }
-
-                if (originalFillColors.ContainsKey(original))
-                {
-                    originalFillColors[copy] = originalFillColors[original];
-                }
-                else
-                {
-                    originalFillColors[copy] = originalEllipse.Fill;
+                    selectionManager?.SetOriginalStyles(copy, originalEllipse.Stroke, originalEllipse.Fill, originalEllipse.StrokeThickness);
                 }
             }
             else if (original is Border originalBorder && copy is Border copyBorder)
             {
-                if (originalStrokeColors.ContainsKey(original))
+                if (!selectionManager?.HasOriginalStrokeThickness(copy) ?? true)
                 {
-                    originalStrokeColors[copy] = originalStrokeColors[original];
-                }
-                else
-                {
-                    originalStrokeColors[copy] = originalBorder.BorderBrush;
-                }
-
-                if (originalFillColors.ContainsKey(original))
-                {
-                    originalFillColors[copy] = originalFillColors[original];
-                }
-                else
-                {
-                    originalFillColors[copy] = originalBorder.Background;
+                    selectionManager?.SetOriginalStyles(copy, originalBorder.BorderBrush, originalBorder.Background, originalBorder.BorderThickness.Left);
                 }
             }
             else if (original is Line originalLine && copy is Line copyLine)
             {
-                if (originalStrokeColors.ContainsKey(original))
+                if (!selectionManager?.HasOriginalStrokeThickness(copy) ?? true)
                 {
-                    originalStrokeColors[copy] = originalStrokeColors[original];
-                }
-                else
-                {
-                    originalStrokeColors[copy] = originalLine.Stroke;
+                    selectionManager?.SetOriginalStyles(copy, originalLine.Stroke, null, originalLine.StrokeThickness);
                 }
             }
             else if (original is TextBlock originalText && copy is TextBlock copyText)
             {
-                if (originalStrokeColors.ContainsKey(original))
+                if (selectionManager?.GetOriginalStrokeColor(copy) == null)
                 {
-                    originalStrokeColors[copy] = originalStrokeColors[original];
-                }
-                else
-                {
-                    originalStrokeColors[copy] = originalText.Foreground;
+                    selectionManager?.UpdateOriginalStrokeColor(copy, originalText.Foreground);
                 }
             }
         }
@@ -2261,63 +2138,59 @@ namespace Graphic_Editor
             
             if (element is Ellipse ellipse)
             {
-                if (originalStrokeColors.ContainsKey(element))
+                var strokeColor = selectionManager?.GetOriginalStrokeColor(element);
+                if (strokeColor != null)
                 {
-                    ellipse.Stroke = originalStrokeColors[element];
+                    ellipse.Stroke = strokeColor;
                 }
-                if (originalFillColors.ContainsKey(element))
+                var fillColor = selectionManager?.GetOriginalFillColor(element);
+                if (fillColor != null)
                 {
-                    ellipse.Fill = originalFillColors[element];
+                    ellipse.Fill = fillColor;
                 }
             }
             else if (element is Border border)
             {
-                if (originalStrokeColors.ContainsKey(element))
+                var strokeColor = selectionManager?.GetOriginalStrokeColor(element);
+                if (strokeColor != null)
                 {
-                    border.BorderBrush = originalStrokeColors[element];
+                    border.BorderBrush = strokeColor;
                 }
-                if (originalFillColors.ContainsKey(element))
+                var fillColor = selectionManager?.GetOriginalFillColor(element);
+                if (fillColor != null)
                 {
-                    border.Background = originalFillColors[element];
+                    border.Background = fillColor;
                 }
             }
             else if (element is Line line)
             {
-                if (originalStrokeColors.ContainsKey(element))
+                var strokeColor = selectionManager?.GetOriginalStrokeColor(element);
+                if (strokeColor != null)
                 {
-                    line.Stroke = originalStrokeColors[element];
+                    line.Stroke = strokeColor;
                 }
             }
             else if (element is TextBlock textBlock)
             {
-                if (originalStrokeColors.ContainsKey(element))
+                var strokeColor = selectionManager?.GetOriginalStrokeColor(element);
+                if (strokeColor != null)
                 {
-                    textBlock.Foreground = originalStrokeColors[element];
+                    textBlock.Foreground = strokeColor;
                 }
             }
         }
 
         private void SelectAllElements()
         {
-            ClearSelection();
-
-            // Используем ToArray() для создания безопасной копии
-            UIElement[] elements = new UIElement[MainCanvas.Children.Count];
-            MainCanvas.Children.CopyTo(elements, 0);
-
-            foreach (UIElement element in elements)
-            {
-                if (IsSelectableElement(element))
-                {
-                    SelectElement(element as FrameworkElement);
-                }
-            }
+            selectionManager?.SelectAllElements();
         }
 
         private bool IsSelectableElement(UIElement element)
         {
+            // Проверяем, что элемент не является прямоугольником выделения из SelectionManager
+            // SelectionManager управляет selectionRect, поэтому просто проверяем тип
             return element != null &&
-                   element != selectionRect &&
+                   !(element is Rectangle) && // Исключаем прямоугольники (selectionRect)
                    !IsElementInNotation(element) &&
                    element is FrameworkElement;
         }
@@ -2439,7 +2312,7 @@ namespace Graphic_Editor
             Canvas.SetZIndex(textBlock, 1000);
 
             // Сохраняем оригинальные настройки
-            originalStrokeColors[textBlock] = color;
+            selectionManager?.UpdateOriginalStrokeColor(textBlock, color);
             SaveTextFormatting(textBlock);
 
             // Добавляем текстовый элемент на холст
@@ -2474,9 +2347,9 @@ namespace Graphic_Editor
             if (textBlock == null) return;
             DeselectAll();
             // Сохраняем оригинальный цвет если он еще не сохранен
-            if (!originalStrokeColors.ContainsKey(textBlock))
+            if (selectionManager?.GetOriginalStrokeColor(textBlock) == null)
             {
-                originalStrokeColors[textBlock] = textBlock.Foreground;
+                selectionManager?.UpdateOriginalStrokeColor(textBlock, textBlock.Foreground);
             }
             SelectElement(textBlock);
             SelectShape(textBlock);
@@ -2495,9 +2368,9 @@ namespace Graphic_Editor
         private void StartTextDrag(UIElement element, MouseButtonEventArgs e)
         {
             // Убедимся, что цвета сохранены перед началом перетаскивания
-            if (!originalStrokeColors.ContainsKey(element) && element is TextBlock textBlock)
+            if (element is TextBlock textBlock && selectionManager?.GetOriginalStrokeColor(element) == null)
             {
-                originalStrokeColors[element] = textBlock.Foreground;
+                selectionManager?.UpdateOriginalStrokeColor(element, textBlock.Foreground);
             }
 
             isDragging = true;
@@ -2599,15 +2472,7 @@ namespace Graphic_Editor
             if (MainCanvas.Children.Contains(textBlock))
             {
                 // Получаем оригинальный цвет текста
-                Brush originalStrokeColor = null;
-                if (originalStrokeColors.ContainsKey(textBlock))
-                {
-                    originalStrokeColor = originalStrokeColors[textBlock];
-                }
-                else
-                {
-                    originalStrokeColor = textBlock.Foreground;
-                }
+                Brush originalStrokeColor = selectionManager?.GetOriginalStrokeColor(textBlock) ?? textBlock.Foreground;
 
                 // Создаем TextBox для редактирования с сохранением форматирования
                 var editTextBox = new TextBox
@@ -2690,7 +2555,7 @@ namespace Graphic_Editor
                 Canvas.SetTop(textBlock, top);
                 Canvas.SetZIndex(textBlock, 1000);
 
-                originalStrokeColors[textBlock] = originalColor;
+                selectionManager?.UpdateOriginalStrokeColor(textBlock, originalColor);
                 SaveTextFormatting(textBlock);
 
                 MainCanvas.Children.Add(textBlock);
@@ -2791,6 +2656,7 @@ namespace Graphic_Editor
         private void ApplyTextFormattingToSelected()
         {
             // Применяем изменения только если есть выбранный текстовый элемент
+            var selectedElement = selectionManager?.SelectedElement;
             if (selectedElement is TextBlock textBlock)
             {
                 // Применяем шрифт, если он выбран
@@ -3093,144 +2959,10 @@ namespace Graphic_Editor
             }
         }
 
+        // Применение визуального выделения (делегируется в SelectionManager)
         private void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
         {
-            if (element == null) return;
-
-            if (isSelected)
-            {
-                // ВЫДЕЛЕНИЕ ТОЛЬКО УВЕЛИЧЕНИЕМ ТОЛЩИНЫ, БЕЗ ИЗМЕНЕНИЯ ЦВЕТА
-                // Убеждаемся, что цвет обводки соответствует сохраненному цвету
-                if (selectedElements.Contains(element))
-                {
-                    if (element is Ellipse ellipseElement)
-                    {
-                        // Восстанавливаем сохраненный цвет обводки перед выделением
-                        if (originalStrokeColors.ContainsKey(element))
-                        {
-                            ellipseElement.Stroke = originalStrokeColors[element];
-                        }
-                        // Сохраняем оригинальную толщину перед изменением (если еще не сохранена)
-                        if (!originalStrokeThickness.ContainsKey(element))
-                        {
-                            originalStrokeThickness[element] = ellipseElement.StrokeThickness;
-                        }
-                        // Увеличиваем толщину на 2, используя сохраненную базовую толщину
-                        double baseThickness = originalStrokeThickness[element];
-                        ellipseElement.StrokeThickness = baseThickness + 2;
-                    }
-                    else if (element is Border borderElement)
-                    {
-                        // Восстанавливаем сохраненный цвет обводки перед выделением
-                        if (originalStrokeColors.ContainsKey(element))
-                        {
-                            borderElement.BorderBrush = originalStrokeColors[element];
-                        }
-                        // Сохраняем оригинальную толщину перед изменением (если еще не сохранена)
-                        if (!originalStrokeThickness.ContainsKey(element))
-                        {
-                            originalStrokeThickness[element] = borderElement.BorderThickness.Left;
-                        }
-                        // Увеличиваем толщину на 2, используя сохраненную базовую толщину
-                        double baseThickness = originalStrokeThickness[element];
-                        borderElement.BorderThickness = new Thickness(baseThickness + 2);
-                    }
-                    else if (element is Line lineElement)
-                    {
-                        // Восстанавливаем сохраненный цвет обводки перед выделением
-                        if (originalStrokeColors.ContainsKey(element))
-                        {
-                            lineElement.Stroke = originalStrokeColors[element];
-                        }
-                        // Сохраняем оригинальную толщину перед изменением (если еще не сохранена)
-                        if (!originalStrokeThickness.ContainsKey(element))
-                        {
-                            originalStrokeThickness[element] = lineElement.StrokeThickness;
-                        }
-                        // Увеличиваем толщину на 2, используя сохраненную базовую толщину
-                        double baseThickness = originalStrokeThickness[element];
-                        lineElement.StrokeThickness = baseThickness + 2;
-                    }
-                    else if (element is TextBlock textBlockElement)
-                    {
-                        textBlockElement.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 255));
-                    }
-                }
-            }
-            else
-            {
-                // ВОЗВРАЩАЕМ ОРИГИНАЛЬНЫЕ ЗНАЧЕНИЯ ТОЛЬКО ЕСЛИ ЭЛЕМЕНТ НЕ ВЫДЕЛЕН
-                if (!selectedElements.Contains(element))
-                {
-                    if (element is Ellipse ellipseElement)
-                    {
-                        if (originalStrokeColors.ContainsKey(element))
-                        {
-                            ellipseElement.Stroke = originalStrokeColors[element];
-                        }
-                        else
-                        {
-                            // Если цвет не сохранен, используем логику по умолчанию
-                            if (ellipseElement.Fill == Brushes.Transparent) // Кольцо
-                            {
-                                ellipseElement.Stroke = Brushes.White;
-                            }
-                            else // Круг
-                            {
-                                ellipseElement.Stroke = Brushes.Black;
-                            }
-                        }
-
-                        // Восстанавливаем толщину
-                        if (originalStrokeThickness.ContainsKey(element))
-                        {
-                            ellipseElement.StrokeThickness = originalStrokeThickness[element];
-                        }
-                    }
-                    else if (element is Border borderElement)
-                    {
-                        if (originalStrokeColors.ContainsKey(element))
-                        {
-                            borderElement.BorderBrush = originalStrokeColors[element];
-                        }
-                        else
-                        {
-                            borderElement.BorderBrush = Brushes.White;
-                        }
-
-                        // Восстанавливаем толщину
-                        if (originalStrokeThickness.ContainsKey(element))
-                        {
-                            borderElement.BorderThickness = new Thickness(originalStrokeThickness[element]);
-                        }
-                    }
-                    else if (element is Line lineElement)
-                    {
-                        if (originalStrokeColors.ContainsKey(element))
-                        {
-                            lineElement.Stroke = originalStrokeColors[element];
-                        }
-                        else
-                        {
-                            lineElement.Stroke = Brushes.White;
-                        }
-
-                        // Восстанавливаем толщину
-                        if (originalStrokeThickness.ContainsKey(element))
-                        {
-                            lineElement.StrokeThickness = originalStrokeThickness[element];
-                        }
-                    }
-                    else if (element is TextBlock textBlockElement)
-                    {
-                        if (originalStrokeColors.ContainsKey(element))
-                        {
-                            textBlockElement.Foreground = originalStrokeColors[element];
-                        }
-                        textBlockElement.Background = Brushes.Transparent;
-                    }
-                }
-            }
+            selectionManager?.ApplySelectionVisualFeedback(element, isSelected);
         }
 
         // Метод для обновления текстовых полей размеров
@@ -3343,12 +3075,14 @@ namespace Graphic_Editor
             }
 
             // Сохраняем в словарь
-            originalStrokeThickness[element] = thickness;
+            selectionManager?.UpdateOriginalStrokeThickness(element, thickness);
 
             // Если это selectedElement, обновляем и в selectedShape
+            var selectedElement = selectionManager?.SelectedElement;
+            var selectedShape = selectionManager?.SelectedShape;
             if (selectedElement == element && selectedShape != null)
             {
-                originalStrokeThickness[selectedShape] = thickness;
+                selectionManager?.UpdateOriginalStrokeThickness(selectedShape, thickness);
             }
         }
         private bool IsShapeFromNotation(UIElement element)
@@ -3387,9 +3121,7 @@ namespace Graphic_Editor
                     StrokeThickness = 3, // ФИКСИРОВАННАЯ толщина
                     Cursor = Cursors.Hand
                 };
-                originalStrokeThickness[copy] = 3;
-                originalStrokeColors[copy] = Brushes.White;
-                originalFillColors[copy] = Brushes.White;
+                selectionManager?.SetOriginalStyles(copy, Brushes.White, Brushes.White, 3);
                 return copy;
             }
             else if (original == UmlInitialNode)
@@ -3417,11 +3149,8 @@ namespace Graphic_Editor
                 };
 
                 border.Child = circle;
-                originalStrokeThickness[border] = 3;
-                originalStrokeThickness[circle] = 1;
-                originalStrokeColors[border] = Brushes.White;
-                originalFillColors[circle] = Brushes.White;
-                originalStrokeColors[circle] = Brushes.White;
+                selectionManager?.SetOriginalStyles(border, Brushes.White, null, 3);
+                selectionManager?.SetOriginalStyles(circle, Brushes.White, Brushes.White, 1);
                 return border;
             }
             else if (original == SimpleRing)
@@ -3435,8 +3164,7 @@ namespace Graphic_Editor
                     Fill = Brushes.Transparent,
                     Cursor = Cursors.Hand
                 };
-                originalStrokeThickness[copy] = 5;
-                originalStrokeColors[copy] = Brushes.White;
+                selectionManager?.SetOriginalStyles(copy, Brushes.White, null, 5);
                 return copy;
             }
             else if (original == Ellipse)
@@ -3450,8 +3178,7 @@ namespace Graphic_Editor
                     Fill = Brushes.Transparent,
                     Cursor = Cursors.Hand
                 };
-                originalStrokeThickness[copy] = 3;
-                originalStrokeColors[copy] = Brushes.White;
+                selectionManager?.SetOriginalStyles(copy, Brushes.White, null, 3);
                 return copy;
             }
             else if (original == Square)
@@ -3466,9 +3193,7 @@ namespace Graphic_Editor
                     CornerRadius = (Square as Border).CornerRadius,
                     Cursor = Cursors.Hand
                 };
-                originalStrokeThickness[copy] = 2;
-                originalStrokeColors[copy] = Brushes.White;
-                originalFillColors[copy] = Brushes.White;
+                selectionManager?.SetOriginalStyles(copy, Brushes.White, Brushes.White, 2);
                 return copy;
             }
             else if (original == ResizableSquare)
@@ -3485,9 +3210,7 @@ namespace Graphic_Editor
                     RenderTransformOrigin = new Point(0.5, 0.5)
                 };
                 copy.RenderTransform = new RotateTransform(45);
-                originalStrokeThickness[copy] = 2;
-                originalStrokeColors[copy] = Brushes.White;
-                originalFillColors[copy] = Brushes.White;
+                selectionManager?.SetOriginalStyles(copy, Brushes.White, Brushes.White, 2);
                 return copy;
             }
             else if (original == Rectangle)
@@ -3502,9 +3225,7 @@ namespace Graphic_Editor
                     CornerRadius = (Rectangle as Border).CornerRadius,
                     Cursor = Cursors.Hand
                 };
-                originalStrokeThickness[copy] = 2;
-                originalStrokeColors[copy] = Brushes.White;
-                originalFillColors[copy] = Brushes.White;
+                selectionManager?.SetOriginalStyles(copy, Brushes.White, Brushes.White, 2);
                 return copy;
             }
             else if (original == stick)
@@ -3519,9 +3240,7 @@ namespace Graphic_Editor
                     CornerRadius = (stick as Border).CornerRadius,
                     Cursor = Cursors.Hand
                 };
-                originalStrokeThickness[copy] = 2;
-                originalStrokeColors[copy] = Brushes.White;
-                originalFillColors[copy] = Brushes.White;
+                selectionManager?.SetOriginalStyles(copy, Brushes.White, Brushes.White, 2);
                 return copy;
             }
             else if (original == SuperEllipse)
@@ -3536,9 +3255,7 @@ namespace Graphic_Editor
                     CornerRadius = (SuperEllipse as Border).CornerRadius,
                     Cursor = Cursors.Hand
                 };
-                originalStrokeThickness[copy] = 2;
-                originalStrokeColors[copy] = Brushes.White;
-                originalFillColors[copy] = Brushes.White;
+                selectionManager?.SetOriginalStyles(copy, Brushes.White, Brushes.White, 2);
                 return copy;
             }
             return null;
@@ -3661,11 +3378,9 @@ namespace Graphic_Editor
         private void CanvasShape_MouseLeftButtonUp(object sender, MouseEventArgs e)
         {
             // Завершение выделения
-            if (isSelecting)
+            if (selectionManager?.IsSelecting == true)
             {
-                isSelecting = false;
-                MainCanvas.ReleaseMouseCapture();
-                selectionRect.Visibility = Visibility.Collapsed;
+                selectionManager.EndSelection();
             }
 
             // Завершение перетаскивания
@@ -3769,126 +3484,20 @@ namespace Graphic_Editor
             }
         }
 
-        // Методы для системы выделения
-        private void StartSelection(Point position)
-        {
-            // Сбрасываем предыдущее выделение, если не зажат Ctrl
-            if (!Keyboard.IsKeyDown(Key.LeftCtrl))
-            {
-                ClearSelection();
-            }
-
-            selectionStart = position;
-            isSelecting = true;
-
-            selectionRect.Visibility = Visibility.Visible;
-            Canvas.SetLeft(selectionRect, position.X);
-            Canvas.SetTop(selectionRect, position.Y);
-            selectionRect.Width = 0;
-            selectionRect.Height = 0;
-
-            MainCanvas.CaptureMouse();
-        }
-
-        private void UpdateSelectionInRealTime(Rect selectionBounds)
-        {
-            foreach (UIElement element in MainCanvas.Children)
-            {
-                if (element == selectionRect || element == null) continue;
-
-                var elementBounds = GetElementBounds(element);
-                bool shouldBeSelected = selectionBounds.IntersectsWith(elementBounds);
-
-                if (element is FrameworkElement frameworkElement)
-                {
-                    if (Keyboard.IsKeyDown(Key.LeftCtrl))
-                    {
-                        // В режиме Ctrl: добавляем к существующему выделению
-                        if (shouldBeSelected && !selectedElements.Contains(frameworkElement))
-                        {
-                            // Добавляем к выделению без вызова DeselectAll
-                            if (!selectedElements.Contains(frameworkElement))
-                            {
-                                selectedElements.Add(frameworkElement);
-                                SaveOriginalColors(frameworkElement);
-                                ApplySelectionVisualFeedback(frameworkElement, true);
-                                SelectShape(frameworkElement);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // В обычном режиме: выделяем только элементы в области
-                        if (shouldBeSelected && !selectedElements.Contains(frameworkElement))
-                        {
-                            // Добавляем к выделению без вызова DeselectAll
-                            if (!selectedElements.Contains(frameworkElement))
-                            {
-                                selectedElements.Add(frameworkElement);
-                                SaveOriginalColors(frameworkElement);
-                                ApplySelectionVisualFeedback(frameworkElement, true);
-                                SelectShape(frameworkElement);
-                            }
-                        }
-                        else if (!shouldBeSelected && selectedElements.Contains(frameworkElement))
-                        {
-                            DeselectElement(frameworkElement);
-                        }
-                    }
-                }
-            }
-        }
-
-        private Rect GetElementBounds(UIElement element)
-        {
-            if (element == null) return new Rect(0, 0, 0, 0);
-            
-            double left = Canvas.GetLeft(element);
-            double top = Canvas.GetTop(element);
-            double width = 0;
-            double height = 0;
-
-            if (element is Ellipse ellipse)
-            {
-                width = ellipse.Width;
-                height = ellipse.Height;
-            }
-            else if (element is Border border)
-            {
-                width = border.Width;
-                height = border.Height;
-            }
-            else if (element is Line line)
-            {
-                // Для линии используем bounding box
-                double minX = Math.Min(line.X1, line.X2);
-                double minY = Math.Min(line.Y1, line.Y2);
-                double maxX = Math.Max(line.X1, line.X2);
-                double maxY = Math.Max(line.Y1, line.Y2);
-                return new Rect(minX, minY, maxX - minX, maxY - minY);
-            }
-            else if (element is TextBlock textBlock)
-            {
-                // Для текста используем размеры текста
-                textBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                width = textBlock.DesiredSize.Width;
-                height = textBlock.DesiredSize.Height;
-            }
-
-            return new Rect(left, top, width, height);
-        }
+        // Методы для системы выделения (теперь делегируются в SelectionManager)
+        // Старые методы удалены, используются методы SelectionManager
 
         //Выделение через Ctrl
         private void HandleElementClick(UIElement element, MouseButtonEventArgs e)
         {
-            if (element == null) return;
+            if (element == null || selectionManager == null) return;
             
             if (element is FrameworkElement frameworkElement)
             {
                 if (Keyboard.IsKeyDown(Key.LeftCtrl))
                 {
                     // Ctrl + клик: переключаем выделение
-                    if (selectedElements.Contains(frameworkElement))
+                    if (selectionManager.IsElementSelected(frameworkElement))
                     {
                         DeselectElement(frameworkElement);
                     }
@@ -3919,19 +3528,9 @@ namespace Graphic_Editor
 
         private void DeselectElement(UIElement element)
         {
-            if (element == null)
-            {
-                return;
-            }
-
-            selectedElements.Remove(element);
-            ApplySelectionVisualFeedback(element, false);
-
-            if (element is FrameworkElement frameworkElement)
-            {
-                frameworkElement.Opacity = 1;
-                frameworkElement.ContextMenu = null;
-            }
+            if (element == null) return;
+            
+            selectionManager?.DeselectElement(element);
 
             if (resizableElements.TryGetValue(element, out var resizable))
             {
@@ -3942,48 +3541,7 @@ namespace Graphic_Editor
         public void SelectShape(UIElement shape)
         {
             if (shape == null) return;
-
-            DeselectArrow();
-
-            DeselectArrow();
-
-            // Сохраняем оригинальные цвета перед выделением
-            SaveOriginalColors(shape);
-
-            // Выделяем новую фигуру
-            selectedShape = shape;
-
-            if (shape is FrameworkElement frameworkElement)
-            {
-                selectedElement = frameworkElement;
-
-                // Добавляем в список выделенных элементов если еще нет
-                if (!selectedElements.Contains(frameworkElement))
-                {
-                    selectedElements.Add(frameworkElement);
-                }
-            }
-
-            // Применяем визуальное выделение
-            ApplySelectionVisualFeedback(shape, true);
-
-            // Показываем ручки изменения размера
-            // ShowResizeHandlesForElement(shape);
-
-            // Обновляем комбо-боксы в соответствии с цветами фигуры
-            UpdateColorComboBoxesFromShape(selectedShape);
-
-            // Создаем контекстное меню
-            if (shape is FrameworkElement frameworkElementForMenu)
-            {
-                CreateContextMenu(frameworkElementForMenu);
-            }
-
-            // Показываем ручки изменения размера только если элемент НЕ в нотации
-            if (!IsElementInNotation(shape))
-            {
-                ShowResizeHandlesForElement(shape);
-            }
+            selectionManager?.SelectShape(shape);
         }
 
         // Углы для изменения размера, а также появление блоков
@@ -4051,21 +3609,10 @@ namespace Graphic_Editor
             }
 
             // Обработка выделения
-            if (isSelecting)
+            if (selectionManager?.IsSelecting == true)
             {
                 var currentPos = e.GetPosition(MainCanvas);
-
-                var x = Math.Min(currentPos.X, selectionStart.X);
-                var y = Math.Min(currentPos.Y, selectionStart.Y);
-                var width = Math.Abs(currentPos.X - selectionStart.X);
-                var height = Math.Abs(currentPos.Y - selectionStart.Y);
-
-                Canvas.SetLeft(selectionRect, x);
-                Canvas.SetTop(selectionRect, y);
-                selectionRect.Width = width;
-                selectionRect.Height = height;
-
-                UpdateSelectionInRealTime(new Rect(x, y, width, height));
+                selectionManager.UpdateSelectionRect(currentPos);
             }
 
             // Обработка перетаскивания (частичное повторение написанного ранее)
@@ -4091,32 +3638,32 @@ namespace Graphic_Editor
             }
 
             // Завершение выделения
-            if (isSelecting)
+            if (selectionManager?.IsSelecting == true)
             {
-                isSelecting = false;
-                MainCanvas.ReleaseMouseCapture();
-                selectionRect.Visibility = Visibility.Collapsed;
+                selectionManager.EndSelection();
             }
 
             // Завершение перетаскивания
             if (isDragging && draggedElement != null)
             {
                 // Сохраняем текущую толщину ПОСЛЕ перетаскивания
-                if (originalStrokeThickness.ContainsKey(draggedElement))
+                if (selectionManager?.HasOriginalStrokeThickness(draggedElement) == true)
                 {
                     // Обновляем сохраненную толщину текущим значением
+                    double thickness = 0;
                     if (draggedElement is Ellipse ellipseElement)
                     {
-                        originalStrokeThickness[draggedElement] = ellipseElement.StrokeThickness;
+                        thickness = ellipseElement.StrokeThickness;
                     }
                     else if (draggedElement is Border borderElement)
                     {
-                        originalStrokeThickness[draggedElement] = borderElement.BorderThickness.Left;
+                        thickness = borderElement.BorderThickness.Left;
                     }
                     else if (draggedElement is Line lineElement)
                     {
-                        originalStrokeThickness[draggedElement] = lineElement.StrokeThickness;
+                        thickness = lineElement.StrokeThickness;
                     }
+                    selectionManager.UpdateOriginalStrokeThickness(draggedElement, thickness);
                 }
 
                 isDragging = false;
@@ -4139,19 +3686,20 @@ namespace Graphic_Editor
         // Метод применения цвета к выделенной фигуре
         private void ApplyColorToSelectedShape(string hexColor)
         {
-            if (string.IsNullOrEmpty(hexColor)) return;
+            if (string.IsNullOrEmpty(hexColor) || selectionManager == null) return;
 
             Color newColor = (Color)ColorConverter.ConvertFromString("#" + hexColor);
             Brush newBrush = new SolidColorBrush(newColor);
 
             // Применяем цвет ко всем выделенным элементам
-            foreach (var element in selectedElements.ToList())
+            foreach (var element in selectionManager.SelectedElements)
             {
                 ApplyFillColorToShape(element, newBrush);
             }
 
             // Также применяем к selectedShape, если он не в selectedElements
-            if (selectedShape != null && !selectedElements.Contains(selectedShape))
+            var selectedShape = selectionManager.SelectedShape;
+            if (selectedShape != null && !selectionManager.IsElementSelected(selectedShape))
             {
                 ApplyFillColorToShape(selectedShape, newBrush);
             }
@@ -4256,19 +3804,20 @@ namespace Graphic_Editor
         // Метод применения цвета обводки к выделенной фигуре
         private void ApplyStrokeColorToSelectedShape(string hexColor)
         {
-            if (string.IsNullOrEmpty(hexColor)) return;
+            if (string.IsNullOrEmpty(hexColor) || selectionManager == null) return;
 
             Color newColor = (Color)ColorConverter.ConvertFromString("#" + hexColor);
             Brush newBrush = new SolidColorBrush(newColor);
 
             // Применяем цвет обводки ко всем выделенным элементам
-            foreach (var element in selectedElements.ToList())
+            foreach (var element in selectionManager.SelectedElements)
             {
                 ApplyStrokeColorToShape(element, newBrush);
             }
 
             // Также применяем к selectedShape, если он не в selectedElements
-            if (selectedShape != null && !selectedElements.Contains(selectedShape))
+            var selectedShape = selectionManager.SelectedShape;
+            if (selectedShape != null && !selectionManager.IsElementSelected(selectedShape))
             {
                 ApplyStrokeColorToShape(selectedShape, newBrush);
             }
@@ -4277,16 +3826,46 @@ namespace Graphic_Editor
         // Инициализация системы выделения
         private void InitializeSelectionSystem()
         {
-            selectionRect = new Rectangle
+            // Создаем менеджер выделения
+            selectionManager = new SelectionManager(MainCanvas, this);
+            
+            // Настраиваем делегат для снятия выделения стрелки
+            selectionManager.OnDeselectArrow = DeselectArrow;
+
+            // Подписываемся на события выделения для обновления панелей свойств
+            selectionManager.OnElementSelected += (element) =>
             {
-                Stroke = Brushes.DodgerBlue,
-                StrokeThickness = 1,
-                StrokeDashArray = new DoubleCollection { 2, 2 },
-                Fill = new SolidColorBrush(Color.FromArgb(0x20, 0x1E, 0x90, 0xFF)),
-                Visibility = Visibility.Collapsed
+                if (element != null)
+                {
+                    // Обновляем комбо-боксы в соответствии с цветами фигуры
+                    UpdateColorComboBoxesFromShape(element);
+
+                    // Показываем панель толщины обводки только если элемент НЕ в нотации
+                    if (!IsElementInNotation(element))
+                    {
+                        UpdateStrokeWidthPanelVisibility();
+                    }
+
+                    // Обновляем панель текста, если элемент является текстовым
+                    UpdateTextPanelForSelectedElement(element);
+
+                    // Показываем ручки изменения размера
+                    ShowResizeHandlesForElement(element);
+
+                    // Создаем контекстное меню для выделенного элемента
+                    CreateContextMenu(element);
+                }
             };
-            MainCanvas.Children.Add(selectionRect);
-            Panel.SetZIndex(selectionRect, 1000);
+
+            selectionManager.OnSelectionCleared += () =>
+            {
+                // Скрываем панели свойств
+                StrokeWidthPanel.Visibility = Visibility.Collapsed;
+                DimensionsPanel.Visibility = Visibility.Collapsed;
+                FillPanel.Visibility = Visibility.Collapsed;
+                StrokePanel.Visibility = Visibility.Collapsed;
+                TextPanel.Visibility = Visibility.Collapsed;
+            };
 
             // Добавляем обработчики событий для выделения
             MainCanvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
@@ -4297,12 +3876,7 @@ namespace Graphic_Editor
 
         private void ClearSelection()
         {
-            foreach (var element in selectedElements.ToList())
-            {
-                DeselectElement(element);
-            }
-
-            DeselectArrow();
+            selectionManager?.ClearSelection();
         }
 
         // Вспомогательный метод для обновления комбо-бокса
@@ -4328,14 +3902,7 @@ namespace Graphic_Editor
                 {
                     ellipse.Fill = brush;
                     // Сохраняем новый цвет как оригинальный
-                    if (!originalFillColors.ContainsKey(shape))
-                    {
-                        originalFillColors[shape] = brush;
-                    }
-                    else
-                    {
-                        originalFillColors[shape] = brush;
-                    }
+                    selectionManager?.UpdateOriginalFillColor(shape, brush);
                 }
             }
             else if (shape is Border border)
@@ -4343,14 +3910,7 @@ namespace Graphic_Editor
                 // Для Border меняем Background (заливку)
                 border.Background = brush;
                 // Сохраняем новый цвет как оригинальный
-                if (!originalFillColors.ContainsKey(shape))
-                {
-                    originalFillColors[shape] = brush;
-                }
-                else
-                {
-                    originalFillColors[shape] = brush;
-                }
+                selectionManager?.UpdateOriginalFillColor(shape, brush);
             }
             // Для Line и TextBlock заливка не применяется
         }
@@ -4364,14 +3924,8 @@ namespace Graphic_Editor
             Brush strokeBrush = null;
 
             // Используем оригинальные цвета если они сохранены
-            if (originalFillColors.ContainsKey(shape))
-            {
-                fillBrush = originalFillColors[shape];
-            }
-            if (originalStrokeColors.ContainsKey(shape))
-            {
-                strokeBrush = originalStrokeColors[shape];
-            }
+            fillBrush = selectionManager?.GetOriginalFillColor(shape);
+            strokeBrush = selectionManager?.GetOriginalStrokeColor(shape);
 
             // Если оригинальные цвета не сохранены, берем текущие
             if (fillBrush == null)
@@ -4437,6 +3991,7 @@ namespace Graphic_Editor
 
         private void CopySelectedElements()
         {
+            var selectedElements = selectionManager?.SelectedElements?.ToList() ?? new List<UIElement>();
             if (selectedElements.Count > 0)
             {
                 // Сохраняем копии выделенных элементов
@@ -5255,14 +4810,7 @@ namespace Graphic_Editor
                 textBlock.Foreground = brush;
             }
             // Сохраняем новый цвет как оригинальный
-            if (!originalStrokeColors.ContainsKey(shape))
-            {
-                originalStrokeColors[shape] = brush;
-            }
-            else
-            {
-                originalStrokeColors[shape] = brush;
-            }
+            selectionManager?.UpdateOriginalStrokeColor(shape, brush);
         }
 
         // Метод для очистки комбо-боксов при запуске программы
