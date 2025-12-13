@@ -101,6 +101,9 @@ namespace Graphic_Editor
         //Система управления текстом
         private TextManager textManager;
 
+        //Система управления заливкой и обводкой
+        private FillStrokeManager fillStrokeManager;
+
         //Не работает
         private const double WorkAreaTop = 40;    // Отступ сверху (под меню)
         private const double WorkAreaBottom = 100; // Отступ снизу (над панелью инструментов)
@@ -128,6 +131,7 @@ namespace Graphic_Editor
             InitializePropertyBlocks(); //Скрывает блоки свойств при загрузке приложения
             InitializeArrowManager(); //Инициализация менеджера стрелок
             InitializeSelectionSystem(); //Настраивает систему выделения через SelectionManager
+            InitializeFillStrokeManager(); //Инициализация менеджера заливки и обводки
             InitializeTextManager(); //Инициализация менеджера текста
             isActiveCursor();
 
@@ -1400,136 +1404,17 @@ namespace Graphic_Editor
         }
 
 
-        // Метод для показа/скрытия панели толщины обводки
-        private void UpdateStrokeWidthPanelVisibility() //Интересно
-        {
-            // Если все панели скрыты - не показываем панель ширины обводки
-            if (TogglePanelsButton.IsChecked == true)
-            {
-                StrokeWidthPanel.Visibility = Visibility.Collapsed;
-                return;
-            }
-
-            var selectedElement = selectionManager?.SelectedElement;
-            if (selectedElement != null)
-            {
-                // Показываем панель толщины только для элементов, у которых есть обводка
-                bool hasStroke = selectedElement is Ellipse || selectedElement is Line ||
-                                selectedElement is Border || selectedElement is TextBlock;
-                StrokeWidthPanel.Visibility = hasStroke ? Visibility.Visible : Visibility.Collapsed;
-
-                // Обновляем комбо-бокс толщины текущим значением
-                UpdateStrokeWidthComboBoxFromShape(selectedElement);
-            }
-            else
-            {
-                StrokeWidthPanel.Visibility = Visibility.Collapsed;
-            }
-        }
 
         // Обработчик изменения толщины обводки
         private void StrokeWidthComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (StrokeWidthComboBox.SelectedItem is ComboBoxItem selectedItem)
-            {
-                string thicknessValue = selectedItem.Tag as string;
-                if (!string.IsNullOrEmpty(thicknessValue))
-                {
-                    try
-                    {
-                        double thickness = double.Parse(thicknessValue);
-                        ApplyStrokeThicknessToSelectedShape(thickness);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Ошибка применения толщины: {ex.Message}");
-                    }
-                }
-            }
-        }
-
-        // Метод применения толщины обводки к выделенной фигуре
-        private void ApplyStrokeThicknessToSelectedShape(double thickness)
-        {
-            var selectedElement = selectionManager?.SelectedElement;
-            if (selectedElement != null)
-            {
-                ApplyStrokeThicknessToShape(selectedElement, thickness);
-
-                // Сохраняем новую толщину как оригинальную
-                selectionManager?.UpdateOriginalStrokeThickness(selectedElement, thickness);
-                
-                var selectedShape = selectionManager?.SelectedShape;
-                if (selectedShape != null)
-                {
-                    selectionManager?.UpdateOriginalStrokeThickness(selectedShape, thickness);
-                }
-            }
+            fillStrokeManager?.StrokeWidthComboBox_SelectionChanged(sender, e);
         }
 
         // Вспомогательный метод для применения толщины обводки к конкретной фигуре
         internal void ApplyStrokeThicknessToShape(UIElement shape, double thickness)
         {
-            UpdateStrokeThicknessInAllReferences(shape, thickness);
-            if (shape is Ellipse ellipse)
-            {
-                ellipse.StrokeThickness = thickness;
-            }
-            else if (shape is Border border)
-            {
-                border.BorderThickness = new Thickness(thickness);
-            }
-            else if (shape is Line line)
-            {
-                line.StrokeThickness = thickness;
-            }
-            else if (shape is TextBlock textBlock)
-            {
-                // Для текста толщина не применяется
-            }
-
-            // Сохраняем толщину в словарь оригинальных толщин
-            selectionManager?.UpdateOriginalStrokeThickness(shape, thickness);
-        }
-
-        // Метод обновления комбо-бокса толщины на основе фигуры
-        private void UpdateStrokeWidthComboBoxFromShape(UIElement shape)
-        {
-            if (shape == null) return;
-
-            double currentThickness = 0;
-
-            if (shape is Ellipse ellipse)
-            {
-                currentThickness = ellipse.StrokeThickness;
-            }
-            else if (shape is Border border)
-            {
-                currentThickness = border.BorderThickness.Left;
-            }
-            else if (shape is Line line)
-            {
-                currentThickness = line.StrokeThickness;
-            }
-
-            // Обновляем комбо-бокс
-            UpdateStrokeWidthComboBoxSelection(currentThickness);
-        }
-
-        // Вспомогательный метод для обновления комбо-бокса толщины
-        private void UpdateStrokeWidthComboBoxSelection(double thickness)
-        {
-            foreach (ComboBoxItem item in StrokeWidthComboBox.Items)
-            {
-                if (item.Tag != null && double.Parse(item.Tag as string) == thickness)
-                {
-                    StrokeWidthComboBox.SelectedItem = item;
-                    return;
-                }
-            }
-
-            // Если точное значение не найдено, выбираем ближайшее
-            StrokeWidthComboBox.SelectedIndex = 0;
+            fillStrokeManager?.ApplyStrokeThicknessToShape(shape, thickness);
         }
 
         // Сохранение оригинальных цветов и толщины (делегируется в SelectionManager)
@@ -2341,34 +2226,6 @@ namespace Graphic_Editor
             }
         }
 
-        // Метод для принудительного обновления толщины во всех связанных элементах
-        private void UpdateStrokeThicknessInAllReferences(UIElement element, double thickness)
-        {
-            // Обновляем толщину в основном элементе
-            if (element is Ellipse ellipse)
-            {
-                ellipse.StrokeThickness = thickness;
-            }
-            else if (element is Border border)
-            {
-                border.BorderThickness = new Thickness(thickness);
-            }
-            else if (element is Line line)
-            {
-                line.StrokeThickness = thickness;
-            }
-
-            // Сохраняем в словарь
-            selectionManager?.UpdateOriginalStrokeThickness(element, thickness);
-
-            // Если это selectedElement, обновляем и в selectedShape
-            var selectedElement = selectionManager?.SelectedElement;
-            var selectedShape = selectionManager?.SelectedShape;
-            if (selectedElement == element && selectedShape != null)
-            {
-                selectionManager?.UpdateOriginalStrokeThickness(selectedShape, thickness);
-            }
-        }
         private bool IsShapeFromNotation(UIElement element)
         {
             // Проверяем, находится ли фигура в панели нотации
@@ -2950,121 +2807,20 @@ namespace Graphic_Editor
             e.Handled = true;
         }
 
-        // Метод применения цвета к выделенной фигуре
-        private void ApplyColorToSelectedShape(string hexColor)
-        {
-            if (string.IsNullOrEmpty(hexColor) || selectionManager == null) return;
-
-            Color newColor = (Color)ColorConverter.ConvertFromString("#" + hexColor);
-            Brush newBrush = new SolidColorBrush(newColor);
-
-            // Применяем цвет ко всем выделенным элементам
-            foreach (var element in selectionManager.SelectedElements)
-            {
-                ApplyFillColorToShape(element, newBrush);
-            }
-
-            // Также применяем к selectedShape, если он не в selectedElements
-            var selectedShape = selectionManager.SelectedShape;
-            if (selectedShape != null && !selectionManager.IsElementSelected(selectedShape))
-            {
-                ApplyFillColorToShape(selectedShape, newBrush);
-            }
-        }
 
         // ОБРАБОТЧИК СОБЫТИЯ ДЛЯ COMBOBOX
         private void FillColorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (FillColorComboBox.SelectedItem is ComboBoxItem selectedItem)
-            {
-                string hexColor = selectedItem.Tag as string;
-                if (!string.IsNullOrEmpty(hexColor))
-                {
-                    try
-                    {
-                        // Обновляем превью цвета
-                        FillColorPreview.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#" + hexColor));
-
-                        // Применяем цвет к выделенной фигуре
-                        ApplyColorToSelectedShape(hexColor);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Ошибка применения цвета: {ex.Message}");
-                    }
-                }
-            }
+            fillStrokeManager?.FillColorComboBox_SelectionChanged(sender, e);
         }
 
-        // Вспомогательный метод для применения цвета к конкретной фигуре
-        private void ApplyColorToShape(UIElement shape, Brush brush)
-        {
-            if (shape is Ellipse ellipse)
-            {
-                if (ellipse.Fill == Brushes.Transparent) // Кольцо
-                {
-                    ellipse.Stroke = brush;
-                }
-                else // Круг
-                {
-                    ellipse.Fill = brush;
-                }
-            }
-            else if (shape is Border border)
-            {
-                border.Background = brush;
-            }
-            else if (shape is Line line)
-            {
-                line.Stroke = brush;
-            }
-        }
 
         // ОБРАБОТЧИК СОБЫТИЯ ДЛЯ COMBOBOX ОБВОДКИ
         private void StrokeColorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (StrokeColorComboBox.SelectedItem is ComboBoxItem selectedItem)
-            {
-                string hexColor = selectedItem.Tag as string;
-                if (!string.IsNullOrEmpty(hexColor))
-                {
-                    try
-                    {
-                        // Обновляем превью цвета обводки
-                        StrokeColorPreview.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#" + hexColor));
-
-                        // Применяем цвет обводки к выделенной фигуре
-                        ApplyStrokeColorToSelectedShape(hexColor);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Ошибка применения цвета обводки: {ex.Message}");
-                    }
-                }
-            }
+            fillStrokeManager?.StrokeColorComboBox_SelectionChanged(sender, e);
         }
 
-        // Метод применения цвета обводки к выделенной фигуре
-        private void ApplyStrokeColorToSelectedShape(string hexColor)
-        {
-            if (string.IsNullOrEmpty(hexColor) || selectionManager == null) return;
-
-            Color newColor = (Color)ColorConverter.ConvertFromString("#" + hexColor);
-            Brush newBrush = new SolidColorBrush(newColor);
-
-            // Применяем цвет обводки ко всем выделенным элементам
-            foreach (var element in selectionManager.SelectedElements)
-            {
-                ApplyStrokeColorToShape(element, newBrush);
-            }
-
-            // Также применяем к selectedShape, если он не в selectedElements
-            var selectedShape = selectionManager.SelectedShape;
-            if (selectedShape != null && !selectionManager.IsElementSelected(selectedShape))
-            {
-                ApplyStrokeColorToShape(selectedShape, newBrush);
-            }
-        }
 
         // Инициализация менеджера стрелок
         private void InitializeArrowManager()
@@ -3101,12 +2857,12 @@ namespace Graphic_Editor
                 if (element != null)
                 {
                     // Обновляем комбо-боксы в соответствии с цветами фигуры
-                    UpdateColorComboBoxesFromShape(element);
+                    fillStrokeManager?.UpdateColorComboBoxesFromShape(element);
 
                     // Показываем панель толщины обводки только если элемент НЕ в нотации
                     if (!IsElementInNotation(element))
                     {
-                        UpdateStrokeWidthPanelVisibility();
+                        fillStrokeManager?.UpdateStrokeWidthPanelVisibility();
                     }
 
                     // Обновляем панель текста, если элемент является текстовым
@@ -3135,6 +2891,32 @@ namespace Graphic_Editor
             MainCanvas.MouseMove += MainCanvas_MouseMove;
             MainCanvas.MouseLeftButtonUp += MainCanvas_MouseLeftButtonUp;
             MainCanvas.MouseRightButtonDown += MainCanvas_MouseRightButtonDown;
+        }
+
+        // Инициализация менеджера заливки и обводки
+        private void InitializeFillStrokeManager()
+        {
+            var fillColorComboBox = FindName("FillColorComboBox") as ComboBox;
+            var strokeColorComboBox = FindName("StrokeColorComboBox") as ComboBox;
+            var strokeWidthComboBox = FindName("StrokeWidthComboBox") as ComboBox;
+            var fillColorPreview = FindName("FillColorPreview") as Border;
+            var strokeColorPreview = FindName("StrokeColorPreview") as Border;
+            var fillPanel = FindName("FillPanel") as Border;
+            var strokePanel = FindName("StrokePanel") as Border;
+            var strokeWidthPanel = FindName("StrokeWidthPanel") as Border;
+
+            fillStrokeManager = new FillStrokeManager(
+                selectionManager,
+                TogglePanelsButton,
+                fillColorComboBox,
+                strokeColorComboBox,
+                strokeWidthComboBox,
+                fillColorPreview,
+                strokeColorPreview,
+                fillPanel,
+                strokePanel,
+                strokeWidthPanel
+            );
         }
 
         // Инициализация менеджера текста
@@ -3169,100 +2951,11 @@ namespace Graphic_Editor
             selectionManager?.ClearSelection();
         }
 
-        // Вспомогательный метод для обновления комбо-бокса
-        private void UpdateComboBoxSelection(ComboBox comboBox, string hexColor)
-        {
-            foreach (ComboBoxItem item in comboBox.Items)
-            {
-                if (item.Tag as string == hexColor)
-                {
-                    comboBox.SelectedItem = item;
-                    break;
-                }
-            }
-        }
 
         // Вспомогательный метод для применения цвета заливки
         internal void ApplyFillColorToShape(UIElement shape, Brush brush)
         {
-            if (shape is Ellipse ellipse)
-            {
-                // Для эллипсов меняем Fill (заливку), только если это не кольцо
-                if (ellipse.Fill != Brushes.Transparent)
-                {
-                    ellipse.Fill = brush;
-                    // Сохраняем новый цвет как оригинальный
-                    selectionManager?.UpdateOriginalFillColor(shape, brush);
-                }
-            }
-            else if (shape is Border border)
-            {
-                // Для Border меняем Background (заливку)
-                border.Background = brush;
-                // Сохраняем новый цвет как оригинальный
-                selectionManager?.UpdateOriginalFillColor(shape, brush);
-            }
-            // Для Line и TextBlock заливка не применяется
-        }
-
-        // Метод обновления комбо-боксов на основе цветов фигуры
-        private void UpdateColorComboBoxesFromShape(UIElement shape)
-        {
-            if (shape == null) return;
-
-            Brush fillBrush = null;
-            Brush strokeBrush = null;
-
-            // Используем оригинальные цвета если они сохранены
-            fillBrush = selectionManager?.GetOriginalFillColor(shape);
-            strokeBrush = selectionManager?.GetOriginalStrokeColor(shape);
-
-            // Если оригинальные цвета не сохранены, берем текущие
-            if (fillBrush == null)
-            {
-                if (shape is Ellipse ellipse)
-                {
-                    fillBrush = ellipse.Fill;
-                }
-                else if (shape is Border border)
-                {
-                    fillBrush = border.Background;
-                }
-            }
-
-            if (strokeBrush == null)
-            {
-                if (shape is Ellipse ellipse)
-                {
-                    strokeBrush = ellipse.Stroke;
-                }
-                else if (shape is Border border)
-                {
-                    strokeBrush = border.BorderBrush;
-                }
-                else if (shape is Line line)
-                {
-                    strokeBrush = line.Stroke;
-                }
-                else if (shape is TextBlock textBlock)
-                {
-                    strokeBrush = textBlock.Foreground;
-                }
-            }
-
-            // Обновляем комбо-бокс заливки
-            if (fillBrush is SolidColorBrush fillSolidBrush && fillBrush != Brushes.Transparent)
-            {
-                string fillHexColor = fillSolidBrush.Color.ToString().Substring(3);
-                UpdateComboBoxSelection(FillColorComboBox, fillHexColor);
-            }
-
-            // Обновляем комбо-бокс обводки
-            if (strokeBrush is SolidColorBrush strokeSolidBrush)
-            {
-                string strokeHexColor = strokeSolidBrush.Color.ToString().Substring(3);
-                UpdateComboBoxSelection(StrokeColorComboBox, strokeHexColor);
-            }
+            fillStrokeManager?.ApplyFillColorToShape(shape, brush);
         }
 
         private double GetElementHeight(UIElement element)
@@ -3397,73 +3090,11 @@ namespace Graphic_Editor
         }*/
 
 
-        // Метод обновления комбо-бокса на основе цвета фигуры
-        private void UpdateColorComboBoxFromShape(UIElement shape)
-        {
-            if (shape == null) return;
-
-            Brush fillBrush = null;
-            Brush strokeBrush = null;
-
-            if (shape is Ellipse ellipse)
-            {
-                fillBrush = ellipse.Fill;
-                strokeBrush = ellipse.Stroke;
-            }
-            else if (shape is Border border)
-            {
-                fillBrush = border.Background;
-                strokeBrush = border.BorderBrush;
-            }
-            else if (shape is Line line)
-            {
-                strokeBrush = line.Stroke; // У линии только обводка
-            }
-            else if (shape is TextBlock textBlock)
-            {
-                strokeBrush = textBlock.Foreground; // У текста цвет - это обводка
-            }
-
-            // Обновляем комбо-бокс заливки
-            if (fillBrush is SolidColorBrush fillSolidBrush && fillBrush != Brushes.Transparent)
-            {
-                string fillHexColor = fillSolidBrush.Color.ToString().Substring(3);
-                UpdateComboBoxSelection(FillColorComboBox, fillHexColor);
-            }
-
-            // Обновляем комбо-бокс обводки
-            if (strokeBrush is SolidColorBrush strokeSolidBrush)
-            {
-                string strokeHexColor = strokeSolidBrush.Color.ToString().Substring(3);
-                UpdateComboBoxSelection(StrokeColorComboBox, strokeHexColor);
-            }
-        }
 
         // Вспомогательный метод для применения цвета обводки к конкретной фигуре
         internal void ApplyStrokeColorToShape(UIElement shape, Brush brush)
         {
-            if (shape is Ellipse ellipse)
-            {
-                // Для эллипсов меняем Stroke (контур)
-                ellipse.Stroke = brush;
-            }
-            else if (shape is Border border)
-            {
-                // Для Border меняем BorderBrush (рамку)
-                border.BorderBrush = brush;
-            }
-            else if (shape is Line line)
-            {
-                // Для линии меняем Stroke (цвет линии)
-                line.Stroke = brush;
-            }
-            else if (shape is TextBlock textBlock)
-            {
-                // Для текста меняем Foreground (цвет текста)
-                textBlock.Foreground = brush;
-            }
-            // Сохраняем новый цвет как оригинальный
-            selectionManager?.UpdateOriginalStrokeColor(shape, brush);
+            fillStrokeManager?.ApplyStrokeColorToShape(shape, brush);
         }
 
         private void AnimateShapeAppearance(UIElement shape)
@@ -3724,14 +3355,14 @@ namespace Graphic_Editor
                 // Обновляем комбо-бокс толщины
                 if (StrokeWidthComboBox != null)
                 {
-                    UpdateStrokeWidthComboBoxSelection(arrowContainer.Line.StrokeThickness);
+                    fillStrokeManager?.UpdateStrokeWidthComboBoxSelection(arrowContainer.Line.StrokeThickness);
                 }
 
                 // Обновляем комбо-бокс цвета обводки
                 if (StrokeColorComboBox != null && arrowContainer.Line.Stroke is SolidColorBrush strokeBrush)
                 {
                     string strokeHexColor = strokeBrush.Color.ToString().Substring(3);
-                    UpdateComboBoxSelection(StrokeColorComboBox, strokeHexColor);
+                    fillStrokeManager?.UpdateColorComboBoxSelection(StrokeColorComboBox, strokeHexColor);
                 }
 
                 // Скрываем панели, которые не применимы к стрелкам
