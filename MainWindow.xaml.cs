@@ -42,6 +42,8 @@ namespace Graphic_Editor
         //Система выделения
         private SelectionManager selectionManager; //Менеджер системы выделения
         private FrameworkElement copiedElement; //Элемент в буфере обмена для копирования/вставки
+        // Добавляем поле для хранения скопированных элементов
+        private List<UIElement> copiedElements = new List<UIElement>();
         private Point lastMousePosition; //Последняя позиция мыши (для отслеживания движения)
         private Dictionary<UIElement, ResizableElement> resizableElements = 
             new Dictionary<UIElement, ResizableElement>(); //Хранит связь между элементами на холсте и их контроллерами изменения размера
@@ -69,15 +71,7 @@ namespace Graphic_Editor
         private Stack<UndoAction> undoStack = new Stack<UndoAction>(); //Стек для отмены действий
         private Stack<UndoAction> redoStack = new Stack<UndoAction>(); //Стек для повтора действий
 
-        //Система сетки
-        private bool isGridEnabled = false; //Отображение сетки - нет
-        private bool isSnapToGridEnabled = false; //Привязка к сетке - нет
-        private System.Windows.Shapes.Path gridPath; //Отрисовка линий сетки
-        private const double GridSize = 20; //Размер ячейки сетки в пикселях
-
-
-        //Система сохранения оригинальных стилей (теперь управляется SelectionManager)
-        // Все операции с оригинальными стилями выполняются через selectionManager
+        
 
         //Управление интерфейсом
         private bool arePanelsVisible = true; //Видимость всех панелей инструментов
@@ -102,6 +96,9 @@ namespace Graphic_Editor
         //Система перемещения объектов
         private DragManager dragManager;
 
+        //Система сетки
+        private GridManager gridManager;
+
         //Не работает
         private const double WorkAreaTop = 40;    // Отступ сверху (под меню)
         private const double WorkAreaBottom = 100; // Отступ снизу (над панелью инструментов)
@@ -121,8 +118,8 @@ namespace Graphic_Editor
         {
             InitializeComponent(); //Инициализация WPF компонентов
 
+            InitializeGridManager(); //Создает и инициализирует визуальную сетку
             InitializeDragManager(); //Делает фигуры в панели инструментов перетаскиваемыми
-            InitializeGrid(); //Создает и инициализирует визуальную сетку
             InitializePanels(); //Находит и регистрирует все панели выделения
             InitializePropertyBlocks(); //Скрывает блоки свойств при загрузке приложения
             InitializeArrowManager(); //Инициализация менеджера стрелок
@@ -161,20 +158,22 @@ namespace Graphic_Editor
 
             // Обработчик закрытия окна для очистки ресурсов
             this.Closing += MainWindow_Closing;
+
+            MainCanvas.Loaded += MainCanvas_Loaded;
         }
 
         private void InitializeDragManager()
         {
             dragManager = new DragManager(MainCanvas, NotationCanvas)
             {
-                SnapToGrid = SnapToGrid,
-                SelectElement = SelectElement, // Теперь совпадает с сигнатурой
+                SnapToGrid = gridManager.SnapToGrid, // Используем метод из GridManager
+                SelectElement = SelectElement,
                 SelectShape = SelectShape,
                 ApplySelectionVisualFeedback = (element, selected) => selectionManager?.ApplySelectionVisualFeedback(element, selected),
                 IsElementInNotation = IsElementInNotation,
                 GetElementWidth = GetElementWidth,
                 GetElementHeight = GetElementHeight,
-                BringToFront = BringToFront, // Теперь совпадает с сигнатурой
+                BringToFront = BringToFront,
                 MakeCanvasShapeDraggable = MakeCanvasShapeDraggable,
                 SetOriginalStyles = (copy, original) =>
                 {
@@ -193,13 +192,36 @@ namespace Graphic_Editor
             };
 
             // Передаем состояние привязки к сетке
-            dragManager.SetSnapToGridEnabled(isSnapToGridEnabled);
+            dragManager.SetSnapToGridEnabled(gridManager.IsSnapToGridEnabled);
+
+            // Передаем ссылку на GridManager в DragManager
+            gridManager.SetDragManager(dragManager);
 
             // Делаем фигуры перетаскиваемыми
             dragManager.MakeAllShapesDraggable(
                 Circle, SimpleRing, Square, ResizableSquare,
                 Rectangle, SuperEllipse, Ellipse, UmlInitialNode, stick
             );
+        }
+
+        private void InitializeGridManager()
+        {
+            gridManager = new GridManager(
+                MainCanvas,
+                GridToggleMenuItem,
+                SnapToGridMenuItem,
+                dragManager);
+
+            // Подписываемся на события изменения сетки
+            gridManager.OnGridToggled += (isEnabled) =>
+            {
+                // Обновляем состояние в других менеджерах, если нужно
+            };
+
+            gridManager.OnSnapToggled += (isEnabled) =>
+            {
+                // Обновляем состояние в других менеджерах, если нужно
+            };
         }
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -272,249 +294,22 @@ namespace Graphic_Editor
             }
         }
 
-        // Инициализация сетки
-        private void InitializeGrid()
-        {
-            gridPath = new System.Windows.Shapes.Path
-            {
-                Stroke = new SolidColorBrush(Color.FromArgb(60, 128, 128, 128)), // Полупрозрачный серый
-                StrokeThickness = 0.5,
-                IsHitTestVisible = false // Сетка не должна мешать взаимодействию
-            };
-
-            // Добавляем сетку на Canvas, но скрываем
-            MainCanvas.Children.Add(gridPath);
-            gridPath.Visibility = Visibility.Collapsed;
-        }
-
-        // Создание сетки
-        private void CreateGrid()
-        {
-            if (MainCanvas.ActualWidth == 0 || MainCanvas.ActualHeight == 0)
-                return;
-
-            var geometryGroup = new GeometryGroup();
-
-            // Вертикальные линии
-            for (double x = 0; x < MainCanvas.ActualWidth; x += GridSize)
-            {
-                geometryGroup.Children.Add(new LineGeometry(
-                    new Point(x, 0),
-                    new Point(x, MainCanvas.ActualHeight)));
-            }
-
-            // Горизонтальные линии
-            for (double y = 0; y < MainCanvas.ActualHeight; y += GridSize)
-            {
-                geometryGroup.Children.Add(new LineGeometry(
-                    new Point(0, y),
-                    new Point(MainCanvas.ActualWidth, y)));
-            }
-
-            gridPath.Data = geometryGroup;
-        }
-
         // Обработчик переключения сетки из меню
         private void GridToggleMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            // Сохраняем текущее состояние перед проверкой
-            bool wasGridEnabled = isGridEnabled;
-            
-            // Не позволяем отключить сетку, если включена привязка
-            if (wasGridEnabled && isSnapToGridEnabled)
-            {
-                // Отменяем изменение состояния меню
-                GridToggleMenuItem.IsChecked = true;
-                e.Handled = true;
-                return;
-            }
-            
-            ToggleGridVisibility();
+            gridManager.HandleGridToggleClick(sender, e);
         }
 
         // Обработчик переключения привязки к сетке
         private void SnapToGridMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            // Сохраняем текущее состояние перед проверкой
-            bool wasSnapEnabled = isSnapToGridEnabled;
-            
-            // Не позволяем включить привязку, если сетка не включена
-            if (!wasSnapEnabled && !isGridEnabled)
-            {
-                // Отменяем изменение состояния меню
-                SnapToGridMenuItem.IsChecked = false;
-                e.Handled = true;
-                return;
-            }
-            
-            ToggleSnapToGrid();
-        }
-
-        // Метод переключения сетки
-        private void ToggleGridVisibility()
-        {
-            // Не позволяем отключить сетку, если включена привязка
-            if (isGridEnabled && isSnapToGridEnabled)
-            {
-                // Не позволяем отключить сетку, если включена привязка
-                return;
-            }
-
-            isGridEnabled = !isGridEnabled;
-
-            if (isGridEnabled)
-            {
-                // Создаем и показываем сетку
-                CreateGrid();
-                gridPath.Visibility = Visibility.Visible;
-                GridToggleMenuItem.IsChecked = true;
-                GridToggleMenuItem.Header = "Скрыть сетку";
-            }
-            else
-            {
-                // Скрываем сетку
-                gridPath.Visibility = Visibility.Collapsed;
-                GridToggleMenuItem.IsChecked = false;
-                GridToggleMenuItem.Header = "Показать сетку";
-            }
-        }
-
-        // Метод переключения привязки к сетке
-        private void ToggleSnapToGrid()
-        {
-            // Не позволяем включить привязку, если сетка не включена
-            if (!isSnapToGridEnabled && !isGridEnabled)
-            {
-                // Сначала нужно включить сетку
-                return;
-            }
-
-            isSnapToGridEnabled = !isSnapToGridEnabled;
-
-            if (isSnapToGridEnabled)
-            {
-                SnapToGridMenuItem.IsChecked = true;
-                SnapToGridMenuItem.Header = "Отключить привязку";
-
-                // Автоматически включаем сетку если она выключена (на случай если сетка была отключена другим способом)
-                if (!isGridEnabled)
-                {
-                    isGridEnabled = true;
-                    CreateGrid();
-                    gridPath.Visibility = Visibility.Visible;
-                    GridToggleMenuItem.IsChecked = true;
-                    GridToggleMenuItem.Header = "Скрыть сетку";
-                }
-                
-                // Привязываем все существующие элементы к сетке
-                SnapAllElementsToGrid();
-
-                if (dragManager != null)
-                {
-                    dragManager.SetSnapToGridEnabled(true);
-                }
-            }
-            else
-            {
-                SnapToGridMenuItem.IsChecked = false;
-                SnapToGridMenuItem.Header = "Привязка к сетке";
-            }
-            
-            // Обновляем привязку во всех существующих ResizableElement
-            foreach (var resizableElement in resizableElements.Values)
-            {
-                resizableElement.UpdateSnapToGrid(SnapToGrid, isSnapToGridEnabled);
-            }
-
-            if (dragManager != null)
-            {
-                dragManager.SetSnapToGridEnabled(false);
-            }
-        }
-        
-        // Метод для привязки всех элементов на холсте к сетке
-        private void SnapAllElementsToGrid()
-        {
-            foreach (UIElement element in MainCanvas.Children)
-            {
-                // Пропускаем сетку и другие служебные элементы
-                if (element == gridPath || element is System.Windows.Shapes.Path)
-                    continue;
-                    
-                // Пропускаем элементы из панели нотации
-                if (IsElementInNotation(element))
-                    continue;
-                
-                // Обрабатываем Line элементы отдельно (они используют X1, Y1, X2, Y2)
-                if (element is Line line)
-                {
-                    Point snappedStart = SnapToGrid(new Point(line.X1, line.Y1));
-                    Point snappedEnd = SnapToGrid(new Point(line.X2, line.Y2));
-                    line.X1 = snappedStart.X;
-                    line.Y1 = snappedStart.Y;
-                    line.X2 = snappedEnd.X;
-                    line.Y2 = snappedEnd.Y;
-                    continue;
-                }
-                
-                // Обрабатываем Polyline элементы (стрелки) - привязываем все точки
-                if (element is Polyline polyline && polyline.Points != null && polyline.Points.Count > 0)
-                {
-                    PointCollection snappedPoints = new PointCollection();
-                    foreach (Point point in polyline.Points)
-                    {
-                        snappedPoints.Add(SnapToGrid(point));
-                    }
-                    polyline.Points = snappedPoints;
-                    continue;
-                }
-                
-                // Обрабатываем остальные элементы (Ellipse, Border, TextBlock и т.д.)
-                double currentLeft = Canvas.GetLeft(element);
-                double currentTop = Canvas.GetTop(element);
-                
-                if (!double.IsNaN(currentLeft) && !double.IsNaN(currentTop))
-                {
-                    Point snappedPosition = SnapToGrid(new Point(currentLeft, currentTop));
-                    Canvas.SetLeft(element, snappedPosition.X);
-                    Canvas.SetTop(element, snappedPosition.Y);
-                }
-            }
-        }
-
-        // Метод для привязки точки к сетке
-        private Point SnapToGrid(Point originalPoint)
-        {
-            if (!isSnapToGridEnabled || GridSize <= 0) return originalPoint;
-
-            double snappedX = Math.Round(originalPoint.X / GridSize) * GridSize;
-            double snappedY = Math.Round(originalPoint.Y / GridSize) * GridSize;
-
-            return new Point(snappedX, snappedY);
-        }
-
-        // Обновляем сетку при изменении размера окна
-        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
-        {
-            base.OnRenderSizeChanged(sizeInfo);
-
-            if (isGridEnabled && gridPath != null)
-            {
-                // Небольшая задержка для корректного обновления размеров
-                Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    CreateGrid();
-                }), System.Windows.Threading.DispatcherPriority.Background);
-            }
+            gridManager.HandleSnapToggleClick(sender, e);
         }
 
         // Обновляем сетку когда Canvas полностью загружен и проинициализирован
         private void MainCanvas_Loaded(object sender, RoutedEventArgs e)
         {
-            if (isGridEnabled)
-            {
-                CreateGrid();
-            }
+            gridManager.UpdateGrid();
         }
 
         // Горячие клавиши для удобства
@@ -525,16 +320,16 @@ namespace Graphic_Editor
             {
                 arrowManager.CompleteArrow();
                 e.Handled = true;
-                return; // return чтобы не мешать другим обработкам
+                return;
             }
             else if (e.Key == Key.G && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
-                ToggleGridVisibility();
+                gridManager.ToggleGridVisibility();
                 e.Handled = true;
             }
             else if (e.Key == Key.S && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
-                ToggleSnapToGrid();
+                gridManager.ToggleSnapToGrid();
                 e.Handled = true;
             }
             else if (e.Key == Key.F12)
@@ -544,7 +339,6 @@ namespace Graphic_Editor
             }
             else if (e.Key == Key.H && Keyboard.Modifiers == ModifierKeys.Control)
             {
-                // Ctrl+H - альтернативная горячая клавиша
                 TogglePanelsVisibility();
                 e.Handled = true;
             }
@@ -1304,15 +1098,15 @@ namespace Graphic_Editor
                 
                 double newLeft = currentLeft + 20;
                 double newTop = currentTop + 20;
-                
+
                 // Применяем привязку к сетке если включена
-                if (isSnapToGridEnabled)
+                if (gridManager.IsSnapToGridEnabled) // Используем свойство GridManager
                 {
-                    Point snappedPoint = SnapToGrid(new Point(newLeft, newTop));
+                    Point snappedPoint = gridManager.SnapToGrid(new Point(newLeft, newTop)); // Используем метод GridManager
                     newLeft = snappedPoint.X;
                     newTop = snappedPoint.Y;
                 }
-                
+
                 Canvas.SetLeft(newElement, newLeft);
                 Canvas.SetTop(newElement, newTop);
                 
@@ -1328,7 +1122,7 @@ namespace Graphic_Editor
                 }
 
                 // Создаем ResizableElement для нового элемента
-                resizableElements[newElement] = new ResizableElement(newElement, MainCanvas, SnapToGrid, isSnapToGridEnabled);
+                resizableElements[newElement] = new ResizableElement(newElement, MainCanvas, gridManager.SnapToGrid, gridManager.IsSnapToGridEnabled);
 
                 // Выделяем вставленный элемент
                 SelectElement(newElement as FrameworkElement);
@@ -1491,7 +1285,7 @@ namespace Graphic_Editor
                     MakeCanvasShapeDraggable(elementToRestore);
                     
                     // Создаем ResizableElement для восстановленного элемента
-                    resizableElements[elementToRestore] = new ResizableElement(elementToRestore, MainCanvas, SnapToGrid, isSnapToGridEnabled);
+                    resizableElements[elementToRestore] = new ResizableElement(elementToRestore, MainCanvas, gridManager.SnapToGrid, gridManager.IsSnapToGridEnabled);
                     
                     RestoreOriginalAppearance(elementToRestore);
                     
@@ -1548,7 +1342,7 @@ namespace Graphic_Editor
                     MakeCanvasShapeDraggable(elementToAdd);
                     
                     // Создаем ResizableElement для добавленного элемента
-                    resizableElements[elementToAdd] = new ResizableElement(elementToAdd, MainCanvas, SnapToGrid, isSnapToGridEnabled);
+                    resizableElements[elementToAdd] = new ResizableElement(elementToAdd, MainCanvas, gridManager.SnapToGrid, gridManager.IsSnapToGridEnabled);
                     
                     RestoreOriginalAppearance(elementToAdd);
                     
@@ -1882,8 +1676,12 @@ namespace Graphic_Editor
             // Создаем или используем существующий ResizableElement для текущего элемента
             if (!resizableElements.ContainsKey(element))
             {
-                // Создаем новый ResizableElement
-                resizableElements[element] = new ResizableElement(element, MainCanvas, SnapToGrid, isSnapToGridEnabled);
+                // Создаем новый ResizableElement, передавая состояние сетки
+                resizableElements[element] = new ResizableElement(
+                    element,
+                    MainCanvas,
+                    gridManager.SnapToGrid, // Используем метод GridManager
+                    gridManager.IsSnapToGridEnabled); // Используем свойство GridManager
             }
 
             currentResizableElement = resizableElements[element];
@@ -1987,14 +1785,14 @@ namespace Graphic_Editor
             arrowManager = new ArrowManager(
                 MainCanvas,
                 pencil,
-                isSnapToGridEnabled,
+                gridManager.IsSnapToGridEnabled, // Используем свойство GridManager
                 WorkAreaTop,
                 WorkAreaBottom,
                 (element) => { if (element is FrameworkElement fe) BringToFront(fe); },
                 (element, actionType) => SaveToUndoStack(element, actionType),
                 DeselectAll,
                 (element) => { if (element is FrameworkElement fe) { SelectElement(fe); return true; } return false; },
-                SnapToGrid,
+                gridManager.SnapToGrid, // Используем метод из GridManager
                 GetMaxZIndex,
                 GetMinZIndex,
                 UpdateArrowPropertiesInPanels
@@ -2094,13 +1892,13 @@ namespace Graphic_Editor
                 fontSizeComboBox,
                 textPanel,
                 resizableElements,
-                isSnapToGridEnabled,
+                gridManager.IsSnapToGridEnabled, // Используем свойство GridManager
                 (element) => { if (element is FrameworkElement fe) BringToFront(fe); },
                 (element) => { if (element is FrameworkElement fe) SelectElement(fe); },
                 (element) => { if (element is UIElement ue) SelectShape(ue); },
                 DeselectAll,
                 MakeCanvasShapeDraggable,
-                SnapToGrid,
+                gridManager.SnapToGrid, // Используем метод GridManager
                 (element) => SaveToUndoStack(element, UndoActionType.Add)
             );
         }
@@ -2115,8 +1913,8 @@ namespace Graphic_Editor
                 resizableElements,
                 canvasElements,
                 MakeCanvasShapeDraggable,
-                SnapToGrid,
-                () => isSnapToGridEnabled
+                gridManager.SnapToGrid, // Используем метод GridManager
+                () => gridManager.IsSnapToGridEnabled // Используем свойство GridManager
             );
         }
 
@@ -2145,125 +1943,6 @@ namespace Graphic_Editor
                 return fe.ActualWidth > 0 ? fe.ActualWidth : fe.Width;
             return 0;
         }
-
-        // Добавляем поле для хранения скопированных элементов
-        private List<UIElement> copiedElements = new List<UIElement>();
-
-        /* // Создание сетки (должен существовать, нужно пересмотреть)
-        private void CreateGrid()
-        {
-            if (MainCanvas.ActualWidth == 0 || MainCanvas.ActualHeight == 0)
-                return;
-
-            var geometryGroup = new GeometryGroup();
-
-            // Вертикальные линии
-            for (double x = 0; x < MainCanvas.ActualWidth; x += GridSize)
-            {
-                geometryGroup.Children.Add(new LineGeometry(
-                    new Point(x, 0),
-                    new Point(x, MainCanvas.ActualHeight)));
-            }
-
-            // Горизонтальные линии
-            for (double y = 0; y < MainCanvas.ActualHeight; y += GridSize)
-            {
-                geometryGroup.Children.Add(new LineGeometry(
-                    new Point(0, y),
-                    new Point(MainCanvas.ActualWidth, y)));
-            }
-
-            gridPath.Data = geometryGroup;
-        }
-
-        // Обработчик переключения сетки из меню
-        private void GridToggleMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            ToggleGridVisibility();
-        }
-
-        // Обработчик переключения привязки к сетке
-        private void SnapToGridMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            ToggleSnapToGrid();
-        }
-
-        // Метод переключения сетки
-        private void ToggleGridVisibility()
-        {
-            isGridEnabled = !isGridEnabled;
-
-            if (isGridEnabled)
-            {
-                CreateGrid();
-                gridPath.Visibility = Visibility.Visible;
-                GridToggleMenuItem.IsChecked = true;
-                GridToggleMenuItem.Header = "Скрыть сетку";
-            }
-            else
-            {
-                gridPath.Visibility = Visibility.Collapsed;
-                GridToggleMenuItem.IsChecked = false;
-                GridToggleMenuItem.Header = "Показать сетку";
-            }
-        }
-
-        // Метод переключения привязки к сетке
-        private void ToggleSnapToGrid()
-        {
-            isSnapToGridEnabled = !isSnapToGridEnabled;
-
-            if (isSnapToGridEnabled)
-            {
-                SnapToGridMenuItem.IsChecked = true;
-                SnapToGridMenuItem.Header = "Отключить привязку";
-
-                if (!isGridEnabled)
-                {
-                    ToggleGridVisibility();
-                }
-            }
-            else
-            {
-                SnapToGridMenuItem.IsChecked = false;
-                SnapToGridMenuItem.Header = "Привязка к сетке";
-            }
-        }
-
-        // Метод для привязки точки к сетке
-        private Point SnapToGrid(Point originalPoint)
-        {
-            if (!isSnapToGridEnabled) return originalPoint;
-
-            double snappedX = Math.Round(originalPoint.X / GridSize) * GridSize;
-            double snappedY = Math.Round(originalPoint.Y / GridSize) * GridSize;
-
-            return new Point(snappedX, snappedY);
-        }
-
-        // Обновите метод перемещения фигур на канвасе
-        private void CanvasShape_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (isDragging && draggedElement != null && e.LeftButton == MouseButtonState.Pressed)
-            {
-                var element = draggedElement;
-                Point currentPosition = e.GetPosition(MainCanvas);
-
-                // Применяем привязку к сетке если включена
-                if (isSnapToGridEnabled)
-                {
-                    currentPosition = SnapToGrid(currentPosition);
-                }
-
-                double newLeft = currentPosition.X - offset.X;
-                double newTop = currentPosition.Y - offset.Y;
-
-                Canvas.SetLeft(element, newLeft);
-                Canvas.SetTop(element, newTop);
-            }
-        }*/
-
-
 
         // Вспомогательный метод для применения цвета обводки к конкретной фигуре
         internal void ApplyStrokeColorToShape(UIElement shape, Brush brush)

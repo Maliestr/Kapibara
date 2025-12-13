@@ -61,6 +61,7 @@
     <Compile Include="functions\DragManager.cs" />
     <Compile Include="functions\fileSystem\FileManager.cs" />
     <Compile Include="functions\FillStrokeManager.cs" />
+    <Compile Include="functions\GridManager.cs" />
     <Compile Include="functions\Help.cs" />
     <Compile Include="functions\fileSystem\AutoSave.cs" />
     <Compile Include="functions\ResizableElement.cs" />
