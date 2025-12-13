@@ -24,7 +24,6 @@ using System.Windows.Shapes;
 using System.Windows.Shell;
 using System.Xml;
 using System.Xml.Linq;
-
 namespace Graphic_Editor
 {
     public partial class MainWindow : Window
@@ -325,18 +324,49 @@ namespace Graphic_Editor
         // Обработчик переключения сетки из меню
         private void GridToggleMenuItem_Click(object sender, RoutedEventArgs e)
         {
+            // Сохраняем текущее состояние перед проверкой
+            bool wasGridEnabled = isGridEnabled;
+            
+            // Не позволяем отключить сетку, если включена привязка
+            if (wasGridEnabled && isSnapToGridEnabled)
+            {
+                // Отменяем изменение состояния меню
+                GridToggleMenuItem.IsChecked = true;
+                e.Handled = true;
+                return;
+            }
+            
             ToggleGridVisibility();
         }
 
         // Обработчик переключения привязки к сетке
         private void SnapToGridMenuItem_Click(object sender, RoutedEventArgs e)
         {
+            // Сохраняем текущее состояние перед проверкой
+            bool wasSnapEnabled = isSnapToGridEnabled;
+            
+            // Не позволяем включить привязку, если сетка не включена
+            if (!wasSnapEnabled && !isGridEnabled)
+            {
+                // Отменяем изменение состояния меню
+                SnapToGridMenuItem.IsChecked = false;
+                e.Handled = true;
+                return;
+            }
+            
             ToggleSnapToGrid();
         }
 
         // Метод переключения сетки
         private void ToggleGridVisibility()
         {
+            // Не позволяем отключить сетку, если включена привязка
+            if (isGridEnabled && isSnapToGridEnabled)
+            {
+                // Не позволяем отключить сетку, если включена привязка
+                return;
+            }
+
             isGridEnabled = !isGridEnabled;
 
             if (isGridEnabled)
@@ -359,6 +389,13 @@ namespace Graphic_Editor
         // Метод переключения привязки к сетке
         private void ToggleSnapToGrid()
         {
+            // Не позволяем включить привязку, если сетка не включена
+            if (!isSnapToGridEnabled && !isGridEnabled)
+            {
+                // Сначала нужно включить сетку
+                return;
+            }
+
             isSnapToGridEnabled = !isSnapToGridEnabled;
 
             if (isSnapToGridEnabled)
@@ -366,23 +403,86 @@ namespace Graphic_Editor
                 SnapToGridMenuItem.IsChecked = true;
                 SnapToGridMenuItem.Header = "Отключить привязку";
 
-                // Автоматически включаем сетку если она выключена
+                // Автоматически включаем сетку если она выключена (на случай если сетка была отключена другим способом)
                 if (!isGridEnabled)
                 {
-                    ToggleGridVisibility();
+                    isGridEnabled = true;
+                    CreateGrid();
+                    gridPath.Visibility = Visibility.Visible;
+                    GridToggleMenuItem.IsChecked = true;
+                    GridToggleMenuItem.Header = "Скрыть сетку";
                 }
+                
+                // Привязываем все существующие элементы к сетке
+                SnapAllElementsToGrid();
             }
             else
             {
                 SnapToGridMenuItem.IsChecked = false;
                 SnapToGridMenuItem.Header = "Привязка к сетке";
             }
+            
+            // Обновляем привязку во всех существующих ResizableElement
+            foreach (var resizableElement in resizableElements.Values)
+            {
+                resizableElement.UpdateSnapToGrid(SnapToGrid, isSnapToGridEnabled);
+            }
+        }
+        
+        // Метод для привязки всех элементов на холсте к сетке
+        private void SnapAllElementsToGrid()
+        {
+            foreach (UIElement element in MainCanvas.Children)
+            {
+                // Пропускаем сетку и другие служебные элементы
+                if (element == gridPath || element is System.Windows.Shapes.Path)
+                    continue;
+                    
+                // Пропускаем элементы из панели нотации
+                if (IsElementInNotation(element))
+                    continue;
+                
+                // Обрабатываем Line элементы отдельно (они используют X1, Y1, X2, Y2)
+                if (element is Line line)
+                {
+                    Point snappedStart = SnapToGrid(new Point(line.X1, line.Y1));
+                    Point snappedEnd = SnapToGrid(new Point(line.X2, line.Y2));
+                    line.X1 = snappedStart.X;
+                    line.Y1 = snappedStart.Y;
+                    line.X2 = snappedEnd.X;
+                    line.Y2 = snappedEnd.Y;
+                    continue;
+                }
+                
+                // Обрабатываем Polyline элементы (стрелки) - привязываем все точки
+                if (element is Polyline polyline && polyline.Points != null && polyline.Points.Count > 0)
+                {
+                    PointCollection snappedPoints = new PointCollection();
+                    foreach (Point point in polyline.Points)
+                    {
+                        snappedPoints.Add(SnapToGrid(point));
+                    }
+                    polyline.Points = snappedPoints;
+                    continue;
+                }
+                
+                // Обрабатываем остальные элементы (Ellipse, Border, TextBlock и т.д.)
+                double currentLeft = Canvas.GetLeft(element);
+                double currentTop = Canvas.GetTop(element);
+                
+                if (!double.IsNaN(currentLeft) && !double.IsNaN(currentTop))
+                {
+                    Point snappedPosition = SnapToGrid(new Point(currentLeft, currentTop));
+                    Canvas.SetLeft(element, snappedPosition.X);
+                    Canvas.SetTop(element, snappedPosition.Y);
+                }
+            }
         }
 
         // Метод для привязки точки к сетке
         private Point SnapToGrid(Point originalPoint)
         {
-            if (!isSnapToGridEnabled) return originalPoint;
+            if (!isSnapToGridEnabled || GridSize <= 0) return originalPoint;
 
             double snappedX = Math.Round(originalPoint.X / GridSize) * GridSize;
             double snappedY = Math.Round(originalPoint.Y / GridSize) * GridSize;
@@ -396,28 +496,80 @@ namespace Graphic_Editor
             if (isDragging && draggedElement != null && e.LeftButton == MouseButtonState.Pressed)
             {
                 var element = draggedElement;
-                Point currentPosition = e.GetPosition(MainCanvas);
 
-                // Применяем привязку к сетке если включена
+                // ВАЖНО: Привязываем позицию курсора к сетке перед вычислением
+                Point currentPosition = e.GetPosition(MainCanvas);
                 if (isSnapToGridEnabled)
                 {
                     currentPosition = SnapToGrid(currentPosition);
                 }
 
+                // Вычисляем новую позицию с учетом offset
                 double newLeft = currentPosition.X - offset.X;
                 double newTop = currentPosition.Y - offset.Y;
                 // ОГРАНИЧИВАЕМ ПЕРЕМЕЩЕНИЕ РАБОЧЕЙ ОБЛАСТЬЮ
                 double elementWidth = GetElementWidth(element);
                 double elementHeight = GetElementHeight(element);
 
-                // Вычисляем границы рабочей области
+                // Ограничиваем перемещение рабочей областью
+                double elementWidth = GetElementWidth(element);
+                double elementHeight = GetElementHeight(element);
 
                 double maxTop = MainCanvas.ActualHeight - elementHeight - WorkAreaBottom;
 
-                // Ограничиваем координаты
-                newLeft = Math.Max(0, Math.Min(newLeft, MainCanvas.ActualWidth - elementWidth)); newTop = Math.Max(WorkAreaTop, Math.Min(newTop, maxTop));
-                Canvas.SetLeft(element, newLeft);
-                Canvas.SetTop(element, newTop);
+                newLeft = Math.Max(0, Math.Min(newLeft, MainCanvas.ActualWidth - elementWidth));
+                newTop = Math.Max(WorkAreaTop, Math.Min(newTop, maxTop));
+
+                // ДОПОЛНИТЕЛЬНО ПРИВЯЗЫВАЕМ ФИНАЛЬНУЮ ПОЗИЦИЮ
+                if (isSnapToGridEnabled)
+                {
+                    Point snappedPosition = SnapToGrid(new Point(newLeft, newTop));
+                    newLeft = snappedPosition.X;
+                    newTop = snappedPosition.Y;
+                }
+
+                // Обрабатываем Line элементы отдельно
+                if (element is Line line)
+                {
+                    double currentX1 = line.X1;
+                    double currentY1 = line.Y1;
+                    double currentX2 = line.X2;
+                    double currentY2 = line.Y2;
+
+                    // Вычисляем смещение линии
+                    double lineLeft = Math.Min(currentX1, currentX2);
+                    double lineTop = Math.Min(currentY1, currentY2);
+                    double deltaX = newLeft - lineLeft;
+                    double deltaY = newTop - lineTop;
+
+                    // Применяем смещение к обеим точкам линии
+                    double newX1 = currentX1 + deltaX;
+                    double newY1 = currentY1 + deltaY;
+                    double newX2 = currentX2 + deltaX;
+                    double newY2 = currentY2 + deltaY;
+
+                    // Применяем привязку к сетке к обеим точкам линии
+                    if (isSnapToGridEnabled)
+                    {
+                        Point snappedStart = SnapToGrid(new Point(newX1, newY1));
+                        Point snappedEnd = SnapToGrid(new Point(newX2, newY2));
+                        newX1 = snappedStart.X;
+                        newY1 = snappedStart.Y;
+                        newX2 = snappedEnd.X;
+                        newY2 = snappedEnd.Y;
+                    }
+
+                    line.X1 = newX1;
+                    line.Y1 = newY1;
+                    line.X2 = newX2;
+                    line.Y2 = newY2;
+                }
+                else
+                {
+                    // Для остальных элементов
+                    Canvas.SetLeft(element, newLeft);
+                    Canvas.SetTop(element, newTop);
+                }
             }
         }
 
@@ -674,6 +826,11 @@ namespace Graphic_Editor
                     panel.Visibility = Visibility.Collapsed;
                 }
             }
+            // Скрываем панель ширины обводки
+            if (StrokeWidthPanel != null)
+            {
+                StrokeWidthPanel.Visibility = Visibility.Collapsed;
+            }
         }
 
         // Показать все панели
@@ -686,12 +843,20 @@ namespace Graphic_Editor
                 DimensionsPanel.Visibility = Visibility.Visible;
                 FillPanel.Visibility = Visibility.Visible;
                 StrokePanel.Visibility = Visibility.Visible;
+                // Показываем панель ширины обводки только если элемент НЕ в нотации
+                if (!IsElementInNotation(selectedElement))
+                {
+                    StrokeWidthPanel.Visibility = Visibility.Visible;
+                }
             }
             else if (selectedElement is TextBlock textBlock)
             {
                 DimensionsPanel.Visibility = Visibility.Visible;
-                StrokePanel.Visibility = Visibility.Visible;
+                // Не показываем панель обводки для текста
+                StrokePanel.Visibility = Visibility.Collapsed;
                 TextPanel.Visibility = Visibility.Visible;
+                // Не показываем панель ширины обводки для текста
+                StrokeWidthPanel.Visibility = Visibility.Collapsed;
             }
 
             //foreach (var panel in panels)
@@ -860,7 +1025,7 @@ namespace Graphic_Editor
             MakeCanvasShapeDraggable(ellipse);
 
             // Создаем ResizableElement
-            resizableElements[ellipse] = new ResizableElement(ellipse, MainCanvas);
+            resizableElements[ellipse] = new ResizableElement(ellipse, MainCanvas, SnapToGrid, isSnapToGridEnabled);
         }
 
         private void CreateSquareFromData(string[] data)
@@ -882,7 +1047,7 @@ namespace Graphic_Editor
             MakeCanvasShapeDraggable(square);
 
             // Создаем ResizableElement
-            resizableElements[square] = new ResizableElement(square, MainCanvas);
+            resizableElements[square] = new ResizableElement(square, MainCanvas, SnapToGrid, isSnapToGridEnabled);
         }
 
         private void CreateDiamondFromData(string[] data)
@@ -906,7 +1071,7 @@ namespace Graphic_Editor
             MakeCanvasShapeDraggable(diamond);
 
             // Создаем ResizableElement
-            resizableElements[diamond] = new ResizableElement(diamond, MainCanvas);
+            resizableElements[diamond] = new ResizableElement(diamond, MainCanvas, SnapToGrid, isSnapToGridEnabled);
         }
 
         private void CreateLineFromData(string[] data)
@@ -929,7 +1094,7 @@ namespace Graphic_Editor
             MakeCanvasShapeDraggable(line);
 
             // Создаем ResizableElement
-            resizableElements[line] = new ResizableElement(line, MainCanvas);
+            resizableElements[line] = new ResizableElement(line, MainCanvas, SnapToGrid, isSnapToGridEnabled);
         }
 
         private void ExportCanvasToImage(string filePath)
@@ -1333,6 +1498,13 @@ namespace Graphic_Editor
         // Метод для показа/скрытия панели толщины обводки
         private void UpdateStrokeWidthPanelVisibility() //Интересно
         {
+            // Если все панели скрыты - не показываем панель ширины обводки
+            if (TogglePanelsButton.IsChecked == true)
+            {
+                StrokeWidthPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
             if (selectedElement != null)
             {
                 // Показываем панель толщины только для элементов, у которых есть обводка
@@ -1387,7 +1559,7 @@ namespace Graphic_Editor
         }
 
         // Вспомогательный метод для применения толщины обводки к конкретной фигуре
-        private void ApplyStrokeThicknessToShape(UIElement shape, double thickness)
+        internal void ApplyStrokeThicknessToShape(UIElement shape, double thickness)
         {
             UpdateStrokeThicknessInAllReferences(shape, thickness);
             if (shape is Ellipse ellipse)
@@ -1456,53 +1628,49 @@ namespace Graphic_Editor
         {
             if (shape == null) return;
             
+            // Если элемент уже выделен (толщина увеличена), восстанавливаем базовую толщину перед сохранением
+            bool isCurrentlySelected = selectedElements.Contains(shape);
+            double savedThickness = originalStrokeThickness.ContainsKey(shape) ? originalStrokeThickness[shape] : 0;
+            
             if (shape is Ellipse ellipse)
             {
-                if (!originalStrokeColors.ContainsKey(shape))
+                // Если элемент выделен, восстанавливаем базовую толщину перед сохранением
+                if (isCurrentlySelected && savedThickness > 0)
                 {
-                    originalStrokeColors[shape] = ellipse.Stroke;
+                    ellipse.StrokeThickness = savedThickness;
                 }
-                if (!originalFillColors.ContainsKey(shape))
-                {
-                    originalFillColors[shape] = ellipse.Fill;
-                }
-                if (!originalStrokeThickness.ContainsKey(shape))
-                {
-                    originalStrokeThickness[shape] = ellipse.StrokeThickness;
-                }
+                // Сохраняем текущие цвета и толщину
+                originalStrokeColors[shape] = ellipse.Stroke;
+                originalFillColors[shape] = ellipse.Fill;
+                originalStrokeThickness[shape] = ellipse.StrokeThickness;
             }
             else if (shape is Border border)
             {
-                if (!originalStrokeColors.ContainsKey(shape))
+                // Если элемент выделен, восстанавливаем базовую толщину перед сохранением
+                if (isCurrentlySelected && savedThickness > 0)
                 {
-                    originalStrokeColors[shape] = border.BorderBrush;
+                    border.BorderThickness = new Thickness(savedThickness);
                 }
-                if (!originalFillColors.ContainsKey(shape))
-                {
-                    originalFillColors[shape] = border.Background;
-                }
-                if (!originalStrokeThickness.ContainsKey(shape))
-                {
-                    originalStrokeThickness[shape] = border.BorderThickness.Left;
-                }
+                // Сохраняем текущие цвета и толщину
+                originalStrokeColors[shape] = border.BorderBrush;
+                originalFillColors[shape] = border.Background;
+                originalStrokeThickness[shape] = border.BorderThickness.Left;
             }
             else if (shape is Line line)
             {
-                if (!originalStrokeColors.ContainsKey(shape))
+                // Если элемент выделен, восстанавливаем базовую толщину перед сохранением
+                if (isCurrentlySelected && savedThickness > 0)
                 {
-                    originalStrokeColors[shape] = line.Stroke;
+                    line.StrokeThickness = savedThickness;
                 }
-                if (!originalStrokeThickness.ContainsKey(shape))
-                {
-                    originalStrokeThickness[shape] = line.StrokeThickness;
-                }
+                // Сохраняем текущие цвета и толщину
+                originalStrokeColors[shape] = line.Stroke;
+                originalStrokeThickness[shape] = line.StrokeThickness;
             }
             else if (shape is TextBlock textBlock)
             {
-                if (!originalStrokeColors.ContainsKey(shape))
-                {
-                    originalStrokeColors[shape] = textBlock.Foreground;
-                }
+                // Сохраняем текущие цвета
+                originalStrokeColors[shape] = textBlock.Foreground;
             }
         }
 
@@ -1612,6 +1780,10 @@ namespace Graphic_Editor
             // Если элемент не выделен - выделяем его
             if (!selectedElements.Contains(element))
             {
+                // ВАЖНО: Сохраняем текущие цвета ПЕРЕД выделением
+                // Но сначала нужно убедиться, что элемент не выделен (толщина не увеличена)
+                // Если элемент был выделен ранее, его цвета уже сохранены в originalStrokeColors
+                // Поэтому просто используем текущие цвета элемента
                 SaveOriginalColors(element);
                 selectedElement = element;
                 ApplySelectionVisualFeedback(element, true);
@@ -1622,8 +1794,11 @@ namespace Graphic_Editor
                 // Обновляем комбо-боксы в соответствии с цветами фигуры
                 UpdateColorComboBoxesFromShape(element);
 
-                // ПОКАЗЫВАЕМ ПАНЕЛЬ ТОЛЩИНЫ ОБВОДКИ
-                UpdateStrokeWidthPanelVisibility();
+                // ПОКАЗЫВАЕМ ПАНЕЛЬ ТОЛЩИНЫ ОБВОДКИ только если элемент НЕ в нотации
+                if (!IsElementInNotation(element))
+                {
+                    UpdateStrokeWidthPanelVisibility();
+                }
                 // Обновляем панель текста, если элемент является текстовым
                 UpdateTextPanelForSelectedElement(element);
 
@@ -1638,6 +1813,7 @@ namespace Graphic_Editor
                 DimensionsPanel.Visibility = Visibility.Visible;
                 StrokePanel.Visibility = Visibility.Visible;
                 TextPanel.Visibility = Visibility.Visible;
+                StrokeWidthPanel.Visibility = Visibility.Visible;
             }
         }
 
@@ -1716,8 +1892,19 @@ namespace Graphic_Editor
                 double currentLeft = Canvas.GetLeft(newElement);
                 double currentTop = Canvas.GetTop(newElement);
                 
-                Canvas.SetLeft(newElement, currentLeft + 20);
-                Canvas.SetTop(newElement, currentTop + 20);
+                double newLeft = currentLeft + 20;
+                double newTop = currentTop + 20;
+                
+                // Применяем привязку к сетке если включена
+                if (isSnapToGridEnabled)
+                {
+                    Point snappedPoint = SnapToGrid(new Point(newLeft, newTop));
+                    newLeft = snappedPoint.X;
+                    newTop = snappedPoint.Y;
+                }
+                
+                Canvas.SetLeft(newElement, newLeft);
+                Canvas.SetTop(newElement, newTop);
                 
                 // Добавляем на холст
                 MainCanvas.Children.Add(newElement);
@@ -1731,7 +1918,7 @@ namespace Graphic_Editor
                 }
 
                 // Создаем ResizableElement для нового элемента
-                resizableElements[newElement] = new ResizableElement(newElement, MainCanvas);
+                resizableElements[newElement] = new ResizableElement(newElement, MainCanvas, SnapToGrid, isSnapToGridEnabled);
 
                 // Выделяем вставленный элемент
                 SelectElement(newElement as FrameworkElement);
@@ -1893,7 +2080,7 @@ namespace Graphic_Editor
                     MakeCanvasShapeDraggable(elementToRestore);
                     
                     // Создаем ResizableElement для восстановленного элемента
-                    resizableElements[elementToRestore] = new ResizableElement(elementToRestore, MainCanvas);
+                    resizableElements[elementToRestore] = new ResizableElement(elementToRestore, MainCanvas, SnapToGrid, isSnapToGridEnabled);
                     
                     RestoreOriginalAppearance(elementToRestore);
                     
@@ -1950,7 +2137,7 @@ namespace Graphic_Editor
                     MakeCanvasShapeDraggable(elementToAdd);
                     
                     // Создаем ResizableElement для добавленного элемента
-                    resizableElements[elementToAdd] = new ResizableElement(elementToAdd, MainCanvas);
+                    resizableElements[elementToAdd] = new ResizableElement(elementToAdd, MainCanvas, SnapToGrid, isSnapToGridEnabled);
                     
                     RestoreOriginalAppearance(elementToAdd);
                     
@@ -2242,6 +2429,14 @@ namespace Graphic_Editor
                 Height = double.NaN // Автоматический размер
             };
 
+            // Применяем привязку к сетке если включена
+            if (isSnapToGridEnabled)
+            {
+                Point snappedPoint = SnapToGrid(new Point(left, top));
+                left = snappedPoint.X;
+                top = snappedPoint.Y;
+            }
+            
             // Устанавливаем позицию на холсте
             Canvas.SetLeft(textBlock, left);
             Canvas.SetTop(textBlock, top);
@@ -2335,6 +2530,13 @@ namespace Graphic_Editor
             if (isDragging && draggedElement != null && e.LeftButton == MouseButtonState.Pressed)
             {
                 Point currentPosition = e.GetPosition(MainCanvas);
+
+                // ВАЖНО: Привязываем курсор к сетке
+                if (isSnapToGridEnabled)
+                {
+                    currentPosition = SnapToGrid(currentPosition);
+                }
+
                 // Вычисляем новую позицию элемента с учетом смещения
                 double newLeft = currentPosition.X - offset.X;
                 double newTop = currentPosition.Y - offset.Y;
@@ -2351,9 +2553,18 @@ namespace Graphic_Editor
                 double workAreaTop = 26;
                 double workAreaRight = MainCanvas.ActualWidth - 264;
                 double workAreaBottom = MainCanvas.ActualHeight - 100;
+
                 // Ограничиваем перемещение рабочей областью
                 newLeft = Math.Max(workAreaLeft, Math.Min(newLeft, workAreaRight - elementWidth));
                 newTop = Math.Max(workAreaTop, Math.Min(newTop, workAreaBottom - elementHeight));
+
+                // ДОПОЛНИТЕЛЬНО ПРИВЯЗЫВАЕМ ФИНАЛЬНУЮ ПОЗИЦИЮ
+                if (isSnapToGridEnabled)
+                {
+                    Point snappedPosition = SnapToGrid(new Point(newLeft, newTop));
+                    newLeft = snappedPosition.X;
+                    newTop = snappedPosition.Y;
+                }
 
                 Canvas.SetLeft(draggedElement, newLeft);
                 Canvas.SetTop(draggedElement, newTop);
@@ -2796,7 +3007,6 @@ namespace Graphic_Editor
             {
                 // Выделяем фигуру в нотации
                 SelectElement(element as FrameworkElement);
-                // Выделяем фигуру в нотации
                 SelectShape(element);
 
                 isDragging = true;
@@ -2811,8 +3021,26 @@ namespace Graphic_Editor
 
                     // Позиционируем копию так, чтобы центр фигуры был под курсором
                     Point startPosition = e.GetPosition(MainCanvas);
-                    Canvas.SetLeft(shapeCopy, startPosition.X - (GetElementWidth(shapeCopy) / 2));
-                    Canvas.SetTop(shapeCopy, startPosition.Y - (GetElementHeight(shapeCopy) / 2));
+
+                    // ПРИВЯЗЫВАЕМ НАЧАЛЬНУЮ ПОЗИЦИЮ К СЕТКЕ
+                    if (isSnapToGridEnabled)
+                    {
+                        startPosition = SnapToGrid(startPosition);
+                    }
+
+                    double startLeft = startPosition.X - (GetElementWidth(shapeCopy) / 2);
+                    double startTop = startPosition.Y - (GetElementHeight(shapeCopy) / 2);
+
+                    // Дополнительно привязываем финальную позицию к сетке
+                    if (isSnapToGridEnabled)
+                    {
+                        Point snappedStart = SnapToGrid(new Point(startLeft, startTop));
+                        startLeft = snappedStart.X;
+                        startTop = snappedStart.Y;
+                    }
+
+                    Canvas.SetLeft(shapeCopy, startLeft);
+                    Canvas.SetTop(shapeCopy, startTop);
 
                     MainCanvas.Children.Add(shapeCopy);
                     shapeCopy.Opacity = 0.7;
@@ -2835,6 +3063,13 @@ namespace Graphic_Editor
             {
                 // Перемещаем копию фигуры за курсором
                 Point currentPosition = e.GetPosition(MainCanvas);
+
+                // ПРИМЕНЯЕМ ПРИВЯЗКУ К СЕТКЕ К КАЖДОЙ ПОЗИЦИИ КУРСОРА
+                if (isSnapToGridEnabled)
+                {
+                    currentPosition = SnapToGrid(currentPosition);
+                }
+
                 if (currentPosition.Y > WorkAreaTop && currentPosition.Y < MainCanvas.ActualHeight - WorkAreaBottom)
                 {
                     double newLeft = currentPosition.X - (GetElementWidth(shapeCopy) / 2);
@@ -2843,9 +3078,23 @@ namespace Graphic_Editor
                     double elementWidth = GetElementWidth(shapeCopy);
                     double elementHeight = GetElementHeight(shapeCopy);
 
+                    // Дополнительные ограничения для копии
+                    double elementWidth = GetElementWidth(shapeCopy);
+                    double elementHeight = GetElementHeight(shapeCopy);
+
                     double maxTop = MainCanvas.ActualHeight - elementHeight - WorkAreaBottom;
 
-                    newLeft = Math.Max(0, Math.Min(newLeft, MainCanvas.ActualWidth - elementWidth)); newTop = Math.Max(WorkAreaTop, Math.Min(newTop, maxTop));
+                    newLeft = Math.Max(0, Math.Min(newLeft, MainCanvas.ActualWidth - elementWidth));
+                    newTop = Math.Max(WorkAreaTop, Math.Min(newTop, maxTop));
+
+                    // ДОПОЛНИТЕЛЬНО ПРИВЯЗЫВАЕМ ФИНАЛЬНУЮ ПОЗИЦИЮ К СЕТКЕ
+                    if (isSnapToGridEnabled)
+                    {
+                        Point snappedPosition = SnapToGrid(new Point(newLeft, newTop));
+                        newLeft = snappedPosition.X;
+                        newTop = snappedPosition.Y;
+                    }
+
                     Canvas.SetLeft(shapeCopy, newLeft);
                     Canvas.SetTop(shapeCopy, newTop);
                 }
@@ -2858,23 +3107,57 @@ namespace Graphic_Editor
 
             if (isSelected)
             {
-                // ВЫДЕЛЕНИЕ СИНИМ ЦВЕТОМ ДЛЯ ВСЕХ ВЫДЕЛЕННЫХ ЭЛЕМЕНТОВ
+                // ВЫДЕЛЕНИЕ ТОЛЬКО УВЕЛИЧЕНИЕМ ТОЛЩИНЫ, БЕЗ ИЗМЕНЕНИЯ ЦВЕТА
+                // Убеждаемся, что цвет обводки соответствует сохраненному цвету
                 if (selectedElements.Contains(element))
                 {
                     if (element is Ellipse ellipseElement)
                     {
-                        ellipseElement.Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939")); ;
-                        //ellipseElement.StrokeThickness += 2;
+                        // Восстанавливаем сохраненный цвет обводки перед выделением
+                        if (originalStrokeColors.ContainsKey(element))
+                        {
+                            ellipseElement.Stroke = originalStrokeColors[element];
+                        }
+                        // Сохраняем оригинальную толщину перед изменением (если еще не сохранена)
+                        if (!originalStrokeThickness.ContainsKey(element))
+                        {
+                            originalStrokeThickness[element] = ellipseElement.StrokeThickness;
+                        }
+                        // Увеличиваем толщину на 2, используя сохраненную базовую толщину
+                        double baseThickness = originalStrokeThickness[element];
+                        ellipseElement.StrokeThickness = baseThickness + 2;
                     }
                     else if (element is Border borderElement)
                     {
-                        borderElement.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939")); ;
-                        //borderElement.BorderThickness = new Thickness(borderElement.BorderThickness.Left + 2);
+                        // Восстанавливаем сохраненный цвет обводки перед выделением
+                        if (originalStrokeColors.ContainsKey(element))
+                        {
+                            borderElement.BorderBrush = originalStrokeColors[element];
+                        }
+                        // Сохраняем оригинальную толщину перед изменением (если еще не сохранена)
+                        if (!originalStrokeThickness.ContainsKey(element))
+                        {
+                            originalStrokeThickness[element] = borderElement.BorderThickness.Left;
+                        }
+                        // Увеличиваем толщину на 2, используя сохраненную базовую толщину
+                        double baseThickness = originalStrokeThickness[element];
+                        borderElement.BorderThickness = new Thickness(baseThickness + 2);
                     }
                     else if (element is Line lineElement)
                     {
-                        lineElement.Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939")); ;
-                        //lineElement.StrokeThickness += 2;
+                        // Восстанавливаем сохраненный цвет обводки перед выделением
+                        if (originalStrokeColors.ContainsKey(element))
+                        {
+                            lineElement.Stroke = originalStrokeColors[element];
+                        }
+                        // Сохраняем оригинальную толщину перед изменением (если еще не сохранена)
+                        if (!originalStrokeThickness.ContainsKey(element))
+                        {
+                            originalStrokeThickness[element] = lineElement.StrokeThickness;
+                        }
+                        // Увеличиваем толщину на 2, используя сохраненную базовую толщину
+                        double baseThickness = originalStrokeThickness[element];
+                        lineElement.StrokeThickness = baseThickness + 2;
                     }
                     else if (element is TextBlock textBlockElement)
                     {
@@ -2987,6 +3270,28 @@ namespace Graphic_Editor
                 if (shapeCopy != null)
                 {
                     Point dropPosition = e.GetPosition(MainCanvas);
+                    
+                    // Применяем привязку к сетке если включена
+                    double elementWidth = GetElementWidth(shapeCopy);
+                    double elementHeight = GetElementHeight(shapeCopy);
+                    double snappedLeft = dropPosition.X - (elementWidth / 2);
+                    double snappedTop = dropPosition.Y - (elementHeight / 2);
+                    
+                    // Ограничиваем координаты
+                    double maxTop = MainCanvas.ActualHeight - elementHeight - WorkAreaBottom;
+                    snappedLeft = Math.Max(0, Math.Min(snappedLeft, MainCanvas.ActualWidth - elementWidth));
+                    snappedTop = Math.Max(WorkAreaTop, Math.Min(snappedTop, maxTop));
+                    
+                    // Применяем привязку к сетке к финальной позиции фигуры
+                    if (isSnapToGridEnabled)
+                    {
+                        Point snappedPosition = SnapToGrid(new Point(snappedLeft, snappedTop));
+                        snappedLeft = snappedPosition.X;
+                        snappedTop = snappedPosition.Y;
+                    }
+                    
+                    Canvas.SetLeft(shapeCopy, snappedLeft);
+                    Canvas.SetTop(shapeCopy, snappedTop);
 
                     // ЕСЛИ БРОСИЛИ ФИГУРУ ВНЕ РАБОЧЕЙ ОБЛАСТИ - УДАЛЯЕМ ЕЕ
                     if (dropPosition.Y <= WorkAreaTop ||
@@ -3009,6 +3314,7 @@ namespace Graphic_Editor
 
                         // ВЫДЕЛЯЕМ НОВУЮ ФИГУРУ ПОСЛЕ ПЕРЕТАСКИВАНИЯ
                         SelectElement(shapeCopy as FrameworkElement);
+                        SelectShape(shapeCopy);
                         if (IsShapeFromNotation(element))
                         {
                             string shapeType = GetShapeType(element);
@@ -3077,18 +3383,21 @@ namespace Graphic_Editor
         private UIElement CreateShapeCopy(UIElement original)
         {
             // Создаем копию фигуры в зависимости от типа оригинала с фиксированными размерами и толщиной
+            // Все новые фигуры создаются с белым цветом обводки и заливки
             if (original == Circle)
             {
                 var copy = new Ellipse
                 {
                     Width = 110,
                     Height = 110,
-                    Fill = (Circle as Ellipse).Fill,
-                    Stroke = (Circle as Ellipse).Stroke,
+                    Fill = Brushes.White,
+                    Stroke = Brushes.White,
                     StrokeThickness = 3, // ФИКСИРОВАННАЯ толщина
                     Cursor = Cursors.Hand
                 };
                 originalStrokeThickness[copy] = 3;
+                originalStrokeColors[copy] = Brushes.White;
+                originalFillColors[copy] = Brushes.White;
                 return copy;
             }
             else if (original == UmlInitialNode)
@@ -3109,7 +3418,7 @@ namespace Graphic_Editor
                     Width = 80,
                     Height = 80,
                     Fill = Brushes.White,
-                    Stroke = Brushes.Black,
+                    Stroke = Brushes.White,
                     StrokeThickness = 1, // ФИКСИРОВАННАЯ толщина
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center
@@ -3118,6 +3427,9 @@ namespace Graphic_Editor
                 border.Child = circle;
                 originalStrokeThickness[border] = 3;
                 originalStrokeThickness[circle] = 1;
+                originalStrokeColors[border] = Brushes.White;
+                originalFillColors[circle] = Brushes.White;
+                originalStrokeColors[circle] = Brushes.White;
                 return border;
             }
             else if (original == SimpleRing)
@@ -3126,12 +3438,13 @@ namespace Graphic_Editor
                 {
                     Width = 110,
                     Height = 110,
-                    Stroke = (SimpleRing as Ellipse).Stroke,
+                    Stroke = Brushes.White,
                     StrokeThickness = 5, // ФИКСИРОВАННАЯ толщина
                     Fill = Brushes.Transparent,
                     Cursor = Cursors.Hand
                 };
                 originalStrokeThickness[copy] = 5;
+                originalStrokeColors[copy] = Brushes.White;
                 return copy;
             }
             else if (original == Ellipse)
@@ -3140,12 +3453,13 @@ namespace Graphic_Editor
                 {
                     Width = 130,
                     Height = 80,
-                    Stroke = (Ellipse as Ellipse).Stroke,
+                    Stroke = Brushes.White,
                     StrokeThickness = 3, // ФИКСИРОВАННАЯ толщина
                     Fill = Brushes.Transparent,
                     Cursor = Cursors.Hand
                 };
                 originalStrokeThickness[copy] = 3;
+                originalStrokeColors[copy] = Brushes.White;
                 return copy;
             }
             else if (original == Square)
@@ -3154,13 +3468,15 @@ namespace Graphic_Editor
                 {
                     Width = 100,
                     Height = 100,
-                    Background = (Square as Border).Background,
-                    BorderBrush = (Square as Border).BorderBrush,
+                    Background = Brushes.White,
+                    BorderBrush = Brushes.White,
                     BorderThickness = new Thickness(2), // ФИКСИРОВАННАЯ толщина
                     CornerRadius = (Square as Border).CornerRadius,
                     Cursor = Cursors.Hand
                 };
                 originalStrokeThickness[copy] = 2;
+                originalStrokeColors[copy] = Brushes.White;
+                originalFillColors[copy] = Brushes.White;
                 return copy;
             }
             else if (original == ResizableSquare)
@@ -3169,8 +3485,8 @@ namespace Graphic_Editor
                 {
                     Width = 70,
                     Height = 71,
-                    Background = (ResizableSquare as Border).Background,
-                    BorderBrush = (ResizableSquare as Border).BorderBrush,
+                    Background = Brushes.White,
+                    BorderBrush = Brushes.White,
                     BorderThickness = new Thickness(2), // ФИКСИРОВАННАЯ толщина
                     CornerRadius = (ResizableSquare as Border).CornerRadius,
                     Cursor = Cursors.Hand,
@@ -3178,6 +3494,8 @@ namespace Graphic_Editor
                 };
                 copy.RenderTransform = new RotateTransform(45);
                 originalStrokeThickness[copy] = 2;
+                originalStrokeColors[copy] = Brushes.White;
+                originalFillColors[copy] = Brushes.White;
                 return copy;
             }
             else if (original == Rectangle)
@@ -3186,13 +3504,15 @@ namespace Graphic_Editor
                 {
                     Width = 150,
                     Height = 80,
-                    Background = (Rectangle as Border).Background,
-                    BorderBrush = (Rectangle as Border).BorderBrush,
+                    Background = Brushes.White,
+                    BorderBrush = Brushes.White,
                     BorderThickness = new Thickness(2), // ФИКСИРОВАННАЯ толщина
                     CornerRadius = (Rectangle as Border).CornerRadius,
                     Cursor = Cursors.Hand
                 };
                 originalStrokeThickness[copy] = 2;
+                originalStrokeColors[copy] = Brushes.White;
+                originalFillColors[copy] = Brushes.White;
                 return copy;
             }
             else if (original == stick)
@@ -3201,13 +3521,15 @@ namespace Graphic_Editor
                 {
                     Width = 200,
                     Height = 30,
-                    Background = (stick as Border).Background,
-                    BorderBrush = (stick as Border).BorderBrush,
+                    Background = Brushes.White,
+                    BorderBrush = Brushes.White,
                     BorderThickness = new Thickness(2), // ФИКСИРОВАННАЯ толщина
                     CornerRadius = (stick as Border).CornerRadius,
                     Cursor = Cursors.Hand
                 };
                 originalStrokeThickness[copy] = 2;
+                originalStrokeColors[copy] = Brushes.White;
+                originalFillColors[copy] = Brushes.White;
                 return copy;
             }
             else if (original == SuperEllipse)
@@ -3216,13 +3538,15 @@ namespace Graphic_Editor
                 {
                     Width = 120,
                     Height = 80,
-                    Background = (SuperEllipse as Border).Background,
-                    BorderBrush = (SuperEllipse as Border).BorderBrush,
+                    Background = Brushes.White,
+                    BorderBrush = Brushes.White,
                     BorderThickness = new Thickness(2), // ФИКСИРОВАННАЯ толщина
                     CornerRadius = (SuperEllipse as Border).CornerRadius,
                     Cursor = Cursors.Hand
                 };
                 originalStrokeThickness[copy] = 2;
+                originalStrokeColors[copy] = Brushes.White;
+                originalFillColors[copy] = Brushes.White;
                 return copy;
             }
             return null;
@@ -3263,10 +3587,23 @@ namespace Graphic_Editor
                     resizableElements[element].HideResizeHandles();
                 }
 
-                // Рассчитываем смещение так, чтобы центр фигуры был под курсором
+                // Получаем текущую позицию элемента
+                double currentLeft = Canvas.GetLeft(element);
+                double currentTop = Canvas.GetTop(element);
+                if (double.IsNaN(currentLeft)) currentLeft = 0;
+                if (double.IsNaN(currentTop)) currentTop = 0;
+
+                // Получаем позицию курсора на холсте и ПРИВЯЗЫВАЕМ ЕЕ К СЕТКЕ
+                Point canvasPos = e.GetPosition(MainCanvas);
+                if (isSnapToGridEnabled)
+                {
+                    canvasPos = SnapToGrid(canvasPos);
+                }
+
+                // Вычисляем offset как разницу между ПРИВЯЗАННОЙ позицией курсора и позицией элемента
                 offset = new Point(
-                    GetElementWidth(element) / 2,
-                    GetElementHeight(element) / 2
+                    canvasPos.X - currentLeft,
+                    canvasPos.Y - currentTop
                 );
 
                 // ПОДНИМАЕМ ЭЛЕМЕНТ НАВЕРХ ПРИ ЗАХВАТЕ (ZIndex = 1000)
@@ -3278,7 +3615,6 @@ namespace Graphic_Editor
                 isDragging = true;
                 draggedElement = element;
                 element.CaptureMouse();
-                offset = e.GetPosition(element);
                 ApplyCanvasDragVisualFeedback(element, true);
                 e.Handled = true;
             }
@@ -3345,6 +3681,33 @@ namespace Graphic_Editor
             {
                 // ВЫДЕЛЯЕМ фигуру при клике (но не начинаем новое перетаскивание)
                 //SelectShape(element);
+
+                // Применяем привязку к сетке при завершении перетаскивания
+                if (isSnapToGridEnabled)
+                {
+                    // Обрабатываем Line элементы отдельно
+                    if (draggedElement is Line line)
+                    {
+                        Point snappedStart = SnapToGrid(new Point(line.X1, line.Y1));
+                        Point snappedEnd = SnapToGrid(new Point(line.X2, line.Y2));
+                        line.X1 = snappedStart.X;
+                        line.Y1 = snappedStart.Y;
+                        line.X2 = snappedEnd.X;
+                        line.Y2 = snappedEnd.Y;
+                    }
+                    else
+                    {
+                        double currentLeft = Canvas.GetLeft(draggedElement);
+                        double currentTop = Canvas.GetTop(draggedElement);
+                        
+                        if (!double.IsNaN(currentLeft) && !double.IsNaN(currentTop))
+                        {
+                            Point snappedPosition = SnapToGrid(new Point(currentLeft, currentTop));
+                            Canvas.SetLeft(draggedElement, snappedPosition.X);
+                            Canvas.SetTop(draggedElement, snappedPosition.Y);
+                        }
+                    }
+                }
 
                 isDragging = false;
                 draggedElement.ReleaseMouseCapture();
@@ -3588,12 +3951,7 @@ namespace Graphic_Editor
         {
             if (shape == null) return;
 
-            // Проверяем, находится ли элемент в панели нотации
-            if (IsElementInNotation(shape))
-            {
-                // Для элементов в нотации не показываем ручки изменения размера
-                return;
-            }
+            DeselectArrow();
 
             DeselectArrow();
 
@@ -3618,7 +3976,7 @@ namespace Graphic_Editor
             ApplySelectionVisualFeedback(shape, true);
 
             // Показываем ручки изменения размера
-            ShowResizeHandlesForElement(shape);
+            // ShowResizeHandlesForElement(shape);
 
             // Обновляем комбо-боксы в соответствии с цветами фигуры
             UpdateColorComboBoxesFromShape(selectedShape);
@@ -3627,6 +3985,12 @@ namespace Graphic_Editor
             if (shape is FrameworkElement frameworkElementForMenu)
             {
                 CreateContextMenu(frameworkElementForMenu);
+            }
+
+            // Показываем ручки изменения размера только если элемент НЕ в нотации
+            if (!IsElementInNotation(shape))
+            {
+                ShowResizeHandlesForElement(shape);
             }
         }
 
@@ -3667,7 +4031,7 @@ namespace Graphic_Editor
             if (!resizableElements.ContainsKey(element))
             {
                 // Создаем новый ResizableElement
-                resizableElements[element] = new ResizableElement(element, MainCanvas);
+                resizableElements[element] = new ResizableElement(element, MainCanvas, SnapToGrid, isSnapToGridEnabled);
             }
 
             currentResizableElement = resizableElements[element];
@@ -3783,18 +4147,21 @@ namespace Graphic_Editor
         // Метод применения цвета к выделенной фигуре
         private void ApplyColorToSelectedShape(string hexColor)
         {
-            if (selectedShape != null)
+            if (string.IsNullOrEmpty(hexColor)) return;
+
+            Color newColor = (Color)ColorConverter.ConvertFromString("#" + hexColor);
+            Brush newBrush = new SolidColorBrush(newColor);
+
+            // Применяем цвет ко всем выделенным элементам
+            foreach (var element in selectedElements.ToList())
             {
-                Color newColor = (Color)ColorConverter.ConvertFromString("#" + hexColor);
-                Brush newBrush = new SolidColorBrush(newColor);
+                ApplyFillColorToShape(element, newBrush);
+            }
 
+            // Также применяем к selectedShape, если он не в selectedElements
+            if (selectedShape != null && !selectedElements.Contains(selectedShape))
+            {
                 ApplyFillColorToShape(selectedShape, newBrush);
-
-                // Сохраняем новый цвет как оригинальный
-                if (originalFillColors.ContainsKey(selectedShape))
-                {
-                    originalFillColors[selectedShape] = newBrush;
-                }
             }
         }
 
@@ -3897,18 +4264,21 @@ namespace Graphic_Editor
         // Метод применения цвета обводки к выделенной фигуре
         private void ApplyStrokeColorToSelectedShape(string hexColor)
         {
-            if (selectedShape != null)
+            if (string.IsNullOrEmpty(hexColor)) return;
+
+            Color newColor = (Color)ColorConverter.ConvertFromString("#" + hexColor);
+            Brush newBrush = new SolidColorBrush(newColor);
+
+            // Применяем цвет обводки ко всем выделенным элементам
+            foreach (var element in selectedElements.ToList())
             {
-                Color newColor = (Color)ColorConverter.ConvertFromString("#" + hexColor);
-                Brush newBrush = new SolidColorBrush(newColor);
+                ApplyStrokeColorToShape(element, newBrush);
+            }
 
+            // Также применяем к selectedShape, если он не в selectedElements
+            if (selectedShape != null && !selectedElements.Contains(selectedShape))
+            {
                 ApplyStrokeColorToShape(selectedShape, newBrush);
-
-                // Сохраняем новый цвет как оригинальный
-                if (originalStrokeColors.ContainsKey(selectedShape))
-                {
-                    originalStrokeColors[selectedShape] = newBrush;
-                }
             }
         }
 
@@ -3957,7 +4327,7 @@ namespace Graphic_Editor
         }
 
         // Вспомогательный метод для применения цвета заливки
-        private void ApplyFillColorToShape(UIElement shape, Brush brush)
+        internal void ApplyFillColorToShape(UIElement shape, Brush brush)
         {
             if (shape is Ellipse ellipse)
             {
@@ -3965,12 +4335,30 @@ namespace Graphic_Editor
                 if (ellipse.Fill != Brushes.Transparent)
                 {
                     ellipse.Fill = brush;
+                    // Сохраняем новый цвет как оригинальный
+                    if (!originalFillColors.ContainsKey(shape))
+                    {
+                        originalFillColors[shape] = brush;
+                    }
+                    else
+                    {
+                        originalFillColors[shape] = brush;
+                    }
                 }
             }
             else if (shape is Border border)
             {
                 // Для Border меняем Background (заливку)
                 border.Background = brush;
+                // Сохраняем новый цвет как оригинальный
+                if (!originalFillColors.ContainsKey(shape))
+                {
+                    originalFillColors[shape] = brush;
+                }
+                else
+                {
+                    originalFillColors[shape] = brush;
+                }
             }
             // Для Line и TextBlock заливка не применяется
         }
@@ -4081,8 +4469,19 @@ namespace Graphic_Editor
                     double currentLeft = Canvas.GetLeft(newElement);
                     double currentTop = Canvas.GetTop(newElement);
 
-                    Canvas.SetLeft(newElement, currentLeft + 20);
-                    Canvas.SetTop(newElement, currentTop + 20);
+                    double newLeft = currentLeft + 20;
+                    double newTop = currentTop + 20;
+                    
+                    // Применяем привязку к сетке если включена
+                    if (isSnapToGridEnabled)
+                    {
+                        Point snappedPoint = SnapToGrid(new Point(newLeft, newTop));
+                        newLeft = snappedPoint.X;
+                        newTop = snappedPoint.Y;
+                    }
+
+                    Canvas.SetLeft(newElement, newLeft);
+                    Canvas.SetTop(newElement, newTop);
 
                     // Добавляем на холст
                     MainCanvas.Children.Add(newElement);
@@ -4613,13 +5012,6 @@ namespace Graphic_Editor
                 double deltaX = currentPosition.X - arrowDragStartPoint.X;
                 double deltaY = currentPosition.Y - arrowDragStartPoint.Y;
 
-                // Применяем привязку к сетке если включена
-                if (isSnapToGridEnabled)
-                {
-                    deltaX = Math.Round(deltaX / GridSize) * GridSize;
-                    deltaY = Math.Round(deltaY / GridSize) * GridSize;
-                }
-
                 // Проверяем что есть оригинальные точки
                 if (draggedArrowContainer.OriginalPoints == null) return;
 
@@ -4633,6 +5025,14 @@ namespace Graphic_Editor
                     // Ограничиваем перемещение рабочей областью
                     newX = Math.Max(0, Math.Min(newX, MainCanvas.ActualWidth - 10));
                     newY = Math.Max(WorkAreaTop, Math.Min(newY, MainCanvas.ActualHeight - WorkAreaBottom - 10));
+
+                    // ПРИМЕНЯЕМ ПРИВЯЗКУ К СЕТКЕ К КАЖДОЙ ТОЧКЕ В РЕАЛЬНОМ ВРЕМЕНИ
+                    if (isSnapToGridEnabled)
+                    {
+                        Point snappedPoint = SnapToGrid(new Point(newX, newY));
+                        newX = snappedPoint.X;
+                        newY = snappedPoint.Y;
+                    }
 
                     newPoints.Add(new Point(newX, newY));
                 }
@@ -4755,6 +5155,23 @@ namespace Graphic_Editor
                     Canvas.SetZIndex(draggedArrowContainer.Arrowhead, 501);
                 }
 
+                // Применяем привязку к сетке при завершении перетаскивания
+                if (isSnapToGridEnabled && draggedArrowContainer.Line.Points != null)
+                {
+                    PointCollection snappedPoints = new PointCollection();
+                    foreach (Point point in draggedArrowContainer.Line.Points)
+                    {
+                        snappedPoints.Add(SnapToGrid(point));
+                    }
+                    draggedArrowContainer.Line.Points = snappedPoints;
+                    
+                    // Синхронно обновляем позицию наконечника
+                    if (draggedArrowContainer.Arrowhead != null)
+                    {
+                        UpdateArrowheadPosition(draggedArrowContainer);
+                    }
+                }
+
                 // Восстанавливаем визуальное оформление
                 if (selectedArrowContainer == draggedArrowContainer)
                 {
@@ -4823,7 +5240,7 @@ namespace Graphic_Editor
         }
 
         // Вспомогательный метод для применения цвета обводки к конкретной фигуре
-        private void ApplyStrokeColorToShape(UIElement shape, Brush brush)
+        internal void ApplyStrokeColorToShape(UIElement shape, Brush brush)
         {
             if (shape is Ellipse ellipse)
             {
@@ -4845,7 +5262,15 @@ namespace Graphic_Editor
                 // Для текста меняем Foreground (цвет текста)
                 textBlock.Foreground = brush;
             }
-            originalStrokeColors[shape] = brush;
+            // Сохраняем новый цвет как оригинальный
+            if (!originalStrokeColors.ContainsKey(shape))
+            {
+                originalStrokeColors[shape] = brush;
+            }
+            else
+            {
+                originalStrokeColors[shape] = brush;
+            }
         }
 
         // Метод для очистки комбо-боксов при запуске программы

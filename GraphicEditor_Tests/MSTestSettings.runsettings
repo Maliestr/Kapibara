@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <!-- MSTest adapter -->
+  <MSTest>
+    <Parallelize>
+      <Workers>4</Workers>
+      <Scope>MethodLevel</Scope>
+    </Parallelize>
+    <MapInconclusiveToFailed>true</MapInconclusiveToFailed>
+    <CaptureTraceOutput>true</CaptureTraceOutput>
+    <DeploymentEnabled>false</DeploymentEnabled>
+  </MSTest>
+  
+  <!-- Test adapter paths -->
+  <RunConfiguration>
+    <MaxCpuCount>0</MaxCpuCount>
+    <ResultsDirectory>.\TestResults</ResultsDirectory>
+    <TargetPlatform>X86</TargetPlatform>
+    <TargetFrameworkVersion>Framework472</TargetFrameworkVersion>
+  </RunConfiguration>
+</RunSettings>
+
