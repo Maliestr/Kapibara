@@ -104,7 +104,6 @@ namespace Graphic_Editor
         {
             if (shape == null) return;
 
-            // ИСПРАВЛЕНО: Удален дубликат вызова DeselectArrow()
             DeselectArrow();
 
             SaveOriginalColors(shape);
