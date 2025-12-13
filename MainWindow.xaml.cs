@@ -3,27 +3,17 @@ using Microsoft.Win32;
 using System.IO;
 using System.Windows.Media.Imaging;
 using System.Diagnostics;
-using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
-using System.Windows.Ink;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Navigation;
 using System.Windows.Shapes;
-using System.Windows.Shell;
-using System.Xml;
-using System.Xml.Linq;
 namespace Graphic_Editor
 {
     // Тип действия для системы отмены/повтора
@@ -43,16 +33,12 @@ namespace Graphic_Editor
         private SelectionManager selectionManager; //Менеджер системы выделения
         private FrameworkElement copiedElement; //Элемент в буфере обмена для копирования/вставки
         // Добавляем поле для хранения скопированных элементов
-        private List<UIElement> copiedElements = new List<UIElement>();
-        private Point lastMousePosition; //Последняя позиция мыши (для отслеживания движения)
         private Dictionary<UIElement, ResizableElement> resizableElements = 
             new Dictionary<UIElement, ResizableElement>(); //Хранит связь между элементами на холсте и их контроллерами изменения размера
         private ResizableElement currentResizableElement; //Текущий активный изменяемый в размерах элемент
 
         //Система автосохранения
         private AutoSave autoSave; //Система автоматического сохранения проекта
-
-        //Система отмены/повтора
 
         private class UndoAction
         {
@@ -71,15 +57,12 @@ namespace Graphic_Editor
         private Stack<UndoAction> undoStack = new Stack<UndoAction>(); //Стек для отмены действий
         private Stack<UndoAction> redoStack = new Stack<UndoAction>(); //Стек для повтора действий
 
-        
-
         //Управление интерфейсом
         private bool arePanelsVisible = true; //Видимость всех панелей инструментов
         private List<Border> panels = new List<Border>(); //Список всех плашек для управления видимостью
 
         //Система комментариев
-        private bool isCommentModeActive = false; //Активность режима добавления комментариев - нет
-        private List<Comment> comments = new List<Comment>(); //Список всех комментариев на холсте
+        private CommentManager commentManager;
 
         //Система рисования стрелок
         private ArrowManager arrowManager;
@@ -105,28 +88,22 @@ namespace Graphic_Editor
 
         private bool isCursor = true;
 
-        public class Comment //Класс для комментирования
-        {
-            public UIElement VisualElement { get; set; }
-            public UIElement TextElement { get; set; }
-            public string Text { get; set; }
-            public Point Position { get; set; }
-        }
-
-
         public MainWindow()
         {
             InitializeComponent(); //Инициализация WPF компонентов
 
             InitializeGridManager(); //Создает и инициализирует визуальную сетку
             InitializeDragManager(); //Делает фигуры в панели инструментов перетаскиваемыми
-            InitializePanels(); //Находит и регистрирует все панели выделения
-            InitializePropertyBlocks(); //Скрывает блоки свойств при загрузке приложения
             InitializeArrowManager(); //Инициализация менеджера стрелок
             InitializeSelectionSystem(); //Настраивает систему выделения через SelectionManager
             InitializeFillStrokeManager(); //Инициализация менеджера заливки и обводки
             InitializeTextManager(); //Инициализация менеджера текста
             InitializeFileManager(); //Инициализация менеджера файлов
+            InitializeCommentManager();
+
+            InitializePanels(); //Находит и регистрирует все панели выделения
+            InitializePropertyBlocks(); //Скрывает блоки свойств при загрузке приложения
+
             isActiveCursor();
 
             // Обработка горячих клавиш
@@ -144,8 +121,6 @@ namespace Graphic_Editor
             cursor.Click += CursorButton_Click;
             // Кнопка пера включает/выключает режим рисования стрелок
             pencil.Click += PenButton_Click;
-            // Добавляем обработчики для комментариев (переключает режим комментариев)
-            comment.Click += CommentButton_Click;
 
             // Обработчики для размеров текстовых полей
             WidthTextBox.LostFocus += DimensionTextBox_LostFocus;
@@ -221,6 +196,29 @@ namespace Graphic_Editor
             gridManager.OnSnapToggled += (isEnabled) =>
             {
                 // Обновляем состояние в других менеджерах, если нужно
+            };
+        }
+
+        private void InitializeCommentManager()
+        {
+            commentManager = new CommentManager(MainCanvas, comment);
+
+            // Подписка на события, если нужно
+            commentManager.CommentModeChanged += (isActive) =>
+            {
+                // Дополнительная логика при изменении режима комментариев
+            };
+
+            commentManager.CommentCreated += (newComment) =>
+            {
+                // Логика при создании комментария
+                // Например, сохранение в историю
+                SaveToUndoStack(newComment.VisualElement, UndoActionType.Add);
+            };
+
+            commentManager.CommentDeleted += (deletedComment) =>
+            {
+                // Логика при удалении комментария
             };
         }
 
@@ -351,7 +349,8 @@ namespace Graphic_Editor
             MainCanvas.Children.Clear();
             canvasElements.Clear();
             currentFilePath = null;
-            
+            commentManager?.ClearAllComments();
+
             // Сбрасываем имя файла на "Untitled"
             if (FileNameTextBox != null)
             {
@@ -389,6 +388,7 @@ namespace Graphic_Editor
 
         private void SaveFile_Click(object sender, RoutedEventArgs e)
         {
+            fileManager.SaveComments(commentManager, currentFilePath);
             if (string.IsNullOrEmpty(currentFilePath))
             {
                 SaveAsFile_Click(sender, e);
@@ -405,6 +405,13 @@ namespace Graphic_Editor
                     MessageBox.Show($"Ошибка при сохранении файла: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+        }
+
+        private void LoadFile_Click(object sender, RoutedEventArgs e)
+        {
+            // ... существующий код ...
+            fileManager.LoadComments(commentManager, currentFilePath);
+            // ... существующий код ...
         }
 
         private void SaveAsFile_Click(object sender, RoutedEventArgs e)
@@ -573,14 +580,6 @@ namespace Graphic_Editor
                 // Не показываем панель ширины обводки для текста
                 StrokeWidthPanel.Visibility = Visibility.Collapsed;
             }
-
-            //foreach (var panel in panels)
-            //{
-            //    if (panel != null)
-            //    {
-            //        panel.Visibility = Visibility.Visible;
-            //    }
-            //}
         }
 
         private void Exit_Click(object sender, RoutedEventArgs e)
@@ -1158,7 +1157,16 @@ namespace Graphic_Editor
         // Клонирование UI элемента
         private FrameworkElement CloneUIElement(UIElement original)
         {
-            if (original is Polyline originalArrow)
+            if (commentManager != null)
+            {
+                var comment = commentManager.GetCommentByElement(original);
+                if (comment != null)
+                {
+                    // Клонирование комментария (если нужно)
+                    // Возможно, потребуется добавить логику клонирования комментариев
+                }
+            }
+            else if (original is Polyline originalArrow)
             {
                 var newArrow = new Polyline
                 {
@@ -1582,17 +1590,10 @@ namespace Graphic_Editor
                 return;
             }
 
-            if (isCommentModeActive)
+            if (commentManager != null && commentManager.HandleMouseClick(e.GetPosition(MainCanvas), e.OriginalSource))
             {
-                Point clickPosition = e.GetPosition(MainCanvas);
-
-                // Проверяем, что клик не по другим элементам
-                if (e.OriginalSource is System.Windows.Controls.Canvas)
-                {
-                    CreateCommentAtPosition(clickPosition);
-                    e.Handled = true;
-                    return; // Выходим, чтобы не выполнять остальной код
-                }
+                e.Handled = true;
+                return;
             }
 
             // Если кликнули на пустую область канваса - снимаем выделение
@@ -1972,225 +1973,6 @@ namespace Graphic_Editor
 
             transformGroup.Children[1].BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnimation);
             transformGroup.Children[1].BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnimation);
-        }
-
-        // Обработчик кнопки комментариев
-        private void CommentButton_Click(object sender, RoutedEventArgs e)
-        {
-            // Переключаем режим комментариев
-            isCommentModeActive = !isCommentModeActive;
-
-            if (isCommentModeActive)
-            {
-                MainCanvas.Cursor = Cursors.Hand;
-                comment.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
-            }
-            else
-            {
-                MainCanvas.Cursor = Cursors.Arrow;
-                comment.Background = Brushes.Transparent;
-            }
-        }
-
-        //Создание комментария в указанной позиции
-        private void CreateCommentAtPosition(Point position)
-        {
-            // Создаем визуальный элемент комментария
-            var commentIcon = new Border
-            {
-                Width = 12,
-                Height = 12,
-                Background = Brushes.Red,
-                BorderBrush = Brushes.Red,
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
-                Cursor = Cursors.Hand
-            };
-
-            // Создаем TextBlock для отображения текста
-            var commentTextBlock = new Border
-            {
-                Background = Brushes.White,
-                BorderBrush = Brushes.Gray,
-                BorderThickness = new Thickness(1),
-                Padding = new Thickness(8),
-                CornerRadius = new CornerRadius(4),
-                Child = new TextBlock
-                {
-                    Text = "",
-                    Foreground = Brushes.Black,
-                    FontSize = 12,
-                    TextWrapping = TextWrapping.Wrap,
-                    MaxWidth = 250
-                },
-                Visibility = Visibility.Collapsed,
-                IsHitTestVisible = false // Чтобы не мешал взаимодействию
-            };
-
-            // Устанавливаем позицию
-            Canvas.SetLeft(commentIcon, position.X - 6);
-            Canvas.SetTop(commentIcon, position.Y - 6);
-
-            // Позиционируем TextBlock рядом с иконкой
-            Canvas.SetLeft(commentTextBlock, position.X + 15);
-            Canvas.SetTop(commentTextBlock, position.Y - 10);
-
-            // Добавляем на холст
-            MainCanvas.Children.Add(commentIcon);
-            MainCanvas.Children.Add(commentTextBlock);
-
-            // Создаем комментарий
-            var comment = new Comment
-            {
-                VisualElement = commentIcon,
-                TextElement = commentTextBlock,
-                Position = position,
-                Text = ""
-            };
-
-            comments.Add(comment);
-
-            // Обработчик двойного клика
-            commentIcon.MouseLeftButtonDown += (s, e) =>
-            {
-                if (e.ClickCount == 2)
-                {
-                    EditComment(comment);
-                    e.Handled = true;
-                }
-            };
-
-            // Показ текста при наведении
-            commentIcon.MouseEnter += (s, e) =>
-            {
-                commentIcon.Opacity = 0.7;
-
-                if (!string.IsNullOrEmpty(comment.Text))
-                {
-                    if (commentTextBlock.Child is TextBlock textBlock)
-                    {
-                        textBlock.Text = comment.Text;
-                    }
-                    commentTextBlock.Visibility = Visibility.Visible;
-                    Canvas.SetZIndex(commentTextBlock, 1000); // Поверх других элементов
-                }
-            };
-
-            commentIcon.MouseLeave += (s, e) =>
-            {
-                commentIcon.Opacity = 1.0;
-                commentTextBlock.Visibility = Visibility.Collapsed;
-            };
-
-            // Сразу открываем редактор
-            EditComment(comment);
-        }
-        // Редактирование комментария
-        private void EditComment(Comment comment)
-        {
-            var editTextBox = new TextBox
-            {
-                Width = 200,
-                Height = 100,
-                Background = Brushes.White,
-                Foreground = Brushes.Black,
-                BorderBrush = Brushes.Gray,
-                FontSize = 12,
-                TextWrapping = TextWrapping.Wrap,
-                AcceptsReturn = false,
-                Text = comment.Text,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto
-            };
-
-            // Позиционируем рядом с комментарием
-            double left = Canvas.GetLeft(comment.VisualElement) + 20;
-            double top = Canvas.GetTop(comment.VisualElement);
-            Canvas.SetLeft(editTextBox, left);
-            Canvas.SetTop(editTextBox, top);
-
-            MainCanvas.Children.Add(editTextBox);
-            editTextBox.Focus();
-            editTextBox.SelectAll();
-
-            // Завершение редактирования
-            void FinishEditing()
-            {
-                string newText = editTextBox.Text.Trim();
-
-                if (string.IsNullOrEmpty(newText))
-                {
-                    DeleteComment(comment);
-                }
-                else
-                {
-                    comment.Text = newText;
-
-                    if (comment.VisualElement is Border border)
-                    {
-                        border.Background = Brushes.Red;
-                    }
-
-                    // Обновляем TextBlock
-                    if (comment.TextElement is Border textBorder && textBorder.Child is TextBlock textBlock)
-                    {
-                        textBlock.Text = newText;
-                    }
-                }
-
-                MainCanvas.Children.Remove(editTextBox);
-            }
-
-            editTextBox.KeyDown += (s, e) =>
-            {
-                if (e.Key == Key.Enter)
-                {
-                    // Если нажат Ctrl+Enter - добавляем новую строку
-                    if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
-                    {
-                        // Разрешаем обычное поведение TextBox (добавление новой строки)
-                        return;
-                    }
-
-                    // Обычный Enter - завершаем редактирование
-                    FinishEditing();
-                    e.Handled = true;
-                }
-                else if (e.Key == Key.Escape)
-                {
-                    // При отмене проверяем, был ли текст изначально
-                    if (string.IsNullOrEmpty(comment.Text))
-                    {
-                        DeleteComment(comment);
-                    }
-                    MainCanvas.Children.Remove(editTextBox);
-                    e.Handled = true;
-                }
-            };
-
-            editTextBox.LostFocus += (s, e) =>
-            {
-                Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (MainCanvas.Children.Contains(editTextBox))
-                    {
-                        FinishEditing();
-                    }
-                }));
-            };
-        }
-
-        // Удаление комментария
-        private void DeleteComment(Comment comment)
-        {
-            if (comment.VisualElement != null)
-            {
-                MainCanvas.Children.Remove(comment.VisualElement);
-            }
-            if (comment.TextElement != null)
-            {
-                MainCanvas.Children.Remove(comment.TextElement);
-            }
-            comments.Remove(comment);
         }
 
         private void UpdateArrowPropertiesInPanels(ArrowContainer arrowContainer)

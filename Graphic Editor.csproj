@@ -58,6 +58,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="functions\ArrowManager.cs" />
+    <Compile Include="functions\CommentManager.cs" />
     <Compile Include="functions\DragManager.cs" />
     <Compile Include="functions\fileSystem\FileManager.cs" />
     <Compile Include="functions\FillStrokeManager.cs" />

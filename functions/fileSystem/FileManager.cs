@@ -305,6 +305,16 @@ namespace Graphic_Editor
                 encoder.Save(fileStream);
             }
         }
+
+        public void SaveComments(CommentManager commentManager, string filePath)
+        {
+            // Логика сохранения комментариев
+        }
+
+        public void LoadComments(CommentManager commentManager, string filePath)
+        {
+            // Логика загрузки комментариев
+        }
     }
 }
 
