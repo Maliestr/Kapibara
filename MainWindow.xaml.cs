@@ -137,7 +137,8 @@ namespace Graphic_Editor
                 },
                 AnimateShapeAppearance = AnimateShapeAppearance,
                 IsShapeFromNotation = IsShapeFromNotation,
-                GetShapeType = GetShapeType
+                GetShapeType = GetShapeType,
+                OnElementMoved = (element, position) => poolManager?.HandleElementMove(element, position) // Обработка прикрепления к пулам
             };
 
             // Передаем состояние привязки к сетке
@@ -322,6 +323,20 @@ namespace Graphic_Editor
             {
                 // Сохраняем текущую толщину ПОСЛЕ перетаскивания
                 var draggedElement = dragManager.DraggedElement;
+                
+                // Обрабатываем прикрепление элемента к пулу
+                if (draggedElement != null && poolManager != null)
+                {
+                    double elementLeft = Canvas.GetLeft(draggedElement);
+                    double elementTop = Canvas.GetTop(draggedElement);
+                    
+                    if (!double.IsNaN(elementLeft) && !double.IsNaN(elementTop))
+                    {
+                        Point elementPosition = new Point(elementLeft, elementTop);
+                        poolManager.HandleElementMove(draggedElement, elementPosition);
+                    }
+                }
+                
                 if (draggedElement != null && selectionManager?.HasOriginalStrokeThickness(draggedElement) == true)
                 {
                     // Обновляем сохраненную толщину
@@ -1513,7 +1528,7 @@ namespace Graphic_Editor
         {
             poolManager = new PoolManager(
                 MainCanvas,
-                dash, // Кнопка dash на нижней панели
+                rectangle, // Кнопка rectangle (3-я кнопка) на нижней панели
                 gridManager.IsSnapToGridEnabled, // Используем свойство GridManager
                 gridManager.SnapToGrid, // Используем метод GridManager
                 (element, actionType) => clipboardManager?.SaveToUndoStack(element, actionType)

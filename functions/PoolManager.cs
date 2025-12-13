@@ -22,6 +22,7 @@ namespace Graphic_Editor
         private Func<Point, Point> _snapToGridFunc;
         private Action<UIElement, UndoActionType> _saveToUndoStackAction;
         private Dictionary<UIElement, ResizableElement> _resizableElements = new Dictionary<UIElement, ResizableElement>(); // ResizableElement для пулов
+        private Dictionary<UIElement, Pool> _elementToPoolMap = new Dictionary<UIElement, Pool>(); // Карта элементов к пулам
 
         // Константы для пулов
         private const double DefaultPoolWidth = 150; // Ширина вертикального пула
@@ -40,6 +41,15 @@ namespace Graphic_Editor
         public List<Pool> Pools => _pools;
 
         /// <summary>
+        /// Класс для представления прикрепленного элемента
+        /// </summary>
+        public class AttachedElement
+        {
+            public UIElement Element { get; set; }
+            public Point RelativePosition { get; set; } // Относительная позиция относительно пула
+        }
+
+        /// <summary>
         /// Класс для представления пула
         /// </summary>
         public class Pool
@@ -54,6 +64,7 @@ namespace Graphic_Editor
             public Point Position { get; set; }
             public double Width { get; set; }
             public double Height { get; set; }
+            public List<AttachedElement> AttachedElements { get; set; } = new List<AttachedElement>(); // Прикрепленные элементы
         }
 
         public PoolManager(
@@ -609,7 +620,196 @@ namespace Graphic_Editor
             Canvas.SetLeft(_draggedPool.Container, newPosition.X);
             Canvas.SetTop(_draggedPool.Container, newPosition.Y);
             
-            // Разделительная линия больше не используется
+            // Обновляем позицию пула
+            _draggedPool.Position = newPosition;
+            
+            // Перемещаем все прикрепленные элементы вместе с пулом
+            UpdateAttachedElementsPosition(_draggedPool);
+        }
+
+        /// <summary>
+        /// Обновление позиций прикрепленных элементов при перемещении пула
+        /// </summary>
+        private void UpdateAttachedElementsPosition(Pool pool)
+        {
+            if (pool == null) return;
+
+            double poolLeft = Canvas.GetLeft(pool.Container);
+            double poolTop = Canvas.GetTop(pool.Container);
+
+            foreach (var attached in pool.AttachedElements)
+            {
+                if (attached.Element != null && _mainCanvas.Children.Contains(attached.Element))
+                {
+                    Canvas.SetLeft(attached.Element, poolLeft + attached.RelativePosition.X);
+                    Canvas.SetTop(attached.Element, poolTop + attached.RelativePosition.Y);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Проверка, попадает ли элемент в границы пула
+        /// </summary>
+        private bool IsElementInsidePool(UIElement element, Pool pool)
+        {
+            if (element == null || pool == null || pool.Container == null) return false;
+
+            double elementLeft = Canvas.GetLeft(element);
+            double elementTop = Canvas.GetTop(element);
+            
+            if (double.IsNaN(elementLeft) || double.IsNaN(elementTop)) return false;
+
+            double poolLeft = Canvas.GetLeft(pool.Container);
+            double poolTop = Canvas.GetTop(pool.Container);
+            
+            if (double.IsNaN(poolLeft) || double.IsNaN(poolTop)) return false;
+
+            // Получаем размеры элемента
+            double elementWidth = 0;
+            double elementHeight = 0;
+            if (element is FrameworkElement fe)
+            {
+                elementWidth = fe.ActualWidth > 0 ? fe.ActualWidth : fe.Width;
+                elementHeight = fe.ActualHeight > 0 ? fe.ActualHeight : fe.Height;
+                
+                if (double.IsNaN(elementWidth) || elementWidth <= 0) return false;
+                if (double.IsNaN(elementHeight) || elementHeight <= 0) return false;
+            }
+            else
+            {
+                return false;
+            }
+
+            // Проверяем, попадает ли центр элемента в границы пула (исключая header)
+            double elementCenterX = elementLeft + elementWidth / 2;
+            double elementCenterY = elementTop + elementHeight / 2;
+
+            double poolRight = poolLeft + pool.Width;
+            double poolBottom = poolTop + pool.Height;
+
+            // Для вертикального пула проверяем, что элемент находится в body (не в header)
+            if (pool.IsVertical)
+            {
+                double bodyTop = poolTop + HeaderHeight;
+                return elementCenterX >= poolLeft && elementCenterX <= poolRight &&
+                       elementCenterY >= bodyTop && elementCenterY <= poolBottom;
+            }
+            else
+            {
+                // Для горизонтального пула проверяем, что элемент находится в body (не в header)
+                double bodyLeft = poolLeft + HeaderHeight;
+                return elementCenterX >= bodyLeft && elementCenterX <= poolRight &&
+                       elementCenterY >= poolTop && elementCenterY <= poolBottom;
+            }
+        }
+
+        /// <summary>
+        /// Прикрепление элемента к пулу
+        /// </summary>
+        private void AttachElementToPool(UIElement element, Pool pool)
+        {
+            if (element == null || pool == null) return;
+
+            // Проверяем, не прикреплен ли уже элемент к другому пулу
+            if (_elementToPoolMap.ContainsKey(element))
+            {
+                DetachElementFromPool(element);
+            }
+
+            double elementLeft = Canvas.GetLeft(element);
+            double elementTop = Canvas.GetTop(element);
+            double poolLeft = Canvas.GetLeft(pool.Container);
+            double poolTop = Canvas.GetTop(pool.Container);
+
+            // Вычисляем относительную позицию
+            Point relativePosition = new Point(
+                elementLeft - poolLeft,
+                elementTop - poolTop
+            );
+
+            var attached = new AttachedElement
+            {
+                Element = element,
+                RelativePosition = relativePosition
+            };
+
+            pool.AttachedElements.Add(attached);
+            _elementToPoolMap[element] = pool;
+        }
+
+        /// <summary>
+        /// Открепление элемента от пула
+        /// </summary>
+        private void DetachElementFromPool(UIElement element)
+        {
+            if (element == null || !_elementToPoolMap.ContainsKey(element)) return;
+
+            Pool pool = _elementToPoolMap[element];
+            var attached = pool.AttachedElements.FirstOrDefault(a => a.Element == element);
+            
+            if (attached != null)
+            {
+                pool.AttachedElements.Remove(attached);
+            }
+
+            _elementToPoolMap.Remove(element);
+        }
+
+        /// <summary>
+        /// Обработка перемещения элемента - проверка попадания в пул
+        /// </summary>
+        public void HandleElementMove(UIElement element, Point newPosition)
+        {
+            if (element == null) return;
+
+            // Проверяем, не является ли элемент частью пула
+            foreach (var pool in _pools)
+            {
+                if (element == pool.Container || element == pool.Header || element == pool.Body || 
+                    element == pool.Separator || element == pool.HeaderText)
+                {
+                    return; // Не прикрепляем элементы пула к самому пулу
+                }
+            }
+
+            // Проверяем, прикреплен ли элемент к пулу
+            if (_elementToPoolMap.ContainsKey(element))
+            {
+                Pool currentPool = _elementToPoolMap[element];
+                
+                // Обновляем относительную позицию
+                double poolLeft = Canvas.GetLeft(currentPool.Container);
+                double poolTop = Canvas.GetTop(currentPool.Container);
+                
+                Point relativePosition = new Point(
+                    newPosition.X - poolLeft,
+                    newPosition.Y - poolTop
+                );
+
+                var attached = currentPool.AttachedElements.FirstOrDefault(a => a.Element == element);
+                if (attached != null)
+                {
+                    attached.RelativePosition = relativePosition;
+                }
+
+                // Проверяем, все еще ли элемент в границах пула
+                if (!IsElementInsidePool(element, currentPool))
+                {
+                    DetachElementFromPool(element);
+                }
+            }
+            else
+            {
+                // Проверяем, попадает ли элемент в какой-либо пул
+                foreach (var pool in _pools)
+                {
+                    if (IsElementInsidePool(element, pool))
+                    {
+                        AttachElementToPool(element, pool);
+                        break;
+                    }
+                }
+            }
         }
 
         private void PoolDrag_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)

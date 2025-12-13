@@ -36,6 +36,7 @@ namespace Graphic_Editor
         public Action<UIElement> AnimateShapeAppearance { get; set; }
         public Func<UIElement, bool> IsShapeFromNotation { get; set; }
         public Func<UIElement, string> GetShapeType { get; set; }
+        public Action<UIElement, Point> OnElementMoved { get; set; } // Обработчик перемещения элемента
 
         // Добавляем ссылку на ResizableElement
         public Func<UIElement, bool> GetIsDragging { get; set; }
@@ -380,6 +381,13 @@ namespace Graphic_Editor
                     // Для остальных элементов
                     Canvas.SetLeft(element, newLeft);
                     Canvas.SetTop(element, newTop);
+                }
+
+                // Вызываем обработчик перемещения элемента (для прикрепления к пулам)
+                if (OnElementMoved != null)
+                {
+                    Point elementPosition = new Point(newLeft, newTop);
+                    OnElementMoved(element, elementPosition);
                 }
             }
         }
