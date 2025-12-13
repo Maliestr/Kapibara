@@ -273,10 +273,17 @@ namespace Graphic_Editor
                 return;
             }
 
-            // Если кликнули на пустую область канваса - снимаем выделение
+            if (textManager != null && textManager.HandleMouseClick(e.GetPosition(MainCanvas), e.OriginalSource))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            // Если кликнули на пустую область канваса - снимаем выделение и скрываем ручки
             if (e.OriginalSource == MainCanvas)
             {
                 DeselectAll();
+                HideAllResizeHandles();
                 e.Handled = true;
             }
         }
@@ -835,6 +842,34 @@ namespace Graphic_Editor
         {
             if (shape == null) return;
             selectionManager?.SelectShape(shape);
+        }
+
+        /// <summary>
+        /// Скрывает все ручки изменения размера ResizableElement
+        /// </summary>
+        private void HideAllResizeHandles()
+        {
+            // Скрываем ручки для обычных элементов
+            if (currentResizableElement != null)
+            {
+                currentResizableElement.HideResizeHandles();
+                currentResizableElement = null;
+            }
+
+            // Скрываем ручки для всех элементов в resizableElements
+            foreach (var resizable in resizableElements.Values)
+            {
+                resizable?.HideResizeHandles();
+            }
+
+            // Скрываем ручки для всех пулов
+            if (poolManager != null)
+            {
+                foreach (var pool in poolManager.Pools)
+                {
+                    poolManager.HideResizeHandlesForPool(pool);
+                }
+            }
         }
 
         private void DeselectElement(UIElement element)
@@ -1489,11 +1524,33 @@ namespace Graphic_Editor
                 gridManager.SnapToGrid, // Используем метод GridManager
                 (element) => clipboardManager?.SaveToUndoStack(element, UndoActionType.Add)
             );
+
+            // Подписываемся на события для выделения кнопки
+            textManager.OnTextModeActivated += () =>
+            {
+                if (text != null)
+                {
+                    text.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
+                }
+            };
+
+            textManager.OnTextModeDeactivated += () =>
+            {
+                if (text != null)
+                {
+                    text.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF343434"));
+                }
+            };
         }
 
         private void TextButton_Click(object sender, RoutedEventArgs e)
         {
-            if (textManager?.IsTextModeActive == true) return;
+            if (textManager?.IsTextModeActive == true)
+            {
+                // Если режим уже активен, деактивируем его
+                textManager?.DeactivateTextMode();
+                return;
+            }
             textManager?.ActivateTextMode();
         }
 
