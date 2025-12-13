@@ -19,7 +19,7 @@
         Background="#FF252525"
         FontFamily="Gotham Pro">
     <!--Widht и Height нужны для правильной визуализации окна-->
-    
+    <!--есть тесты-->
     <Window.Resources>
         <!-- Общий стиль для кнопок заголовка (минимизация/максимизация) с подсветкой при наведении -->
         <Style x:Key="TitleBarButtonStyle" TargetType="Button">
@@ -69,7 +69,6 @@
 
         <Style x:Key="ControlButtonStyle" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
-            <!--Нужно ли-->
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -84,10 +83,37 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#FF3939"/>
+                                <Setter TargetName="border" Property="Background" Value="#3F3F3F"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#AC1C1C"/>
+                                <Setter TargetName="border" Property="Background" Value="#272727"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TogglePanelsButtonStyle" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="border"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#3F3F3F"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#272727"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -114,6 +140,227 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <!-- Стиль для выпадающего меню и наведения (применяется ко всем MenuItem) -->
+        <Style TargetType="MenuItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="12"/>
+            
+            <Style.Resources>
+                <!-- Стиль для разделителей -->
+                <Style TargetType="Separator">
+                    <Setter Property="Background" Value="#555555"/>
+                    <Setter Property="Margin" Value="8,2"/>
+                    <Setter Property="Height" Value="1"/>
+                </Style>
+            </Style.Resources>
+            
+            <Style.Triggers>
+                <!-- Стиль для верхнего уровня меню (кнопки вверху) -->
+                <Trigger Property="Role" Value="TopLevelHeader">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="MenuItem">
+                                <Grid x:Name="Grid">
+                                    <!-- Основная кнопка верхнего уровня -->
+                                    <Border x:Name="Border"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="0"
+                                            CornerRadius="4"
+                                            Padding="8,6"
+                                            Margin="0,0,0,0">
+                                        <ContentPresenter x:Name="Content"
+                                                          ContentSource="Header"
+                                                          RecognizesAccessKey="True"
+                                                          VerticalAlignment="Center"
+                                                          HorizontalAlignment="Left"/>
+                                    </Border>
+                                    
+                                    <!-- Выпадающее меню для верхнего уровня -->
+                                    <Popup x:Name="PART_Popup"
+                                           Placement="Bottom"
+                                           HorizontalOffset="0"
+                                           VerticalOffset="2"
+                                           AllowsTransparency="True"
+                                           PopupAnimation="Fade"
+                                           StaysOpen="False"
+                                           IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
+                                        <Border x:Name="SubMenuBorder"
+                                                Background="#FF343434"
+                                                BorderBrush="#555555"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="4">
+
+                                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
+                                
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="#3A3A3A"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="#272727"/>
+                                    </Trigger>
+                                    <Trigger Property="IsSubmenuOpen" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="#272727"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Foreground" Value="#888888"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+                
+                <!-- Стиль для элементов внутри выпадающего меню -->
+                <Trigger Property="Role" Value="SubmenuItem">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="MenuItem">
+                                <Grid x:Name="Grid">
+                                    <!-- Основная часть кнопки меню -->
+                                    <Border x:Name="Bg" 
+                                            Background="Transparent"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="0"
+                                            CornerRadius="3"
+                                            Padding="10,6">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <!-- Текст -->
+                                            <ContentPresenter x:Name="HeaderHost" 
+                                                              Grid.Column="1"
+                                                              ContentSource="Header"
+                                                              RecognizesAccessKey="True"
+                                                              VerticalAlignment="Center"/>
+                                            
+                                            <!-- Горячие клавиши -->
+                                            <TextBlock x:Name="InputGestureText"
+                                                       Grid.Column="2"
+                                                       Text="{TemplateBinding InputGestureText}"
+                                                       Foreground="#AAAAAA"
+                                                       Margin="10,0,0,0"
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                    
+                                    <!-- Выпадающее меню -->
+                                    <Popup x:Name="PART_Popup"
+                                           Placement="Right"
+                                           HorizontalOffset="-4"
+                                           VerticalOffset="-2"
+                                           AllowsTransparency="True"
+                                           PopupAnimation="Fade"
+                                           StaysOpen="False"
+                                           IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
+                                        <Border x:Name="SubMenuBorder"
+                                                Background="#FF343434"
+                                                BorderBrush="#555555"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="4">
+
+                                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
+                                
+                                <ControlTemplate.Triggers>
+                                    <!-- Наведение на основную кнопку -->
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bg" Property="Background" Value="#3F3F3F"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                    
+                                    <!-- Нажатие на основную кнопку -->
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="Bg" Property="Background" Value="#272727"/>
+                                    </Trigger>
+                                    
+                                    <!-- Когда меню открыто -->
+                                    <Trigger Property="IsSubmenuOpen" Value="True">
+                                        <Setter TargetName="Bg" Property="Background" Value="#272727"/>
+                                    </Trigger>
+                                    
+                                    <!-- Отключенное состояние -->
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Foreground" Value="#888888"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+                
+                <!-- Стиль для обычных элементов меню (без подменю) -->
+                <Trigger Property="Role" Value="TopLevelItem">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="MenuItem">
+                                <Border x:Name="Border"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"
+                                        BorderThickness="0"
+                                        CornerRadius="3"
+                                        Padding="10,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <!-- Текст -->
+                                        <ContentPresenter x:Name="Content"
+                                                          Grid.Column="1"
+                                                          ContentSource="Header"
+                                                          RecognizesAccessKey="True"
+                                                          VerticalAlignment="Center"/>
+                                        
+                                        <!-- Горячие клавиши -->
+                                        <TextBlock x:Name="GestureText"
+                                                   Grid.Column="2"
+                                                   Text="{TemplateBinding InputGestureText}"
+                                                   Foreground="#AAAAAA"
+                                                   Margin="10,0,0,0"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                                
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="#3F3F3F"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="#272727"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Foreground" Value="#888888"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
 
@@ -144,8 +391,8 @@
                     <Image Source="/Icons/L.png" Width="25.82" Height="25.82" Margin="15,11,15,3"/>
 
                     <Menu Background="Transparent" FontSize="12" Foreground="White" 
-                          WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom" Height="34">
-                        <MenuItem Header="Файл" Margin="0,2,18,0" Height="32">
+                          WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom" Height="32">
+                        <MenuItem Header="Файл" Margin="0,0,18,0" Height="32">
                             <MenuItem Header="Новый" Click="NewFile_Click"/>
                             <MenuItem Header="Открыть..." Click="OpenFile_Click"/>
                             <MenuItem Header="Сохранить" Click="SaveFile_Click"/>
@@ -156,7 +403,7 @@
                             <MenuItem Header="Выход" Click="Exit_Click"/>
                         </MenuItem>
 
-                        <MenuItem Header="Вид" Margin="0,2,18,0" Height="32" Width="36">
+                        <MenuItem Header="Вид" Margin="0,0,18,0" Height="32" Width="36">
                             <MenuItem Header="Увеличить" Click="ZoomIn_Click"/>
                             <MenuItem Header="Уменьшить" Click="ZoomOut_Click"/>
                             <MenuItem Header="Сбросить масштаб" Click="ResetZoom_Click"/>
@@ -172,7 +419,7 @@
                                       IsCheckable="True"/>
                         </MenuItem>
 
-                        <MenuItem Header="Правка" Margin="0,2,18,0" Height="32">
+                        <MenuItem Header="Правка" Margin="0,0,18,0" Height="32">
                             <MenuItem Header="Отменить" InputGestureText="Ctrl+Z" Click="Undo_Click"/>
                             <MenuItem Header="Повторить" InputGestureText="Ctrl+Y" Click="Redo_Click"/>
                             <Separator/>
@@ -184,7 +431,7 @@
                             <MenuItem Header="Удалить" InputGestureText="Delete"/>
                         </MenuItem>
 
-                        <MenuItem Header="Справка" Height="32" Margin="0,2,0,0">
+                        <MenuItem Header="Справка" Height="32" Margin="0,0,0,0">
                             <MenuItem Header="Справка" InputGestureText="F1" Click="Help_Click"/>
                             <MenuItem Header="О программе" Click="About_Click"/>
                         </MenuItem>
@@ -247,21 +494,22 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBox Text="Untaitled" Background="Transparent"
+                    <TextBox x:Name="FileNameTextBox" Text="Untitled" Background="Transparent"
                              Height="18" Grid.Column="1" Margin="0,0,0,1"
                              Foreground="White" VerticalAlignment="Center"
                              AcceptsReturn="False" MaxLength="50"
-                             BorderThickness="0" FontSize="16"/>
+                             BorderThickness="0" FontSize="16"
+                             TextChanged="FileNameTextBox_TextChanged"/>
 
-                    <Button x:Name="TogglePanelsButton"
+                    <ToggleButton x:Name="TogglePanelsButton" Style="{StaticResource TogglePanelsButtonStyle}"
                             Grid.Column="2" HorizontalAlignment="Right" 
-                            VerticalAlignment="Center" Margin="0,0,4,0"
+                            VerticalAlignment="Center" Margin="0,0,0,0"
                             Background="Transparent" BorderThickness="0"
-                            Width="30" Height="20" Cursor="Hand"
+                            Width="34" Height="26" Cursor="Hand"
                             Click="TogglePanelsButton_Click">
                         <Image Source="/Icons/КнСк.png" 
                                Width="24" Height="12"/>
-                    </Button>
+                    </ToggleButton>
                 </Grid>
             </Border>
             
@@ -589,419 +837,445 @@
                 </StackPanel>
             </Border>
 
+            <StackPanel x:Name="PropertiesPanel" 
+                        Grid.Column="2"
+                        Width="270" 
+                        VerticalAlignment="Top"
+                        Margin="0,20,0,0">
+                <!-- Панель с размерами -->
+                <Border x:Name="DimensionsPanel" CornerRadius="10"
+                                Background="#FF343434" 
+                                Width="270" 
+                                Height="84"
+                        BorderBrush="#CCCCCC"
+                        BorderThickness="1"
+                                Margin="0,0,0,0" HorizontalAlignment="Center"
+                                VerticalAlignment="Top">
+                    <StackPanel Orientation="Vertical" 
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Width="200" Height="61">
 
-            <!-- Панель с размерами -->
-            <Border x:Name="DimensionsPanel" CornerRadius="10"
-                            Grid.Column="2"
-                            Background="#FF343434" 
-                            Width="270" 
-                            Height="84"
-                    BorderBrush="#CCCCCC"
-                    BorderThickness="1"
-                            Margin="0,20,0,0" HorizontalAlignment="Center"
-                            VerticalAlignment="Top">
-                <StackPanel Orientation="Vertical" 
+                        <TextBlock Text="Размеры" 
+                                Foreground="White" 
+                                FontSize="14"
+                                FontWeight="Bold"
+                                HorizontalAlignment="Center"
+                                Margin="0,0,0,10"/>
+
+                        <StackPanel Orientation="Horizontal" 
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+
+                            <!-- Ширина -->
+                            <StackPanel Orientation="Horizontal" 
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,15,0">
+                                <TextBlock Text="W" 
+                                        Foreground="White" 
+                                        FontSize="12"
+                                        FontWeight="Bold"
+                                        VerticalAlignment="Center"
+                                        Width="20"
+                                        TextAlignment="Center"/>
+                                <Border CornerRadius="5"
+                                    Width="60" 
+                                    Height="22"
+                                    Background="#D9D9D9"
+                                    VerticalAlignment="Center"
+                                    Margin="5,0,0,0">
+                                    <TextBox x:Name="WidthTextBox"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            FontSize="11"
+                                            VerticalContentAlignment="Center"
+                                            HorizontalContentAlignment="Center"
+                                            Text=""/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Высота -->
+                            <StackPanel Orientation="Horizontal" 
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Margin="15,0,0,0">
+                                <TextBlock Text="H" 
+                                        Foreground="White" 
+                                        FontSize="12"
+                                        FontWeight="Bold"
+                                        VerticalAlignment="Center"
+                                        Width="20"
+                                        TextAlignment="Center"/>
+                                <Border CornerRadius="5"
+                                    Width="60" 
+                                    Height="22"
+                                    Background="#D9D9D9"
+                                    VerticalAlignment="Center"
+                                    Margin="5,0,0,0">
+                                    <TextBox x:Name="HeightTextBox"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            FontSize="11"
+                                            VerticalContentAlignment="Center"
+                                            HorizontalContentAlignment="Center"
+                                            Text=""/>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Панель с заливкой -->
+                <Border x:Name="FillPanel" CornerRadius="10" 
+                        BorderBrush="#CCCCCC"
+                        BorderThickness="1"
+                Background="#FF343434" 
+                Width="270" 
+                Height="84"
+                Margin="0,20,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <StackPanel Orientation="Vertical" 
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        Width="200" Height="61">
+                        Width="200">
 
-                    <TextBlock Text="Размеры" 
+                        <TextBlock Text="Заливка" 
                             Foreground="White" 
                             FontSize="14"
                             FontWeight="Bold"
                             HorizontalAlignment="Center"
                             Margin="0,0,0,10"/>
 
-                    <StackPanel Orientation="Horizontal" 
+                        <StackPanel Orientation="Horizontal" 
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center">
 
-                        <!-- Ширина -->
-                        <StackPanel Orientation="Horizontal" 
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Margin="0,0,15,0">
-                            <TextBlock Text="W" 
-                                    Foreground="White" 
-                                    FontSize="12"
-                                    FontWeight="Bold"
-                                    VerticalAlignment="Center"
-                                    Width="20"
-                                    TextAlignment="Center"/>
-                            <Border CornerRadius="5"
-                                Width="60" 
-                                Height="22"
-                                Background="#D9D9D9"
-                                VerticalAlignment="Center"
-                                Margin="5,0,0,0">
-                                <TextBox x:Name="WidthTextBox"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        FontSize="11"
-                                        VerticalContentAlignment="Center"
-                                        HorizontalContentAlignment="Center"
-                                        Text=""/>
-                            </Border>
-                        </StackPanel>
+                            <!-- Превью цвета -->
+                            <Border x:Name="FillColorPreview"
+                        CornerRadius="5"
+                        Width="40" 
+                        Height="22"
+                        Background="#FFC44141"
+                        VerticalAlignment="Center"
+                        Margin="0,0,10,0"
+                        BorderThickness="1"
+                        BorderBrush="#FF666666"/>
 
-                        <!-- Высота -->
-                        <StackPanel Orientation="Horizontal" 
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Margin="15,0,0,0">
-                            <TextBlock Text="H" 
-                                    Foreground="White" 
-                                    FontSize="12"
-                                    FontWeight="Bold"
-                                    VerticalAlignment="Center"
-                                    Width="20"
-                                    TextAlignment="Center"/>
-                            <Border CornerRadius="5"
-                                Width="60" 
-                                Height="22"
-                                Background="#D9D9D9"
-                                VerticalAlignment="Center"
-                                Margin="5,0,0,0">
-                                <TextBox x:Name="HeightTextBox"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        FontSize="11"
-                                        VerticalContentAlignment="Center"
-                                        HorizontalContentAlignment="Center"
-                                        Text=""/>
-                            </Border>
-                        </StackPanel>
-
-                    </StackPanel>
-
-                </StackPanel>
-            </Border>
-
-            <!-- Панель с заливкой -->
-            <Border x:Name="FillPanel" CornerRadius="10" 
-                            Grid.Column="2"
-                    BorderBrush="#CCCCCC"
-                    BorderThickness="1"
-            Background="#FF343434" 
-            Width="270" 
-            Height="84"
-            Margin="0,124,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
-                <StackPanel Orientation="Vertical" 
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Width="200">
-
-                    <TextBlock Text="Заливка" 
-                        Foreground="White" 
-                        FontSize="14"
-                        FontWeight="Bold"
-                        HorizontalAlignment="Center"
-                        Margin="0,0,0,10"/>
-
-                    <StackPanel Orientation="Horizontal" 
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
-
-                        <!-- Превью цвета -->
-                        <Border x:Name="FillColorPreview"
-                    CornerRadius="5"
-                    Width="40" 
-                    Height="22"
-                    Background="#FFC44141"
-                    VerticalAlignment="Center"
-                    Margin="0,0,10,0"
-                    BorderThickness="1"
-                    BorderBrush="#FF666666"/>
-
-                        <!-- Выпадающий список цветов -->
-                        <ComboBox x:Name="FillColorComboBox"
-                      Width="92" 
-                      Height="22"
-                      VerticalAlignment="Center"
-                      Margin="0,0,10,0"
-                      Background="#D9D9D9"
-                      BorderThickness="0"
-                      FontSize="11"
-                      SelectedIndex="0"
-                      SelectionChanged="FillColorComboBox_SelectionChanged">
+                            <!-- Выпадающий список цветов -->
+                            <ComboBox x:Name="FillColorComboBox"
+                          Width="92" 
+                          Height="22"
+                          VerticalAlignment="Center"
+                          Margin="0,0,10,0"
+                          Background="#D9D9D9"
+                          BorderThickness="0"
+                          FontSize="11"
+                          SelectedIndex="0"
+                          SelectionChanged="FillColorComboBox_SelectionChanged">
 
                             <ComboBoxItem Tag="C44141">
                                 <StackPanel Orientation="Horizontal" Margin="2">
 
-                                    <TextBlock Text="Красный" 
-                                   FontSize="11"
-                                   VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </ComboBoxItem>
+                                        <TextBlock Text="Красный" 
+                                       FontSize="11"
+                                       VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
 
                             <ComboBoxItem Tag="4166C4">
                                 <StackPanel Orientation="Horizontal" Margin="2">
 
-                                    <TextBlock Text="Синий" 
-                                   FontSize="11"
-                                   VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </ComboBoxItem>
+                                        <TextBlock Text="Синий" 
+                                       FontSize="11"
+                                       VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
 
                             <ComboBoxItem Tag="41C441">
                                 <StackPanel Orientation="Horizontal" Margin="2">
 
-                                    <TextBlock Text="Зеленый" 
-                                   FontSize="11"
-                                   VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </ComboBoxItem>
+                                        <TextBlock Text="Зеленый" 
+                                       FontSize="11"
+                                       VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
 
                             <ComboBoxItem Tag="C4C441">
                                 <StackPanel Orientation="Horizontal" Margin="2">
 
-                                    <TextBlock Text="Желтый" 
-                                   FontSize="11"
-                                   VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </ComboBoxItem>
+                                        <TextBlock Text="Желтый" 
+                                       FontSize="11"
+                                       VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
 
                             <ComboBoxItem Tag="000000">
                                 <StackPanel Orientation="Horizontal" Margin="2">
 
-                                    <TextBlock Text="Черный" 
-                                   FontSize="11"
-                                   VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                        </ComboBox>
+                                        <TextBlock Text="Черный" 
+                                       FontSize="11"
+                                       VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+                            </ComboBox>
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
-            </Border>
+                </Border>
 
-            <!-- Панель с обводкой -->
-            <Border x:Name="StrokePanel" CornerRadius="10"
-                            Grid.Column="2"
-                    BorderBrush="#CCCCCC"
-                    BorderThickness="1"
+                <!-- Панель с обводкой -->
+                <Border x:Name="StrokePanel" CornerRadius="10"
+                        BorderBrush="#CCCCCC"
+                        BorderThickness="1"
+                Background="#FF343434" 
+                Width="270" 
+                Height="84"
+                Margin="0,20,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <StackPanel Orientation="Vertical" 
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Width="200">
+
+                        <TextBlock Text="Обводка" 
+                            Foreground="White" 
+                            FontSize="14"
+                            FontWeight="Bold"
+                            HorizontalAlignment="Center"
+                            Margin="0,0,0,10"/>
+
+                        <!-- Поле с цветом обводки -->
+                        <StackPanel Orientation="Horizontal" 
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                            <!-- Превью цвета обводки -->
+                            <Border x:Name="StrokeColorPreview"
+                        CornerRadius="5"
+                        Width="40" 
+                        Height="22"
+                        Background="#FF000000"
+                        VerticalAlignment="Center"
+                        Margin="0,0,10,0"
+                        BorderThickness="1"
+                        BorderBrush="#FF666666" RenderTransformOrigin="0.512,0.527"/>
+
+                            <!-- Выпадающий список цветов обводки -->
+                            <ComboBox x:Name="StrokeColorComboBox"
+                          Width="92" 
+                          Height="22"
+                          VerticalAlignment="Center"
+                          Margin="0,0,10,0"
+                          Background="#D9D9D9"
+                          BorderThickness="0"
+                          FontSize="11"
+                          SelectedIndex="0"
+                          SelectionChanged="StrokeColorComboBox_SelectionChanged">
+
+                                <ComboBoxItem Tag="000000">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
+                                        <TextBlock Text="Черный" 
+                                       FontSize="11"
+                                       VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+
+                                <ComboBoxItem Tag="FFFFFF">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
+
+                                        <TextBlock Text="Белый" 
+                                       FontSize="11"
+                                       VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+
+                                <ComboBoxItem Tag="C44141">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
+
+                                        <TextBlock Text="Красный" 
+                                       FontSize="11"
+                                       VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+
+                                <ComboBoxItem Tag="4166C4">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
+
+                                        <TextBlock Text="Синий" 
+                                       FontSize="11"
+                                       VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+
+                                <ComboBoxItem Tag="41C441">
+                                    <StackPanel Orientation="Horizontal" Margin="2">
+
+                                        <TextBlock Text="Зеленый" 
+                                       FontSize="11"
+                                       VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+                            </ComboBox>
+
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Панель с текстом -->
+                <Border x:Name="TextPanel" CornerRadius="10"
+            BorderBrush="#CCCCCC"
+            BorderThickness="1"
             Background="#FF343434" 
             Width="270" 
-            Height="84"
-            Margin="0,228,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
-                <StackPanel Orientation="Vertical" 
+            Height="120"
+            Margin="0,20,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <StackPanel Orientation="Vertical" 
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Width="200">
 
-                    <TextBlock Text="Обводка" 
-                        Foreground="White" 
-                        FontSize="14"
-                        FontWeight="Bold"
-                        HorizontalAlignment="Center"
-                        Margin="0,0,0,10"/>
+                        <TextBlock Text="Текст" 
+                       Foreground="White" 
+                       FontSize="14"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,15"/>
 
-                    <!-- Поле с цветом обводки -->
-                    <StackPanel Orientation="Horizontal" 
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
-                        <StackPanel x:Name="StrokeWidthPanel" Orientation="Vertical" Margin="0,5,0,0" Visibility="Collapsed">
-                            <TextBlock Text="Толщина обводки:" FontSize="11" Margin="0,0,0,2"/>
-                            <ComboBox x:Name="StrokeWidthComboBox" Height="25" FontSize="11" SelectionChanged="StrokeWidthComboBox_SelectionChanged">
-                                <ComboBoxItem Content="1 px" Tag="1"/>
-                                <ComboBoxItem Content="2 px" Tag="2"/>
-                                <ComboBoxItem Content="3 px" Tag="3"/>
-                                <ComboBoxItem Content="5 px" Tag="5"/>
-                                <ComboBoxItem Content="8 px" Tag="8"/>
-                                <ComboBoxItem Content="10 px" Tag="10"/>
-                            </ComboBox>
-                        </StackPanel>
-                        <!-- Превью цвета обводки -->
-                        <Border x:Name="StrokeColorPreview"
-                    CornerRadius="5"
-                    Width="40" 
-                    Height="22"
-                    Background="#FF000000"
-                    VerticalAlignment="Center"
-                    Margin="0,0,10,0"
-                    BorderThickness="1"
-                    BorderBrush="#FF666666" RenderTransformOrigin="0.512,0.527"/>
-
-                        <!-- Выпадающий список цветов обводки -->
-                        <ComboBox x:Name="StrokeColorComboBox"
-                      Width="92" 
-                      Height="22"
-                      VerticalAlignment="Center"
-                      Margin="0,0,10,0"
-                      Background="#D9D9D9"
-                      BorderThickness="0"
-                      FontSize="11"
-                      SelectedIndex="0"
-                      SelectionChanged="StrokeColorComboBox_SelectionChanged">
-
-                            <ComboBoxItem Tag="000000">
-                                <StackPanel Orientation="Horizontal" Margin="2">
-                                    <TextBlock Text="Черный" 
-                                   FontSize="11"
-                                   VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-
-                            <ComboBoxItem Tag="FFFFFF">
-                                <StackPanel Orientation="Horizontal" Margin="2">
-
-                                    <TextBlock Text="Белый" 
-                                   FontSize="11"
-                                   VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-
-                            <ComboBoxItem Tag="C44141">
-                                <StackPanel Orientation="Horizontal" Margin="2">
-
-                                    <TextBlock Text="Красный" 
-                                   FontSize="11"
-                                   VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-
-                            <ComboBoxItem Tag="4166C4">
-                                <StackPanel Orientation="Horizontal" Margin="2">
-
-                                    <TextBlock Text="Синий" 
-                                   FontSize="11"
-                                   VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-
-                            <ComboBoxItem Tag="41C441">
-                                <StackPanel Orientation="Horizontal" Margin="2">
-
-                                    <TextBlock Text="Зеленый" 
-                                   FontSize="11"
-                                   VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                        </ComboBox>
-
-                    </StackPanel>
-
-                </StackPanel>
-            </Border>
-
-            <!-- Панель с текстом -->
-            <Border x:Name="TextPanel" CornerRadius="10"
-        Grid.Column="2"
-        BorderBrush="#CCCCCC"
-        BorderThickness="1"
-        Background="#FF343434" 
-        Width="270" 
-        Height="120"
-        Margin="0,332,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
-                <StackPanel Orientation="Vertical" 
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Width="200">
-
-                    <TextBlock Text="Текст" 
-                   Foreground="White" 
-                   FontSize="14"
-                   FontWeight="Bold"
-                   HorizontalAlignment="Center"
-                   Margin="0,0,0,15"/>
-
-                    <!-- Шрифт -->
-                    <StackPanel Orientation="Horizontal" 
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Margin="0,0,0,10">
-
-                        <Border CornerRadius="5"
-                    Width="150" 
-                    Height="22"
-                    Background="#D9D9D9"
-                    VerticalAlignment="Center">
-                            <ComboBox x:Name="FontComboBox"
-                          Background="Transparent"
-                          BorderThickness="0"
-                          FontSize="11"
-                          VerticalContentAlignment="Center"
-                          Padding="5,0"
-                          SelectionChanged="FontComboBox_SelectionChanged">
-                                <ComboBoxItem Content="Gotham Pro" IsSelected="True"/>
-                                <ComboBoxItem Content="Arial"/>
-                                <ComboBoxItem Content="Times New Roman"/>
-                                <ComboBoxItem Content="Calibri"/>
-                                <ComboBoxItem Content="Verdana"/>
-                                <ComboBoxItem Content="Tahoma"/>
-                            </ComboBox>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- Стиль и размер -->
-                    <StackPanel Orientation="Horizontal" 
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
-
-                        <!-- Стиль -->
+                        <!-- Шрифт -->
                         <StackPanel Orientation="Horizontal" 
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        Margin="0,0,10,0">
+                        Margin="0,0,0,10">
 
                             <Border CornerRadius="5"
-                        Width="60" 
+                        Width="150" 
                         Height="22"
                         Background="#D9D9D9"
                         VerticalAlignment="Center">
-                                <ComboBox x:Name="FontStyleComboBox"
-                              Background="Transparent"
-                              BorderThickness="0"
-                              FontSize="11"
-                              VerticalContentAlignment="Center"
-                              Padding="5,0" 
-                              Margin="0,0,-8,0"
-                              SelectionChanged="FontStyleComboBox_SelectionChanged">
-                                    <ComboBoxItem Content="Regular" IsSelected="True"/>
-                                    <ComboBoxItem Content="Bold"/>
-                                    <ComboBoxItem Content="Italic"/>
-                                    <ComboBoxItem Content="Bold Italic"/>
-                                </ComboBox>
-                            </Border>
-                        </StackPanel>
-
-                        <!-- Размер -->
-                        <StackPanel Orientation="Horizontal"
-                        VerticalAlignment="Center"
-                        Margin="10,0,0,0" 
-                        Width="53">
-
-                            <Border CornerRadius="5"
-                        Width="50" 
-                        Height="22"
-                        Background="#D9D9D9"
-                        VerticalAlignment="Center">
-                                <ComboBox x:Name="FontSizeComboBox"
+                                <ComboBox x:Name="FontComboBox"
                               Background="Transparent"
                               BorderThickness="0"
                               FontSize="11"
                               VerticalContentAlignment="Center"
                               Padding="5,0"
-                              SelectionChanged="FontSizeComboBox_SelectionChanged">
-                                    <ComboBoxItem Content="8"/>
-                                    <ComboBoxItem Content="9"/>
-                                    <ComboBoxItem Content="10" IsSelected="True"/>
-                                    <ComboBoxItem Content="11"/>
-                                    <ComboBoxItem Content="12"/>
-                                    <ComboBoxItem Content="14"/>
-                                    <ComboBoxItem Content="16"/>
-                                    <ComboBoxItem Content="18"/>
-                                    <ComboBoxItem Content="20"/>
-                                    <ComboBoxItem Content="24"/>
-                                    <ComboBoxItem Content="28"/>
-                                    <ComboBoxItem Content="32"/>
+                              >
+                                    <ComboBoxItem Content="Gotham Pro" IsSelected="True"/>
+                                    <ComboBoxItem Content="Arial"/>
+                                    <ComboBoxItem Content="Times New Roman"/>
+                                    <ComboBoxItem Content="Calibri"/>
+                                    <ComboBoxItem Content="Verdana"/>
+                                    <ComboBoxItem Content="Tahoma"/>
                                 </ComboBox>
                             </Border>
                         </StackPanel>
 
-                    </StackPanel>
+                        <!-- Стиль и размер -->
+                        <StackPanel Orientation="Horizontal" 
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
 
-                </StackPanel>
-            </Border>
+                            <!-- Стиль -->
+                            <StackPanel Orientation="Horizontal" 
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Margin="0,0,10,0">
+
+                                <Border CornerRadius="5"
+                            Width="60" 
+                            Height="22"
+                            Background="#D9D9D9"
+                            VerticalAlignment="Center">
+                                    <ComboBox x:Name="FontStyleComboBox"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  FontSize="11"
+                                  VerticalContentAlignment="Center"
+                                  Padding="5,0" 
+                                  Margin="0,0,-8,0"
+                                  >
+                                        <ComboBoxItem Content="Regular" IsSelected="True"/>
+                                        <ComboBoxItem Content="Bold"/>
+                                        <ComboBoxItem Content="Italic"/>
+                                        <ComboBoxItem Content="Bold Italic"/>
+                                    </ComboBox>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Размер -->
+                            <StackPanel Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Margin="10,0,0,0" 
+                            Width="53">
+
+                                <Border CornerRadius="5"
+                            Width="50" 
+                            Height="22"
+                            Background="#D9D9D9"
+                            VerticalAlignment="Center">
+                                    <ComboBox x:Name="FontSizeComboBox"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  FontSize="11"
+                                  VerticalContentAlignment="Center"
+                                  Padding="5,0"
+                                  >
+                                        <ComboBoxItem Content="8"/>
+                                        <ComboBoxItem Content="9"/>
+                                        <ComboBoxItem Content="10" IsSelected="True"/>
+                                        <ComboBoxItem Content="11"/>
+                                        <ComboBoxItem Content="12"/>
+                                        <ComboBoxItem Content="14"/>
+                                        <ComboBoxItem Content="16"/>
+                                        <ComboBoxItem Content="18"/>
+                                        <ComboBoxItem Content="20"/>
+                                        <ComboBoxItem Content="24"/>
+                                        <ComboBoxItem Content="28"/>
+                                        <ComboBoxItem Content="32"/>
+                                    </ComboBox>
+                                </Border>
+                            </StackPanel>
+
+                        </StackPanel>
+
+                    </StackPanel>
+                </Border>
+
+                <!-- Панель с шириной обводки -->
+                <Border x:Name="StrokeWidthPanel" CornerRadius="10"
+                        BorderBrush="#CCCCCC"
+                        BorderThickness="1"
+                        Background="#FF343434" 
+                        Width="270" 
+                        Height="84"
+                        Margin="0,20,0,0" 
+                        HorizontalAlignment="Center" 
+                        VerticalAlignment="Top"
+                        Visibility="Collapsed">
+                    <StackPanel Orientation="Vertical" 
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Width="200">
+                        <TextBlock Text="Ширина обводки" 
+                            Foreground="White" 
+                            FontSize="14"
+                            FontWeight="Bold"
+                            HorizontalAlignment="Center"
+                            Margin="0,0,0,10"/>
+                        <ComboBox x:Name="StrokeWidthComboBox" 
+                            Height="25" 
+                            Width="150"
+                            FontSize="11" 
+                            Background="#D9D9D9"
+                            BorderThickness="0"
+                            HorizontalAlignment="Center"
+                            SelectionChanged="StrokeWidthComboBox_SelectionChanged">
+                            <ComboBoxItem Content="1 px" Tag="1"/>
+                            <ComboBoxItem Content="2 px" Tag="2"/>
+                            <ComboBoxItem Content="3 px" Tag="3"/>
+                            <ComboBoxItem Content="5 px" Tag="5"/>
+                            <ComboBoxItem Content="8 px" Tag="8"/>
+                            <ComboBoxItem Content="10 px" Tag="10"/>
+                        </ComboBox>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
         </Grid>
 
     </Grid>
