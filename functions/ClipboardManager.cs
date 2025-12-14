@@ -44,7 +44,7 @@ namespace Graphic_Editor
         private GridManager gridManager;
         private Stack<UndoAction> undoStack = new Stack<UndoAction>();
         private Stack<UndoAction> redoStack = new Stack<UndoAction>();
-        private FrameworkElement copiedElement;
+        private List<FrameworkElement> copiedElements = new List<FrameworkElement>();
 
         public ClipboardManager(
             Canvas mainCanvas,
@@ -63,10 +63,23 @@ namespace Graphic_Editor
         // Копирование выделенного элемента
         public void CopySelectedElement()
         {
-            var selectedElement = selectionManager?.SelectedElement;
-            if (selectedElement != null)
+            var selectedElements = selectionManager?.SelectedElements.ToList() ?? new List<UIElement>();
+            
+            copiedElements.Clear();
+            
+            if (selectedElements.Count > 0)
             {
-                copiedElement = CloneUIElement(selectedElement);
+                foreach (var element in selectedElements)
+                {
+                    if (element is FrameworkElement frameworkElement)
+                    {
+                        var cloned = CloneUIElement(element);
+                        if (cloned != null)
+                        {
+                            copiedElements.Add(cloned);
+                        }
+                    }
+                }
                 SelectionChanged?.Invoke();
             }
         }
@@ -74,11 +87,25 @@ namespace Graphic_Editor
         // Вырезание выделенного элемента
         public void CutSelectedElement()
         {
+            var selectedElements = selectionManager?.SelectedElements.ToList() ?? new List<UIElement>();
+            
+            // Если выделено несколько элементов, используем метод для множественного вырезания
+            if (selectedElements.Count > 1)
+            {
+                CutSelectedElements();
+                return;
+            }
+
             var selectedElement = selectionManager?.SelectedElement;
             if (selectedElement != null)
             {
                 // Сохраняем копию для буфера обмена
-                copiedElement = CloneUIElement(selectedElement);
+                copiedElements.Clear();
+                var cloned = CloneUIElement(selectedElement);
+                if (cloned != null)
+                {
+                    copiedElements.Add(cloned);
+                }
 
                 // Сохраняем в стек отмены как удаление
                 SaveToUndoStack(selectedElement, UndoActionType.Remove);
@@ -95,56 +122,106 @@ namespace Graphic_Editor
 
                 selectionManager.DeselectAll();
                 SelectionChanged?.Invoke();
+                UndoRedoStackChanged?.Invoke();
             }
         }
 
         // Вставка элемента
         public void PasteElement()
         {
-            if (copiedElement != null)
+            if (copiedElements != null && copiedElements.Count > 0)
             {
-                // Создаем копию скопированного элемента со смещением
-                UIElement newElement = CloneUIElement(copiedElement);
-
-                // Смещаем новую копию на 20 пикселей
-                double currentLeft = Canvas.GetLeft(newElement);
-                double currentTop = Canvas.GetTop(newElement);
-
-                double newLeft = currentLeft + 20;
-                double newTop = currentTop + 20;
-
-                // Применяем привязку к сетке если включена
-                if (gridManager.IsSnapToGridEnabled)
+                selectionManager.ClearSelection();
+                
+                var pastedElements = new List<UIElement>();
+                
+                // Вычисляем минимальные координаты для смещения
+                double minLeft = double.MaxValue;
+                double minTop = double.MaxValue;
+                
+                foreach (var copiedElement in copiedElements)
                 {
-                    Point snappedPoint = gridManager.SnapToGrid(new Point(newLeft, newTop));
-                    newLeft = snappedPoint.X;
-                    newTop = snappedPoint.Y;
+                    double left = Canvas.GetLeft(copiedElement);
+                    double top = Canvas.GetTop(copiedElement);
+                    if (!double.IsNaN(left) && left < minLeft) minLeft = left;
+                    if (!double.IsNaN(top) && top < minTop) minTop = top;
+                }
+                
+                if (double.IsNaN(minLeft) || minLeft == double.MaxValue) minLeft = 0;
+                if (double.IsNaN(minTop) || minTop == double.MaxValue) minTop = 0;
+
+                // Вставляем все элементы с сохранением относительных позиций
+                foreach (var copiedElement in copiedElements)
+                {
+                    // Создаем копию скопированного элемента
+                    UIElement newElement = CloneUIElement(copiedElement);
+                    if (newElement == null) continue;
+
+                    // Вычисляем смещение относительно минимальных координат
+                    double originalLeft = Canvas.GetLeft(copiedElement);
+                    double originalTop = Canvas.GetTop(copiedElement);
+                    
+                    if (double.IsNaN(originalLeft)) originalLeft = 0;
+                    if (double.IsNaN(originalTop)) originalTop = 0;
+
+                    // Смещаем на 20 пикселей от минимальных координат
+                    double offsetX = originalLeft - minLeft;
+                    double offsetY = originalTop - minTop;
+                    
+                    double newLeft = minLeft + offsetX + 20;
+                    double newTop = minTop + offsetY + 20;
+
+                    // Применяем привязку к сетке если включена
+                    if (gridManager.IsSnapToGridEnabled)
+                    {
+                        Point snappedPoint = gridManager.SnapToGrid(new Point(newLeft, newTop));
+                        newLeft = snappedPoint.X;
+                        newTop = snappedPoint.Y;
+                    }
+
+                    Canvas.SetLeft(newElement, newLeft);
+                    Canvas.SetTop(newElement, newTop);
+
+                    // Добавляем на холст
+                    mainCanvas.Children.Add(newElement);
+
+                    // Перемещаем на передний план
+                    if (newElement is FrameworkElement frameworkElement)
+                    {
+                        BringToFront(frameworkElement);
+                    }
+
+                    // Создаем ResizableElement для нового элемента
+                    resizableElements[newElement] = new ResizableElement(
+                        newElement,
+                        mainCanvas,
+                        gridManager.SnapToGrid,
+                        gridManager.IsSnapToGridEnabled);
+
+                    pastedElements.Add(newElement);
+
+                    // Сохраняем в стек отмены
+                    SaveToUndoStack(newElement);
                 }
 
-                Canvas.SetLeft(newElement, newLeft);
-                Canvas.SetTop(newElement, newTop);
-
-                // Добавляем на холст
-                mainCanvas.Children.Add(newElement);
-
-                // Перемещаем на передний план
-                if (newElement is FrameworkElement frameworkElement)
+                // Выделяем все вставленные элементы
+                foreach (var element in pastedElements)
                 {
-                    BringToFront(frameworkElement);
+                    if (element is FrameworkElement frameworkElement)
+                    {
+                        selectionManager.SelectShape(frameworkElement);
+                    }
                 }
 
-                // Создаем ResizableElement для нового элемента
-                resizableElements[newElement] = new ResizableElement(
-                    newElement,
-                    mainCanvas,
-                    gridManager.SnapToGrid,
-                    gridManager.IsSnapToGridEnabled);
-
-                // Выделяем вставленный элемент
-                selectionManager.SelectElement(newElement as FrameworkElement);
-
-                // Сохраняем в стек отмены
-                SaveToUndoStack(newElement);
+                // Показываем ручки изменения размера для всех выделенных элементов
+                var selectedElements = selectionManager.SelectedElements.ToList();
+                foreach (var element in selectedElements)
+                {
+                    if (element is FrameworkElement frameworkElement && resizableElements.ContainsKey(element))
+                    {
+                        resizableElements[element].ShowResizeHandles();
+                    }
+                }
 
                 SelectionChanged?.Invoke();
                 UndoRedoStackChanged?.Invoke();
@@ -218,6 +295,17 @@ namespace Graphic_Editor
             var selectedElements = selectionManager?.SelectedElements.ToList() ?? new List<UIElement>();
             if (selectedElements.Count > 0)
             {
+                // Сохраняем все элементы в буфер обмена
+                copiedElements.Clear();
+                foreach (var element in selectedElements)
+                {
+                    var cloned = CloneUIElement(element);
+                    if (cloned != null)
+                    {
+                        copiedElements.Add(cloned);
+                    }
+                }
+
                 foreach (var element in selectedElements)
                 {
                     // Сохраняем в стек отмены как удаление
