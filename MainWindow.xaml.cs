@@ -141,6 +141,7 @@ namespace Graphic_Editor
                 GetElementHeight = GetElementHeight,
                 BringToFront = BringToFront,
                 MakeCanvasShapeDraggable = MakeCanvasShapeDraggable,
+                GetSelectedElements = () => selectionManager?.SelectedElements.ToList() ?? new List<UIElement>(),
                 SetOriginalStyles = (copy, original) =>
                 {
                     if (original is Ellipse originalEllipse && copy is Ellipse copyEllipse)
@@ -222,7 +223,8 @@ namespace Graphic_Editor
                 MainCanvas,
                 selectionManager,
                 resizableElements,
-                gridManager);
+                gridManager,
+                MakeCanvasShapeDraggable);
 
             // Подписываемся на события для обновления интерфейса
             clipboardManager.SelectionChanged += () =>

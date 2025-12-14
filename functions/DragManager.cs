@@ -1,4 +1,6 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -17,6 +19,7 @@ namespace Graphic_Editor
         private UIElement shapeCopy;
         private Transform originalTransform;
         private Point dragStartPoint;
+        private Point draggedElementStartPosition; // Начальная позиция перетаскиваемого элемента
 
         // Константы для ограничения перемещения
         private const double WorkAreaTop = 40;
@@ -40,10 +43,16 @@ namespace Graphic_Editor
 
         // Добавляем ссылку на ResizableElement
         public Func<UIElement, bool> GetIsDragging { get; set; }
+        
+        // Доступ к выделенным элементам для группового перемещения
+        public Func<List<UIElement>> GetSelectedElements { get; set; }
 
         // Canvas для работы
         private Canvas mainCanvas;
         private Canvas notationCanvas;
+        
+        // Состояние для группового перемещения
+        private Dictionary<UIElement, Point> selectedElementsStartPositions = new Dictionary<UIElement, Point>();
 
         // Дополнительные свойства
         private bool isSnapToGridEnabled = false;
@@ -273,8 +282,20 @@ namespace Graphic_Editor
             var element = sender as FrameworkElement;
             if (element != null)
             {
-                // Выделяем элемент
-                SelectElement?.Invoke(element);
+                // Проверяем, выделен ли элемент уже
+                bool isAlreadySelected = false;
+                if (GetSelectedElements != null)
+                {
+                    var selectedElements = GetSelectedElements();
+                    isAlreadySelected = selectedElements.Contains(element);
+                }
+                
+                // Выделяем элемент только если он еще не выделен
+                // Это предотвращает очистку других выделений при начале перетаскивания
+                if (!isAlreadySelected)
+                {
+                    SelectElement?.Invoke(element);
+                }
                 SelectShape?.Invoke(element);
 
                 isDragging = true;
@@ -300,11 +321,52 @@ namespace Graphic_Editor
                     canvasPos.Y - currentTop
                 );
 
+                // Сохраняем начальную позицию перетаскиваемого элемента
+                draggedElementStartPosition = new Point(currentLeft, currentTop);
+
+                // Сохраняем начальные позиции всех выделенных элементов для группового перемещения
+                selectedElementsStartPositions.Clear();
+                if (GetSelectedElements != null)
+                {
+                    var selectedElements = GetSelectedElements();
+                    foreach (var selectedElement in selectedElements)
+                    {
+                        if (selectedElement != null)
+                        {
+                            double left = Canvas.GetLeft(selectedElement);
+                            double top = Canvas.GetTop(selectedElement);
+                            if (double.IsNaN(left)) left = 0;
+                            if (double.IsNaN(top)) top = 0;
+                            
+                            // Для Line элементов используем координаты точек
+                            if (selectedElement is Line line)
+                            {
+                                left = Math.Min(line.X1, line.X2);
+                                top = Math.Min(line.Y1, line.Y2);
+                            }
+                            
+                            selectedElementsStartPositions[selectedElement] = new Point(left, top);
+                        }
+                    }
+                }
+
                 // Поднимаем элемент наверх
                 Canvas.SetZIndex(element, 1000);
 
-                // Визуальный фидбэк
+                // Визуальный фидбэк для всех выделенных элементов
                 ApplyCanvasDragVisualFeedback(element, true);
+                if (GetSelectedElements != null)
+                {
+                    var selectedElements = GetSelectedElements();
+                    foreach (var selectedElement in selectedElements)
+                    {
+                        if (selectedElement != element)
+                        {
+                            ApplyCanvasDragVisualFeedback(selectedElement, true);
+                        }
+                    }
+                }
+                
                 e.Handled = true;
             }
         }
@@ -334,6 +396,10 @@ namespace Graphic_Editor
                 newLeft = Math.Max(0, Math.Min(newLeft, mainCanvas.ActualWidth - elementWidth));
                 newTop = Math.Max(WorkAreaTop, Math.Min(newTop, maxTop));
 
+                // Вычисляем дельту ДО привязки к сетке для группового перемещения
+                double deltaX = newLeft - draggedElementStartPosition.X;
+                double deltaY = newTop - draggedElementStartPosition.Y;
+
                 // Дополнительная привязка к сетке
                 if (isSnapToGridEnabled && SnapToGrid != null)
                 {
@@ -352,13 +418,13 @@ namespace Graphic_Editor
 
                     double lineLeft = Math.Min(currentX1, currentX2);
                     double lineTop = Math.Min(currentY1, currentY2);
-                    double deltaX = newLeft - lineLeft;
-                    double deltaY = newTop - lineTop;
+                    double lineDeltaX = newLeft - lineLeft;
+                    double lineDeltaY = newTop - lineTop;
 
-                    double newX1 = currentX1 + deltaX;
-                    double newY1 = currentY1 + deltaY;
-                    double newX2 = currentX2 + deltaX;
-                    double newY2 = currentY2 + deltaY;
+                    double newX1 = currentX1 + lineDeltaX;
+                    double newY1 = currentY1 + lineDeltaY;
+                    double newX2 = currentX2 + lineDeltaX;
+                    double newY2 = currentY2 + lineDeltaY;
 
                     // Применяем привязку к сетке к точкам линии
                     if (isSnapToGridEnabled && SnapToGrid != null)
@@ -383,6 +449,112 @@ namespace Graphic_Editor
                     Canvas.SetTop(element, newTop);
                 }
 
+                // Перемещаем все выделенные элементы вместе
+                if (GetSelectedElements != null)
+                {
+                    var selectedElements = GetSelectedElements();
+                    
+                    // Используем дельту, вычисленную ДО привязки к сетке
+
+                    // Перемещаем все выделенные элементы, включая перетаскиваемый (если он в списке)
+                    foreach (var selectedElement in selectedElements)
+                    {
+                        // Пропускаем перетаскиваемый элемент, он уже перемещен выше
+                        if (selectedElement == element) continue;
+                        
+                        // Пропускаем null элементы
+                        if (selectedElement == null) continue;
+                        
+                        // Получаем начальную позицию из словаря или текущую позицию
+                        Point startPos;
+                        if (selectedElementsStartPositions.ContainsKey(selectedElement))
+                        {
+                            startPos = selectedElementsStartPositions[selectedElement];
+                        }
+                        else
+                        {
+                            // Если позиция не была сохранена, получаем текущую
+                            double left = Canvas.GetLeft(selectedElement);
+                            double top = Canvas.GetTop(selectedElement);
+                            if (double.IsNaN(left)) left = 0;
+                            if (double.IsNaN(top)) top = 0;
+                            
+                            if (selectedElement is Line lineForPos)
+                            {
+                                left = Math.Min(lineForPos.X1, lineForPos.X2);
+                                top = Math.Min(lineForPos.Y1, lineForPos.Y2);
+                            }
+                            
+                            startPos = new Point(left, top);
+                            selectedElementsStartPositions[selectedElement] = startPos;
+                        }
+                        
+                        double newSelectedLeft = startPos.X + deltaX;
+                        double newSelectedTop = startPos.Y + deltaY;
+                        
+                        // Ограничиваем координаты
+                        double selectedElementWidth = GetElementWidth(selectedElement);
+                        double selectedElementHeight = GetElementHeight(selectedElement);
+                        double selectedMaxTop = mainCanvas.ActualHeight - selectedElementHeight - WorkAreaBottom;
+                        
+                        newSelectedLeft = Math.Max(0, Math.Min(newSelectedLeft, mainCanvas.ActualWidth - selectedElementWidth));
+                        newSelectedTop = Math.Max(WorkAreaTop, Math.Min(newSelectedTop, selectedMaxTop));
+                        
+                        // Применяем привязку к сетке
+                        if (isSnapToGridEnabled && SnapToGrid != null)
+                        {
+                            Point snappedPosition = SnapToGrid(new Point(newSelectedLeft, newSelectedTop));
+                            newSelectedLeft = snappedPosition.X;
+                            newSelectedTop = snappedPosition.Y;
+                        }
+                        
+                        // Обработка Line элементов отдельно
+                        if (selectedElement is Line selectedLine)
+                        {
+                            double lineDeltaX = newSelectedLeft - startPos.X;
+                            double lineDeltaY = newSelectedTop - startPos.Y;
+                            
+                            double currentX1 = selectedLine.X1;
+                            double currentY1 = selectedLine.Y1;
+                            double currentX2 = selectedLine.X2;
+                            double currentY2 = selectedLine.Y2;
+                            
+                            double newX1 = currentX1 + lineDeltaX;
+                            double newY1 = currentY1 + lineDeltaY;
+                            double newX2 = currentX2 + lineDeltaX;
+                            double newY2 = currentY2 + lineDeltaY;
+                            
+                            // Применяем привязку к сетке к точкам линии
+                            if (isSnapToGridEnabled && SnapToGrid != null)
+                            {
+                                Point snappedStart = SnapToGrid(new Point(newX1, newY1));
+                                Point snappedEnd = SnapToGrid(new Point(newX2, newY2));
+                                newX1 = snappedStart.X;
+                                newY1 = snappedStart.Y;
+                                newX2 = snappedEnd.X;
+                                newY2 = snappedEnd.Y;
+                            }
+                            
+                            selectedLine.X1 = newX1;
+                            selectedLine.Y1 = newY1;
+                            selectedLine.X2 = newX2;
+                            selectedLine.Y2 = newY2;
+                        }
+                        else
+                        {
+                            Canvas.SetLeft(selectedElement, newSelectedLeft);
+                            Canvas.SetTop(selectedElement, newSelectedTop);
+                        }
+                        
+                        // Вызываем обработчик перемещения элемента (для прикрепления к пулам)
+                        if (OnElementMoved != null)
+                        {
+                            Point elementPosition = new Point(newSelectedLeft, newSelectedTop);
+                            OnElementMoved(selectedElement, elementPosition);
+                        }
+                    }
+                }
+
                 // Вызываем обработчик перемещения элемента (для прикрепления к пулам)
                 if (OnElementMoved != null)
                 {
@@ -397,9 +569,10 @@ namespace Graphic_Editor
         {
             if (isDragging && draggedElement != null)
             {
-                // Применяем привязку к сетке при завершении
+                // Применяем привязку к сетке при завершении для всех выделенных элементов
                 if (isSnapToGridEnabled && SnapToGrid != null)
                 {
+                    // Привязка для перетаскиваемого элемента
                     if (draggedElement is Line line)
                     {
                         Point snappedStart = SnapToGrid(new Point(line.X1, line.Y1));
@@ -421,6 +594,39 @@ namespace Graphic_Editor
                             Canvas.SetTop(draggedElement, snappedPosition.Y);
                         }
                     }
+                    
+                    // Привязка для остальных выделенных элементов
+                    if (GetSelectedElements != null && selectedElementsStartPositions.Count > 0)
+                    {
+                        var selectedElements = GetSelectedElements();
+                        foreach (var selectedElement in selectedElements)
+                        {
+                            if (selectedElement != draggedElement)
+                            {
+                                if (selectedElement is Line selectedLine)
+                                {
+                                    Point snappedStart = SnapToGrid(new Point(selectedLine.X1, selectedLine.Y1));
+                                    Point snappedEnd = SnapToGrid(new Point(selectedLine.X2, selectedLine.Y2));
+                                    selectedLine.X1 = snappedStart.X;
+                                    selectedLine.Y1 = snappedStart.Y;
+                                    selectedLine.X2 = snappedEnd.X;
+                                    selectedLine.Y2 = snappedEnd.Y;
+                                }
+                                else
+                                {
+                                    double currentLeft = Canvas.GetLeft(selectedElement);
+                                    double currentTop = Canvas.GetTop(selectedElement);
+
+                                    if (!double.IsNaN(currentLeft) && !double.IsNaN(currentTop))
+                                    {
+                                        Point snappedPosition = SnapToGrid(new Point(currentLeft, currentTop));
+                                        Canvas.SetLeft(selectedElement, snappedPosition.X);
+                                        Canvas.SetTop(selectedElement, snappedPosition.Y);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 isDragging = false;
@@ -435,9 +641,21 @@ namespace Graphic_Editor
                 // Возвращаем нормальный ZIndex
                 Canvas.SetZIndex(draggedElement, 1);
 
-                // Возвращаем исходный вид
+                // Возвращаем исходный вид для всех выделенных элементов
                 ApplyCanvasDragVisualFeedback(draggedElement, false);
+                if (GetSelectedElements != null)
+                {
+                    var selectedElements = GetSelectedElements();
+                    foreach (var selectedElement in selectedElements)
+                    {
+                        if (selectedElement != draggedElement)
+                        {
+                            ApplyCanvasDragVisualFeedback(selectedElement, false);
+                        }
+                    }
+                }
 
+                selectedElementsStartPositions.Clear();
                 draggedElement = null;
                 e.Handled = true;
             }

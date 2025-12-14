@@ -42,6 +42,7 @@ namespace Graphic_Editor
         private SelectionManager selectionManager;
         private Dictionary<UIElement, ResizableElement> resizableElements;
         private GridManager gridManager;
+        private Action<UIElement> makeCanvasShapeDraggable;
         private Stack<UndoAction> undoStack = new Stack<UndoAction>();
         private Stack<UndoAction> redoStack = new Stack<UndoAction>();
         private List<FrameworkElement> copiedElements = new List<FrameworkElement>();
@@ -50,12 +51,14 @@ namespace Graphic_Editor
             Canvas mainCanvas,
             SelectionManager selectionManager,
             Dictionary<UIElement, ResizableElement> resizableElements,
-            GridManager gridManager)
+            GridManager gridManager,
+            Action<UIElement> makeCanvasShapeDraggable = null)
         {
             this.mainCanvas = mainCanvas;
             this.selectionManager = selectionManager;
             this.resizableElements = resizableElements;
             this.gridManager = gridManager;
+            this.makeCanvasShapeDraggable = makeCanvasShapeDraggable;
         }
 
         #region Основные операции с буфером обмена
@@ -184,6 +187,9 @@ namespace Graphic_Editor
 
                     // Добавляем на холст
                     mainCanvas.Children.Add(newElement);
+
+                    // Делаем элемент перетаскиваемым
+                    makeCanvasShapeDraggable?.Invoke(newElement);
 
                     // Перемещаем на передний план
                     if (newElement is FrameworkElement frameworkElement)
@@ -372,6 +378,9 @@ namespace Graphic_Editor
 
                     mainCanvas.Children.Add(elementToRestore);
 
+                    // Делаем элемент перетаскиваемым
+                    makeCanvasShapeDraggable?.Invoke(elementToRestore);
+
                     // Создаем ResizableElement для восстановленного элемента
                     resizableElements[elementToRestore] = new ResizableElement(
                         elementToRestore,
@@ -410,6 +419,9 @@ namespace Graphic_Editor
                     if (!double.IsNaN(top)) Canvas.SetTop(elementToAdd, top);
 
                     mainCanvas.Children.Add(elementToAdd);
+
+                    // Делаем элемент перетаскиваемым
+                    makeCanvasShapeDraggable?.Invoke(elementToAdd);
 
                     // Создаем ResizableElement для добавленного элемента
                     resizableElements[elementToAdd] = new ResizableElement(
