@@ -378,7 +378,8 @@
 
         <!-- Title Bar -->
         <Border Grid.Row="0" Background="#424242"
-                MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                MouseLeftButtonDown="TitleBar_MouseLeftButtonDown"
+                Panel.ZIndex="1000">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -474,7 +475,9 @@
 
             <!-- Основной Canvas для всех элементов -->
             <Canvas x:Name="MainCanvas" Background="#252525" 
-                    Grid.Row="1" Grid.ColumnSpan="3" Loaded="MainCanvas_Loaded"/>
+                    Grid.Row="1" Grid.ColumnSpan="3" Loaded="MainCanvas_Loaded"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Width="5000" Height="5000"/>
 
             <Border x:Name="Titl" Grid.Column="0"
                     Width="270" Height="60"
@@ -816,7 +819,7 @@
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center"/>
                         </Button>
-                        <!-- Квадратики -->
+                        <!-- Пулы (Swimlanes) -->
                         <Button x:Name="dash" Style="{StaticResource ControlButtonStyle}"
                             Width="34" 
                             Height="34"
@@ -825,7 +828,7 @@
                             Background="#FF343434"
                             BorderBrush="Transparent"
                             FocusVisualStyle="{x:Null}"
-                            ToolTip="">
+                            ToolTip="Пулы (Swimlanes) - создание разделителей участников">
                             <Image Source="/Icons/dashboard.png"
                                 Width="30" 
                                 Height="30"

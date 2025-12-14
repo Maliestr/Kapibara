@@ -43,6 +43,8 @@ namespace Graphic_Editor
         private DragManager dragManager; // Система перемещения объектов
         private GridManager gridManager; // Система сетки
         private ClipboardManager clipboardManager; // Система буфера обмена и отмены/повтора
+        private PoolManager poolManager; // Система управления пулами (swimlanes)
+        private CanvasPanningManager canvasPanningManager;
         private AutoSave autoSave; // Система автоматического сохранения проекта
 
         // Константы
@@ -107,6 +109,9 @@ namespace Graphic_Editor
             InitializeFileManager(); // Инициализация менеджера файлов
             InitializeCommentManager(); // Инициализация менеджера комментариев
             InitializeClipboardManager(); // Инициализация менеджера буфера обмена и отмены/повтора
+            InitializePoolManager(); // Инициализация менеджера пулов
+            canvasPanningManager = new CanvasPanningManager(MainCanvas);
+            canvasPanningManager.Mode = CanvasPanningManager.PanningMode.MiddleButton;
         }
 
         private void InitializeDragManager()
@@ -135,7 +140,8 @@ namespace Graphic_Editor
                 },
                 AnimateShapeAppearance = AnimateShapeAppearance,
                 IsShapeFromNotation = IsShapeFromNotation,
-                GetShapeType = GetShapeType
+                GetShapeType = GetShapeType,
+                OnElementMoved = (element, position) => poolManager?.HandleElementMove(element, position) // Обработка прикрепления к пулам
             };
 
             // Передаем состояние привязки к сетке
@@ -168,6 +174,7 @@ namespace Graphic_Editor
             gridManager.OnSnapToggled += (isEnabled) =>
             {
                 // Обновляем состояние в других менеджерах, если нужно
+                poolManager?.UpdateSnapToGrid(isEnabled);
             };
         }
 
@@ -263,10 +270,23 @@ namespace Graphic_Editor
                 return;
             }
 
-            // Если кликнули на пустую область канваса - снимаем выделение
+            if (poolManager != null && poolManager.HandleMouseClick(e.GetPosition(MainCanvas), e.OriginalSource))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            if (textManager != null && textManager.HandleMouseClick(e.GetPosition(MainCanvas), e.OriginalSource))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            // Если кликнули на пустую область канваса - снимаем выделение и скрываем ручки
             if (e.OriginalSource == MainCanvas)
             {
                 DeselectAll();
+                HideAllResizeHandles();
                 e.Handled = true;
             }
         }
@@ -313,6 +333,20 @@ namespace Graphic_Editor
             {
                 // Сохраняем текущую толщину ПОСЛЕ перетаскивания
                 var draggedElement = dragManager.DraggedElement;
+                
+                // Обрабатываем прикрепление элемента к пулу
+                if (draggedElement != null && poolManager != null)
+                {
+                    double elementLeft = Canvas.GetLeft(draggedElement);
+                    double elementTop = Canvas.GetTop(draggedElement);
+                    
+                    if (!double.IsNaN(elementLeft) && !double.IsNaN(elementTop))
+                    {
+                        Point elementPosition = new Point(elementLeft, elementTop);
+                        poolManager.HandleElementMove(draggedElement, elementPosition);
+                    }
+                }
+                
                 if (draggedElement != null && selectionManager?.HasOriginalStrokeThickness(draggedElement) == true)
                 {
                     // Обновляем сохраненную толщину
@@ -437,6 +471,7 @@ namespace Graphic_Editor
             canvasElements.Clear();
             currentFilePath = null;
             commentManager?.ClearAllComments();
+            poolManager?.ClearAllPools();
 
             // Сбрасываем имя файла на "Untitled"
             if (FileNameTextBox != null)
@@ -810,6 +845,34 @@ namespace Graphic_Editor
         {
             if (shape == null) return;
             selectionManager?.SelectShape(shape);
+        }
+
+        /// <summary>
+        /// Скрывает все ручки изменения размера ResizableElement
+        /// </summary>
+        private void HideAllResizeHandles()
+        {
+            // Скрываем ручки для обычных элементов
+            if (currentResizableElement != null)
+            {
+                currentResizableElement.HideResizeHandles();
+                currentResizableElement = null;
+            }
+
+            // Скрываем ручки для всех элементов в resizableElements
+            foreach (var resizable in resizableElements.Values)
+            {
+                resizable?.HideResizeHandles();
+            }
+
+            // Скрываем ручки для всех пулов
+            if (poolManager != null)
+            {
+                foreach (var pool in poolManager.Pools)
+                {
+                    poolManager.HideResizeHandlesForPool(pool);
+                }
+            }
         }
 
         private void DeselectElement(UIElement element)
@@ -1464,11 +1527,33 @@ namespace Graphic_Editor
                 gridManager.SnapToGrid, // Используем метод GridManager
                 (element) => clipboardManager?.SaveToUndoStack(element, UndoActionType.Add)
             );
+
+            // Подписываемся на события для выделения кнопки
+            textManager.OnTextModeActivated += () =>
+            {
+                if (text != null)
+                {
+                    text.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
+                }
+            };
+
+            textManager.OnTextModeDeactivated += () =>
+            {
+                if (text != null)
+                {
+                    text.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF343434"));
+                }
+            };
         }
 
         private void TextButton_Click(object sender, RoutedEventArgs e)
         {
-            if (textManager?.IsTextModeActive == true) return;
+            if (textManager?.IsTextModeActive == true)
+            {
+                // Если режим уже активен, деактивируем его
+                textManager?.DeactivateTextMode();
+                return;
+            }
             textManager?.ActivateTextMode();
         }
 
@@ -1493,6 +1578,38 @@ namespace Graphic_Editor
         private void FileNameTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             UpdateWindowTitle();
+        }
+
+        #endregion
+
+        #region Пулы (Swimlanes)
+
+        private void InitializePoolManager()
+        {
+            poolManager = new PoolManager(
+                MainCanvas,
+                rectangle, // Кнопка rectangle (3-я кнопка) на нижней панели
+                gridManager.IsSnapToGridEnabled, // Используем свойство GridManager
+                gridManager.SnapToGrid, // Используем метод GridManager
+                (element, actionType) => clipboardManager?.SaveToUndoStack(element, actionType)
+            );
+
+            // Подписываемся на события
+            poolManager.PoolModeChanged += (isActive) =>
+            {
+                // Дополнительная логика при изменении режима пулов
+            };
+
+            poolManager.PoolCreated += (pool) =>
+            {
+                // Логика при создании пула
+                SaveToUndoStack(pool.Container, UndoActionType.Add);
+            };
+
+            poolManager.PoolDeleted += (pool) =>
+            {
+                // Логика при удалении пула
+            };
         }
 
         #endregion
