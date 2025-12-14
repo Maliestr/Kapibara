@@ -127,17 +127,8 @@ namespace Graphic_Editor
                 GetElementHeight = GetElementHeight,
                 BringToFront = BringToFront,
                 MakeCanvasShapeDraggable = MakeCanvasShapeDraggable,
-                SetOriginalStyles = (copy, original) =>
-                {
-                    if (original is Ellipse originalEllipse && copy is Ellipse copyEllipse)
-                    {
-                        selectionManager?.SetOriginalStyles(copyEllipse, originalEllipse.Stroke, originalEllipse.Fill, originalEllipse.StrokeThickness);
-                    }
-                    else if (original is Border originalBorder && copy is Border copyBorder)
-                    {
-                        selectionManager?.SetOriginalStyles(copyBorder, originalBorder.BorderBrush, originalBorder.Background, originalBorder.BorderThickness.Left);
-                    }
-                },
+                // SetOriginalStyles теперь обрабатывается в FillStrokeManager через SetFillStrokeManager
+                SetOriginalStyles = null,
                 AnimateShapeAppearance = AnimateShapeAppearance,
                 IsShapeFromNotation = IsShapeFromNotation,
                 GetShapeType = GetShapeType,
@@ -1459,6 +1450,12 @@ namespace Graphic_Editor
                 strokePanel,
                 strokeWidthPanel
             );
+            
+            // Устанавливаем FillStrokeManager в DragManager для сохранения оригинальных стилей
+            if (dragManager != null)
+            {
+                dragManager.SetFillStrokeManager(fillStrokeManager);
+            }
         }
 
         private void FillColorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

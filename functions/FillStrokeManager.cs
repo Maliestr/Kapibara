@@ -145,23 +145,29 @@ namespace Graphic_Editor
         {
             if (shape == null) return;
 
-            double currentThickness = 0;
+            // Используем оригинальную (сохраненную) толщину, а не текущую
+            // Текущая толщина может быть увеличена при выделении
+            double originalThickness = selectionManager?.GetOriginalStrokeThickness(shape) ?? 0;
 
-            if (shape is Ellipse ellipse)
+            // Если оригинальная толщина не сохранена, берем текущую
+            if (originalThickness == 0)
             {
-                currentThickness = ellipse.StrokeThickness;
-            }
-            else if (shape is Border border)
-            {
-                currentThickness = border.BorderThickness.Left;
-            }
-            else if (shape is Line line)
-            {
-                currentThickness = line.StrokeThickness;
+                if (shape is Ellipse ellipse)
+                {
+                    originalThickness = ellipse.StrokeThickness;
+                }
+                else if (shape is Border border)
+                {
+                    originalThickness = border.BorderThickness.Left;
+                }
+                else if (shape is Line line)
+                {
+                    originalThickness = line.StrokeThickness;
+                }
             }
 
-            // Обновляем комбо-бокс
-            UpdateStrokeWidthComboBoxSelection(currentThickness);
+            // Обновляем комбо-бокс оригинальной толщиной
+            UpdateStrokeWidthComboBoxSelection(originalThickness);
         }
 
         // Вспомогательный метод для обновления комбо-бокса толщины
@@ -260,8 +266,20 @@ namespace Graphic_Editor
         {
             if (shape is Ellipse ellipse)
             {
-                // Для эллипсов меняем Fill (заливку), только если это не кольцо
-                if (ellipse.Fill != Brushes.Transparent)
+                // Проверяем, была ли фигура изначально прозрачной
+                Brush originalFill = selectionManager?.GetOriginalFillColor(shape);
+                Brush currentFill = ellipse.Fill;
+                
+                // Определяем, была ли фигура изначально прозрачной
+                // Используем оригинальный цвет, если он сохранен, иначе текущий
+                Brush fillToCheck = originalFill ?? currentFill;
+                bool wasTransparent = fillToCheck == null || 
+                                     fillToCheck == Brushes.Transparent ||
+                                     (fillToCheck is SolidColorBrush fillSolid && 
+                                      (fillSolid.Color.A == 0 || fillSolid.Color == Colors.Transparent));
+                
+                // Для эллипсов меняем Fill (заливку), только если изначально не была прозрачной
+                if (!wasTransparent)
                 {
                     ellipse.Fill = brush;
                     // Сохраняем новый цвет как оригинальный
@@ -270,10 +288,25 @@ namespace Graphic_Editor
             }
             else if (shape is Border border)
             {
-                // Для Border меняем Background (заливку)
-                border.Background = brush;
-                // Сохраняем новый цвет как оригинальный
-                selectionManager?.UpdateOriginalFillColor(shape, brush);
+                // Проверяем, была ли фигура изначально прозрачной
+                Brush originalFill = selectionManager?.GetOriginalFillColor(shape);
+                Brush currentFill = border.Background;
+                
+                // Определяем, была ли фигура изначально прозрачной
+                // Используем оригинальный цвет, если он сохранен, иначе текущий
+                Brush fillToCheck = originalFill ?? currentFill;
+                bool wasTransparent = fillToCheck == null || 
+                                     fillToCheck == Brushes.Transparent ||
+                                     (fillToCheck is SolidColorBrush fillSolid && 
+                                      (fillSolid.Color.A == 0 || fillSolid.Color == Colors.Transparent));
+                
+                // Для Border меняем Background (заливку), только если изначально не была прозрачной
+                if (!wasTransparent)
+                {
+                    border.Background = brush;
+                    // Сохраняем новый цвет как оригинальный
+                    selectionManager?.UpdateOriginalFillColor(shape, brush);
+                }
             }
             // Для Line и TextBlock заливка не применяется
         }
@@ -554,6 +587,23 @@ namespace Graphic_Editor
             strokeColorComboBox.SelectedIndex = -1;
             fillColorPreview.Background = Brushes.Transparent;
             strokeColorPreview.Background = Brushes.Transparent;
+        }
+
+        // Метод для сохранения оригинальных стилей с правильной толщиной из копии
+        public void SetOriginalStylesFromCopy(UIElement copy, UIElement original)
+        {
+            if (copy == null || original == null || selectionManager == null) return;
+
+            if (original is Ellipse originalEllipse && copy is Ellipse copyEllipse)
+            {
+                // Используем толщину из копии (которая установлена при создании), а не из оригинала
+                selectionManager.SetOriginalStyles(copyEllipse, originalEllipse.Stroke, originalEllipse.Fill, copyEllipse.StrokeThickness);
+            }
+            else if (original is Border originalBorder && copy is Border copyBorder)
+            {
+                // Используем толщину из копии (которая установлена при создании), а не из оригинала
+                selectionManager.SetOriginalStyles(copyBorder, originalBorder.BorderBrush, originalBorder.Background, copyBorder.BorderThickness.Left);
+            }
         }
     }
 }
