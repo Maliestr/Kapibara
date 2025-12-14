@@ -41,6 +41,11 @@ namespace Graphic_Editor
         public bool IsEnabled { get; set; } = true;
 
         /// <summary>
+        /// Делегат для получения текущего масштаба
+        /// </summary>
+        public Func<double> GetCurrentZoom { get; set; }
+
+        /// <summary>
         /// Событие изменения позиции панорамирования
         /// </summary>
         public event Action<Point> PanningChanged;
@@ -312,7 +317,7 @@ namespace Graphic_Editor
                 currentScreenPosition = currentMousePosition;
             }
 
-            // Вычисляем смещение относительно предыдущей позиции
+            // Вычисляем смещение относительно предыдущей позиции (в пикселях экрана)
             double deltaX = currentScreenPosition.X - _lastMousePosition.X;
             double deltaY = currentScreenPosition.Y - _lastMousePosition.Y;
 
@@ -322,13 +327,19 @@ namespace Graphic_Editor
                 return;
             }
 
-            // Вычисляем новые координаты смещения
+            // Получаем текущий масштаб (если доступен)
+            double currentZoom = GetCurrentZoom?.Invoke() ?? 1.0;
+
+            // В draw.io панорамирование работает так: при перемещении мыши на N пикселей
+            // холст перемещается на те же N пикселей в экранных координатах, независимо от масштаба.
+            // Это означает, что смещение применяется напрямую к offset, без деления на масштаб.
+            // Смещение уже в экранных координатах, поэтому применяем его напрямую.
             double newOffsetX = _transformMatrix.OffsetX + deltaX;
             double newOffsetY = _transformMatrix.OffsetY + deltaY;
 
-            // Ограничиваем смещение границами Canvas
-            newOffsetX = ClampPanningOffsetX(newOffsetX);
-            newOffsetY = ClampPanningOffsetY(newOffsetY);
+            // Ограничиваем смещение границами Canvas (с учетом масштаба)
+            newOffsetX = ClampPanningOffsetX(newOffsetX, currentZoom);
+            newOffsetY = ClampPanningOffsetY(newOffsetY, currentZoom);
 
             // Обновляем матрицу трансформации
             _transformMatrix.OffsetX = newOffsetX;
@@ -347,10 +358,10 @@ namespace Graphic_Editor
         /// <summary>
         /// Ограничение смещения по X границами Canvas
         /// </summary>
-        private double ClampPanningOffsetX(double offsetX)
+        private double ClampPanningOffsetX(double offsetX, double zoom = 1.0)
         {
-            // Получаем размеры Canvas
-            double canvasWidth = _canvas.Width > 0 ? _canvas.Width : _canvas.ActualWidth;
+            // Получаем размеры Canvas с учетом масштаба
+            double canvasWidth = (_canvas.Width > 0 ? _canvas.Width : _canvas.ActualWidth) * zoom;
 
             // Получаем размеры видимой области (контейнера Canvas)
             FrameworkElement parent = _canvas.Parent as FrameworkElement;
@@ -358,7 +369,7 @@ namespace Graphic_Editor
 
             double viewportWidth = parent.ActualWidth;
 
-            // Если Canvas меньше или равен видимой области, не позволяем перемещение
+            // Если масштабированный Canvas меньше или равен видимой области, не позволяем перемещение
             if (canvasWidth <= viewportWidth || viewportWidth <= 0 || canvasWidth <= 0)
             {
                 return 0;
@@ -410,10 +421,10 @@ namespace Graphic_Editor
         /// <summary>
         /// Ограничение смещения по Y границами Canvas
         /// </summary>
-        private double ClampPanningOffsetY(double offsetY)
+        private double ClampPanningOffsetY(double offsetY, double zoom = 1.0)
         {
-            // Получаем размеры Canvas
-            double canvasHeight = _canvas.Height > 0 ? _canvas.Height : _canvas.ActualHeight;
+            // Получаем размеры Canvas с учетом масштаба
+            double canvasHeight = (_canvas.Height > 0 ? _canvas.Height : _canvas.ActualHeight) * zoom;
 
             // Получаем размеры видимой области (контейнера Canvas)
             FrameworkElement parent = _canvas.Parent as FrameworkElement;
@@ -421,7 +432,7 @@ namespace Graphic_Editor
 
             double viewportHeight = parent.ActualHeight;
 
-            // Если Canvas меньше или равен видимой области, не позволяем перемещение
+            // Если масштабированный Canvas меньше или равен видимой области, не позволяем перемещение
             if (canvasHeight <= viewportHeight || viewportHeight <= 0 || canvasHeight <= 0)
             {
                 return 0;

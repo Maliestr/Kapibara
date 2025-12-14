@@ -473,11 +473,32 @@
                 <ColumnDefinition Width="330"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Основной Canvas для всех элементов -->
-            <Canvas x:Name="MainCanvas" Background="#252525" 
-                    Grid.Row="1" Grid.ColumnSpan="3" Loaded="MainCanvas_Loaded"
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Width="5000" Height="5000"/>
+            <!-- Контейнер для Canvas и элементов поверх него -->
+            <Grid Grid.Row="1" Grid.ColumnSpan="3">
+                <!-- Основной Canvas для всех элементов -->
+                <Canvas x:Name="MainCanvas" Background="#252525" 
+                        Loaded="MainCanvas_Loaded"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Width="5000" Height="5000"/>
+                
+                <!-- Отображение масштаба в правом нижнем углу -->
+                <Border Background="#80000000" CornerRadius="5" 
+                        HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                        Margin="0,0,10,78" Padding="8,4">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Масштаб:" Foreground="White" 
+                                   VerticalAlignment="Center" Margin="0,0,5,0" FontSize="12"/>
+                        <TextBox x:Name="ZoomTextBox" Text="100%" Background="Transparent"
+                                 Height="20" Width="55"
+                                 Foreground="White" VerticalAlignment="Center"
+                                 AcceptsReturn="False" MaxLength="10"
+                                 BorderThickness="0" FontSize="12"
+                                 TextChanged="ZoomTextBox_TextChanged"
+                                 LostFocus="ZoomTextBox_LostFocus"
+                                 KeyDown="ZoomTextBox_KeyDown"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
 
             <Border x:Name="Titl" Grid.Column="0"
                     Width="270" Height="60"
@@ -503,6 +524,7 @@
                              AcceptsReturn="False" MaxLength="50"
                              BorderThickness="0" FontSize="16"
                              TextChanged="FileNameTextBox_TextChanged"/>
+
 
                     <ToggleButton x:Name="TogglePanelsButton" Style="{StaticResource TogglePanelsButtonStyle}"
                             Grid.Column="2" HorizontalAlignment="Right" 

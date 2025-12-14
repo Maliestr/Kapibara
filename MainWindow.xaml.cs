@@ -45,6 +45,7 @@ namespace Graphic_Editor
         private ClipboardManager clipboardManager; // Система буфера обмена и отмены/повтора
         private PoolManager poolManager; // Система управления пулами (swimlanes)
         private CanvasPanningManager canvasPanningManager;
+        private ZoomManager zoomManager; // Система масштабирования
         private AutoSave autoSave; // Система автоматического сохранения проекта
 
         // Константы
@@ -77,6 +78,8 @@ namespace Graphic_Editor
 
             // Добавляем обработчик клика по Canvas для сброса выделения
             MainCanvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
+            // Добавляем обработчик колесика мыши для масштабирования
+            MainCanvas.MouseWheel += MainCanvas_MouseWheel;
 
             // Кнопка курсора для обработки взаимодействия с объектами
             cursor.Click += CursorButton_Click;
@@ -112,6 +115,11 @@ namespace Graphic_Editor
             InitializePoolManager(); // Инициализация менеджера пулов
             canvasPanningManager = new CanvasPanningManager(MainCanvas);
             canvasPanningManager.Mode = CanvasPanningManager.PanningMode.MiddleButton;
+            zoomManager = new ZoomManager(MainCanvas);
+            zoomManager.ZoomChanged += ZoomManager_ZoomChanged;
+            // Передаем функцию получения текущего масштаба в панорамирование
+            canvasPanningManager.GetCurrentZoom = () => zoomManager?.CurrentZoom ?? 1.0;
+            UpdateZoomTextBox();
         }
 
         private void InitializeDragManager()
@@ -385,6 +393,17 @@ namespace Graphic_Editor
             }
         }
 
+        private void MainCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            // Масштабирование колесиком мыши при зажатом Ctrl
+            if (Keyboard.Modifiers == ModifierKeys.Control && zoomManager != null)
+            {
+                Point mousePosition = e.GetPosition(MainCanvas);
+                zoomManager.ZoomWithMouseWheel(e.Delta, mousePosition);
+                e.Handled = true;
+            }
+        }
+
         #endregion
 
         #region Обработчики клавиатуры
@@ -616,17 +635,73 @@ namespace Graphic_Editor
 
         private void ZoomIn_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Увеличить");
+            zoomManager?.ZoomIn();
         }
 
         private void ZoomOut_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Уменьшить");
+            zoomManager?.ZoomOut();
         }
 
         private void ResetZoom_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Сбросить масштаб");
+            zoomManager?.ResetZoom();
+        }
+
+        private void ZoomManager_ZoomChanged(double zoom)
+        {
+            UpdateZoomTextBox();
+        }
+
+        private void UpdateZoomTextBox()
+        {
+            if (ZoomTextBox != null && zoomManager != null)
+            {
+                int zoomPercent = (int)(zoomManager.CurrentZoom * 100);
+                ZoomTextBox.Text = $"{zoomPercent}%";
+            }
+        }
+
+        private void ZoomTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            // Обновление происходит при потере фокуса или нажатии Enter
+        }
+
+        private void ZoomTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            ApplyZoomFromTextBox();
+        }
+
+        private void ZoomTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                ApplyZoomFromTextBox();
+                e.Handled = true;
+            }
+        }
+
+        private void ApplyZoomFromTextBox()
+        {
+            if (ZoomTextBox == null || zoomManager == null) return;
+
+            string text = ZoomTextBox.Text.Trim();
+            if (string.IsNullOrEmpty(text)) return;
+
+            // Убираем символ процента, если есть
+            text = text.Replace("%", "").Trim();
+
+            if (double.TryParse(text, out double zoomPercent))
+            {
+                // Преобразуем проценты в коэффициент (100% = 1.0)
+                double zoom = zoomPercent / 100.0;
+                zoomManager.SetZoom(zoom, animate: true);
+            }
+            else
+            {
+                // Если не удалось распарсить, восстанавливаем текущее значение
+                UpdateZoomTextBox();
+            }
         }
 
         #endregion
