@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -13,7 +13,6 @@ namespace Graphic_Editor
         private UIElement element;
         private Canvas canvas;
         private Rectangle[] cornerHandles;
-        private Line[] edgeLines;
         private bool isResizing = false;
         private ResizeDirection resizeDirection;
         private Point startPoint;
@@ -85,7 +84,6 @@ namespace Graphic_Editor
         private void InitializeResizeHandles()
         {
             cornerHandles = new Rectangle[4];
-            edgeLines = new Line[4];
 
             // Угловые маркеры
             for (int i = 0; i < 4; i++)
@@ -109,27 +107,6 @@ namespace Graphic_Editor
                 cornerHandles[i].MouseLeave += Handle_MouseLeave;
 
                 canvas.Children.Add(cornerHandles[i]);
-            }
-
-            // Боковые линии
-            for (int i = 0; i < 4; i++)
-            {
-                edgeLines[i] = new Line
-                {
-                    Stroke = Brushes.Transparent,
-                    StrokeThickness = 6,
-                    Visibility = Visibility.Collapsed
-                };
-
-                edgeLines[i].MouseLeftButtonDown += EdgeLine_MouseLeftButtonDown;
-                edgeLines[i].MouseLeftButtonUp += ResizeHandle_MouseLeftButtonUp;
-                edgeLines[i].MouseMove += ResizeHandle_MouseMove;
-
-                // Добавляем обработчик для обновления курсора при наведении
-                edgeLines[i].MouseEnter += Handle_MouseEnter;
-                edgeLines[i].MouseLeave += Handle_MouseLeave;
-
-                canvas.Children.Add(edgeLines[i]);
             }
         }
 
@@ -196,12 +173,6 @@ namespace Graphic_Editor
                 handle.Visibility = Visibility.Visible;
                 Canvas.SetZIndex(handle, 1001);
             }
-
-            foreach (var line in edgeLines)
-            {
-                line.Visibility = Visibility.Visible;
-                Canvas.SetZIndex(line, 1001);
-            }
         }
 
         public void HideResizeHandles()
@@ -213,15 +184,6 @@ namespace Graphic_Editor
                 {
                     if (handle != null)
                         handle.Visibility = Visibility.Collapsed;
-                }
-            }
-
-            if (edgeLines != null)
-            {
-                foreach (var line in edgeLines)
-                {
-                    if (line != null)
-                        line.Visibility = Visibility.Collapsed;
                 }
             }
 
@@ -246,27 +208,6 @@ namespace Graphic_Editor
             PositionCornerHandle(cornerHandles[1], left + width - 4, top - 4, ResizeDirection.TopRight);
             PositionCornerHandle(cornerHandles[2], left + width - 4, top + height - 4, ResizeDirection.BottomRight);
             PositionCornerHandle(cornerHandles[3], left - 4, top + height - 4, ResizeDirection.BottomLeft);
-
-            // Боковые линии
-            PositionEdgeLine(edgeLines[0],
-                left, top - 3,
-                left + width, top - 3,
-                ResizeDirection.Top);
-
-            PositionEdgeLine(edgeLines[1],
-                left + width + 3, top,
-                left + width + 3, top + height,
-                ResizeDirection.Right);
-
-            PositionEdgeLine(edgeLines[2],
-                left, top + height + 3,
-                left + width, top + height + 3,
-                ResizeDirection.Bottom);
-
-            PositionEdgeLine(edgeLines[3],
-                left - 3, top,
-                left - 3, top + height,
-                ResizeDirection.Left);
         }
 
         private void PositionCornerHandle(Rectangle handle, double left, double top, ResizeDirection direction)
@@ -276,14 +217,6 @@ namespace Graphic_Editor
             handle.Tag = direction;
         }
 
-        private void PositionEdgeLine(Line line, double x1, double y1, double x2, double y2, ResizeDirection direction)
-        {
-            line.X1 = x1;
-            line.Y1 = y1;
-            line.X2 = x2;
-            line.Y2 = y2;
-            line.Tag = direction;
-        }
 
         private double GetElementWidth()
         {
@@ -314,11 +247,6 @@ namespace Graphic_Editor
         }
 
         private void CornerHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            StartResizing(sender, e);
-        }
-
-        private void EdgeLine_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             StartResizing(sender, e);
         }
@@ -562,17 +490,6 @@ namespace Graphic_Editor
                     if (handle != null && canvas.Children.Contains(handle))
                     {
                         canvas.Children.Remove(handle);
-                    }
-                }
-            }
-
-            if (edgeLines != null)
-            {
-                foreach (var line in edgeLines)
-                {
-                    if (line != null && canvas.Children.Contains(line))
-                    {
-                        canvas.Children.Remove(line);
                     }
                 }
             }

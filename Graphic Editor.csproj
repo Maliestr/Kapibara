@@ -68,6 +68,7 @@
     <Compile Include="functions\Help.cs" />
     <Compile Include="functions\fileSystem\AutoSave.cs" />
     <Compile Include="functions\PoolManager.cs" />
+    <Compile Include="functions\RectangleSelectionManager.cs" />
     <Compile Include="functions\ResizableElement.cs" />
     <Compile Include="functions\SelectionManager.cs" />
     <Page Include="MainWindow.xaml">

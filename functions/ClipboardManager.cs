@@ -154,6 +154,15 @@ namespace Graphic_Editor
         // Удаление выделенного элемента
         public void DeleteSelectedElement()
         {
+            var selectedElements = selectionManager?.SelectedElements.ToList() ?? new List<UIElement>();
+            
+            // Если выделено несколько элементов, используем метод для множественного удаления
+            if (selectedElements.Count > 1)
+            {
+                DeleteSelectedElements();
+                return;
+            }
+
             var selectedElement = selectionManager?.SelectedElement;
             if (selectedElement != null)
             {
@@ -170,6 +179,34 @@ namespace Graphic_Editor
                 mainCanvas.Children.Remove(selectedElement);
 
                 selectionManager.DeselectAll();
+                SelectionChanged?.Invoke();
+                UndoRedoStackChanged?.Invoke();
+            }
+        }
+
+        // Удаление нескольких выделенных элементов
+        public void DeleteSelectedElements()
+        {
+            var selectedElements = selectionManager?.SelectedElements.ToList() ?? new List<UIElement>();
+            if (selectedElements.Count > 0)
+            {
+                foreach (var element in selectedElements)
+                {
+                    // Сохраняем в стек отмены как удаление
+                    SaveToUndoStack(element, UndoActionType.Remove);
+
+                    // Удаляем ResizableElement если есть
+                    if (resizableElements.ContainsKey(element))
+                    {
+                        resizableElements[element].Dispose();
+                        resizableElements.Remove(element);
+                    }
+
+                    // Удаляем элемент
+                    mainCanvas.Children.Remove(element);
+                }
+
+                selectionManager.ClearSelection();
                 SelectionChanged?.Invoke();
                 UndoRedoStackChanged?.Invoke();
             }

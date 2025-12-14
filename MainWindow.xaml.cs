@@ -35,6 +35,7 @@ namespace Graphic_Editor
 
         // Системы управления
         private SelectionManager selectionManager; // Менеджер системы выделения
+        private RectangleSelectionManager rectangleSelectionManager; // Менеджер прямоугольного выделения
         private CommentManager commentManager; // Система комментариев
         private ArrowManager arrowManager; // Система рисования стрелок
         private TextManager textManager; // Система управления текстом
@@ -116,6 +117,7 @@ namespace Graphic_Editor
             InitializeDragManager(); // Делает фигуры в панели инструментов перетаскиваемыми
             InitializeArrowManager(); // Инициализация менеджера стрелок
             InitializeSelectionSystem(); // Настраивает систему выделения через SelectionManager
+            InitializeRectangleSelectionManager(); // Инициализация менеджера прямоугольного выделения
             InitializeFillStrokeManager(); // Инициализация менеджера заливки и обводки
             InitializeTextManager(); // Инициализация менеджера текста
             InitializeFileManager(); // Инициализация менеджера файлов
@@ -187,6 +189,7 @@ namespace Graphic_Editor
             {
                 // Обновляем состояние в других менеджерах, если нужно
                 poolManager?.UpdateSnapToGrid(isEnabled);
+                rectangleSelectionManager?.UpdateSnapToGrid();
             };
         }
 
@@ -294,8 +297,27 @@ namespace Graphic_Editor
                 return;
             }
 
-            // Если кликнули на пустую область канваса - снимаем выделение и скрываем ручки
-            if (e.OriginalSource == MainCanvas)
+            // Обработка прямоугольного выделения (только в режиме курсора)
+            if (isCursor && rectangleSelectionManager != null)
+            {
+                UIElement clickedElement = e.OriginalSource as UIElement;
+                
+                // Начинаем прямоугольное выделение только если клик на пустую область
+                if (clickedElement == MainCanvas || clickedElement == null)
+                {
+                    if (rectangleSelectionManager.HandleMouseLeftButtonDown(e, clickedElement))
+                    {
+                        e.Handled = true;
+                        return;
+                    }
+                }
+                // Если клик на элемент, не начинаем прямоугольное выделение
+                // (элемент будет обработан через другие обработчики)
+            }
+
+            // Если кликнули на пустую область канваса и не начали прямоугольное выделение
+            // - снимаем выделение и скрываем ручки
+            if (e.OriginalSource == MainCanvas && (rectangleSelectionManager == null || !rectangleSelectionManager.IsSelecting))
             {
                 DeselectAll();
                 HideAllResizeHandles();
@@ -316,7 +338,15 @@ namespace Graphic_Editor
                 return;
             }
 
-            // Обработка выделения
+            // Обработка прямоугольного выделения (только в режиме курсора)
+            if (isCursor && rectangleSelectionManager != null && rectangleSelectionManager.IsSelecting)
+            {
+                rectangleSelectionManager.HandleMouseMove(e);
+                e.Handled = true;
+                return;
+            }
+
+            // Обработка выделения (старая система)
             if (selectionManager?.IsSelecting == true)
             {
                 var currentPos = e.GetPosition(MainCanvas);
@@ -334,7 +364,15 @@ namespace Graphic_Editor
                 return;
             }
 
-            // Завершение выделения
+            // Завершение прямоугольного выделения (только в режиме курсора)
+            if (isCursor && rectangleSelectionManager != null && rectangleSelectionManager.IsSelecting)
+            {
+                rectangleSelectionManager.HandleMouseLeftButtonUp(e);
+                e.Handled = true;
+                return;
+            }
+
+            // Завершение выделения (старая система)
             if (selectionManager?.IsSelecting == true)
             {
                 selectionManager.EndSelection();
@@ -1597,6 +1635,15 @@ namespace Graphic_Editor
             MainCanvas.MouseMove += MainCanvas_MouseMove;
             MainCanvas.MouseLeftButtonUp += MainCanvas_MouseLeftButtonUp;
             MainCanvas.MouseRightButtonDown += MainCanvas_MouseRightButtonDown;
+        }
+
+        private void InitializeRectangleSelectionManager()
+        {
+            rectangleSelectionManager = new RectangleSelectionManager(
+                MainCanvas,
+                selectionManager,
+                resizableElements,
+                gridManager);
         }
 
         #endregion
