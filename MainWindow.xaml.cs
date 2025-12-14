@@ -256,6 +256,16 @@ namespace Graphic_Editor
                 MakeCanvasShapeDraggable);
 
             // Подписываемся на события для обновления интерфейса
+            clipboardManager.SelectionChanged += UpdateSelectionInfo;
+            
+            // Подписываемся на события выделения
+            if (selectionManager != null)
+            {
+                selectionManager.OnSelectionCleared += UpdateSelectionInfo;
+            }
+            
+            UpdateSelectionInfo();
+            
             clipboardManager.SelectionChanged += () =>
             {
                 // Обновляем состояние меню/кнопок если нужно
@@ -930,6 +940,13 @@ namespace Graphic_Editor
             FillPanel.Visibility = Visibility.Collapsed;
             StrokePanel.Visibility = Visibility.Collapsed;
             TextPanel.Visibility = Visibility.Collapsed;
+            
+            // Инициализируем панель информации о выделении
+            var selectionInfoPanel = FindName("SelectionInfoPanel") as Border;
+            if (selectionInfoPanel != null)
+            {
+                selectionInfoPanel.Visibility = Visibility.Collapsed;
+            }
         }
 
         private void TogglePanelsButton_Click(object sender, RoutedEventArgs e)
@@ -1131,6 +1148,28 @@ namespace Graphic_Editor
                 if (resizableElements.ContainsKey(selectedShape))
                 {
                     resizableElements[selectedShape].ShowResizeHandles();
+                }
+            }
+        }
+
+        private void UpdateSelectionInfo()
+        {
+            if (selectionManager == null) return;
+            
+            var selectedCount = selectionManager.SelectedElements.Count;
+            var selectionInfoPanel = FindName("SelectionInfoPanel") as Border;
+            var selectedCountTextBlock = FindName("SelectedCountTextBlock") as TextBlock;
+            
+            if (selectionInfoPanel != null && selectedCountTextBlock != null)
+            {
+                if (selectedCount > 1)
+                {
+                    selectionInfoPanel.Visibility = Visibility.Visible;
+                    selectedCountTextBlock.Text = $"Выделено элементов: {selectedCount}";
+                }
+                else
+                {
+                    selectionInfoPanel.Visibility = Visibility.Collapsed;
                 }
             }
         }
@@ -1629,6 +1668,8 @@ namespace Graphic_Editor
             // Подписываемся на события выделения для обновления панелей свойств
             selectionManager.OnElementSelected += (element) =>
             {
+                UpdateSelectionInfo();
+                
                 if (element != null)
                 {
                     // Обновляем комбо-боксы в соответствии с цветами фигуры
@@ -1653,6 +1694,8 @@ namespace Graphic_Editor
 
             selectionManager.OnSelectionCleared += () =>
             {
+                UpdateSelectionInfo();
+                
                 // Скрываем панели свойств
                 StrokeWidthPanel.Visibility = Visibility.Collapsed;
                 DimensionsPanel.Visibility = Visibility.Collapsed;
