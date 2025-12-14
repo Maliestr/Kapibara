@@ -572,11 +572,18 @@ namespace Graphic_Editor
             }
             else if (elementName == "Square")
             {
+                // Получаем оригинальный цвет заливки
+                Brush originalBackground = Brushes.Transparent;
+                if (original is Border originalBorder)
+                {
+                    originalBackground = originalBorder.Background ?? Brushes.Transparent;
+                }
+                
                 var copy = new Border
                 {
                     Width = 100,
                     Height = 100,
-                    Background = Brushes.White,
+                    Background = originalBackground,
                     BorderBrush = Brushes.White,
                     BorderThickness = new Thickness(2),
                     CornerRadius = new CornerRadius(0),
@@ -587,11 +594,18 @@ namespace Graphic_Editor
             }
             else if (elementName == "ResizableSquare")
             {
+                // Получаем оригинальный цвет заливки
+                Brush originalBackground = Brushes.Transparent;
+                if (original is Border originalBorder)
+                {
+                    originalBackground = originalBorder.Background ?? Brushes.Transparent;
+                }
+                
                 var copy = new Border
                 {
                     Width = 70,
                     Height = 71,
-                    Background = Brushes.White,
+                    Background = originalBackground,
                     BorderBrush = Brushes.White,
                     BorderThickness = new Thickness(2),
                     CornerRadius = new CornerRadius(0),
@@ -604,11 +618,18 @@ namespace Graphic_Editor
             }
             else if (elementName == "Rectangle")
             {
+                // Получаем оригинальный цвет заливки
+                Brush originalBackground = Brushes.Transparent;
+                if (original is Border originalBorder)
+                {
+                    originalBackground = originalBorder.Background ?? Brushes.Transparent;
+                }
+                
                 var copy = new Border
                 {
                     Width = 150,
                     Height = 80,
-                    Background = Brushes.White,
+                    Background = originalBackground,
                     BorderBrush = Brushes.White,
                     BorderThickness = new Thickness(2),
                     CornerRadius = new CornerRadius(0),
@@ -619,11 +640,18 @@ namespace Graphic_Editor
             }
             else if (elementName == "stick")
             {
+                // Получаем оригинальный цвет заливки
+                Brush originalBackground = Brushes.White;
+                if (original is Border originalBorder)
+                {
+                    originalBackground = originalBorder.Background ?? Brushes.White;
+                }
+                
                 var copy = new Border
                 {
                     Width = 200,
                     Height = 30,
-                    Background = Brushes.White,
+                    Background = originalBackground,
                     BorderBrush = Brushes.White,
                     BorderThickness = new Thickness(2),
                     CornerRadius = new CornerRadius(0),
@@ -634,11 +662,18 @@ namespace Graphic_Editor
             }
             else if (elementName == "SuperEllipse")
             {
+                // Получаем оригинальный цвет заливки
+                Brush originalBackground = Brushes.Transparent;
+                if (original is Border originalBorder)
+                {
+                    originalBackground = originalBorder.Background ?? Brushes.Transparent;
+                }
+                
                 var copy = new Border
                 {
                     Width = 120,
                     Height = 80,
-                    Background = Brushes.White,
+                    Background = originalBackground,
                     BorderBrush = Brushes.White,
                     BorderThickness = new Thickness(2),
                     CornerRadius = new CornerRadius(10),
