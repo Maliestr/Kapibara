@@ -11,7 +11,7 @@ namespace Graphic_Editor
     {
         // Ссылки на элементы UI
         private Canvas mainCanvas;
-        private Path gridPath;
+        private Rectangle gridRectangle; // Используем Rectangle вместо Path для более быстрого рендеринга
         private MenuItem gridToggleMenuItem;
         private MenuItem snapToGridMenuItem;
         private DragManager dragManager;
@@ -20,6 +20,8 @@ namespace Graphic_Editor
         private bool isGridEnabled = false;
         private bool isSnapToGridEnabled = false;
         private const double GridSize = 20; // Размер ячейки сетки в пикселях
+        private bool isGridCreating = false; // Флаг для предотвращения множественных одновременных созданий
+        private bool isGridInitialized = false; // Флаг для ленивой инициализации
 
         // Делегаты для обратного вызова
         public Action<bool> OnGridToggled;
@@ -36,56 +38,112 @@ namespace Graphic_Editor
             snapToGridMenuItem = snapMenuItem ?? throw new ArgumentNullException(nameof(snapMenuItem));
             this.dragManager = dragManager;
 
-            InitializeGrid();
+            // Ленивая инициализация - не создаем gridPath до первого использования
+            // InitializeGrid() будет вызван только когда сетка действительно понадобится
         }
 
-        private void InitializeGrid()
+        private void EnsureGridInitialized()
         {
-            gridPath = new Path
+            if (isGridInitialized)
+                return;
+
+            isGridInitialized = true;
+
+            // Создаем DrawingBrush с паттерном сетки - это намного быстрее, чем создавать тысячи линий
+            var gridBrush = CreateGridBrush();
+
+            gridRectangle = new Rectangle
             {
-                Stroke = new SolidColorBrush(Color.FromArgb(60, 128, 128, 128)),
-                StrokeThickness = 0.5,
+                Fill = gridBrush,
                 IsHitTestVisible = false
             };
 
-            // Добавляем сетку на Canvas, но скрываем
-            mainCanvas.Children.Add(gridPath);
-            gridPath.Visibility = Visibility.Collapsed;
+            // Используем BitmapCache для кеширования сетки как растрового изображения
+            var bitmapCache = new BitmapCache();
+            bitmapCache.RenderAtScale = 1.0;
+            bitmapCache.EnableClearType = false;
+            bitmapCache.SnapsToDevicePixels = true;
+            
+            gridRectangle.CacheMode = bitmapCache;
 
-            // Подписываемся на событие изменения размера
+            // Добавляем сетку на Canvas, но скрываем
+            mainCanvas.Children.Add(gridRectangle);
+            gridRectangle.Visibility = Visibility.Collapsed;
+            
+            // Устанавливаем Z-индекс, чтобы сетка была на заднем плане
+            Canvas.SetZIndex(gridRectangle, -1);
+
+            // Подписываемся на событие изменения размера только после инициализации
             mainCanvas.SizeChanged += (s, e) => UpdateGrid();
+        }
+
+        private DrawingBrush CreateGridBrush()
+        {
+            // Создаем маленький паттерн сетки (одна ячейка) - это намного быстрее, чем тысячи линий
+            var geometry = new GeometryGroup();
+            
+            // Вертикальная линия справа (будет повторяться для всех вертикальных линий)
+            var verticalLine = new LineGeometry(new Point(GridSize, 0), new Point(GridSize, GridSize));
+            // Горизонтальная линия снизу (будет повторяться для всех горизонтальных линий)
+            var horizontalLine = new LineGeometry(new Point(0, GridSize), new Point(GridSize, GridSize));
+            
+            geometry.Children.Add(verticalLine);
+            geometry.Children.Add(horizontalLine);
+            geometry.Freeze();
+            
+            var pen = new Pen(new SolidColorBrush(Color.FromArgb(120, 128, 128, 128)), 0.5);
+            pen.Freeze();
+            
+            var drawing = new GeometryDrawing(null, pen, geometry);
+            drawing.Freeze();
+            
+            var drawingGroup = new DrawingGroup();
+            drawingGroup.Children.Add(drawing);
+            drawingGroup.Freeze();
+            
+            var brush = new DrawingBrush(drawingGroup)
+            {
+                TileMode = TileMode.Tile,
+                Viewport = new Rect(0, 0, GridSize, GridSize),
+                ViewportUnits = BrushMappingMode.Absolute,
+                Stretch = Stretch.None
+            };
+            
+            brush.Freeze();
+            return brush;
         }
 
         public void CreateGrid()
         {
-            if (mainCanvas.ActualWidth == 0 || mainCanvas.ActualHeight == 0)
+            // Убеждаемся, что gridRectangle инициализирован
+            EnsureGridInitialized();
+
+            // Предотвращаем множественные одновременные создания
+            if (isGridCreating)
                 return;
 
-            var geometryGroup = new GeometryGroup();
+            // Получаем размеры Canvas
+            double canvasWidth = mainCanvas.Width > 0 ? mainCanvas.Width : mainCanvas.ActualWidth;
+            double canvasHeight = mainCanvas.Height > 0 ? mainCanvas.Height : mainCanvas.ActualHeight;
 
-            // Вертикальные линии
-            for (double x = 0; x < mainCanvas.ActualWidth; x += GridSize)
+            if (canvasWidth == 0 || canvasHeight == 0)
+                return;
+
+            // С DrawingBrush сетка создается мгновенно - просто обновляем размеры Rectangle
+            if (gridRectangle != null)
             {
-                geometryGroup.Children.Add(new LineGeometry(
-                    new Point(x, 0),
-                    new Point(x, mainCanvas.ActualHeight)));
+                Canvas.SetLeft(gridRectangle, 0);
+                Canvas.SetTop(gridRectangle, 0);
+                gridRectangle.Width = canvasWidth;
+                gridRectangle.Height = canvasHeight;
             }
-
-            // Горизонтальные линии
-            for (double y = 0; y < mainCanvas.ActualHeight; y += GridSize)
-            {
-                geometryGroup.Children.Add(new LineGeometry(
-                    new Point(0, y),
-                    new Point(mainCanvas.ActualWidth, y)));
-            }
-
-            gridPath.Data = geometryGroup;
         }
 
         public void UpdateGrid()
         {
-            if (isGridEnabled)
+            if (isGridEnabled && isGridInitialized)
             {
+                // С DrawingBrush обновление происходит мгновенно
                 CreateGrid();
             }
         }
@@ -102,16 +160,24 @@ namespace Graphic_Editor
 
             if (isGridEnabled)
             {
-                // Создаем и показываем сетку
+                // Инициализируем gridRectangle только при первом включении
+                EnsureGridInitialized();
+                
+                // Создаем сетку мгновенно (DrawingBrush работает очень быстро)
                 CreateGrid();
-                gridPath.Visibility = Visibility.Visible;
+                
+                // Показываем сетку
+                gridRectangle.Visibility = Visibility.Visible;
                 gridToggleMenuItem.IsChecked = true;
                 gridToggleMenuItem.Header = "Скрыть сетку";
             }
             else
             {
-                // Скрываем сетку
-                gridPath.Visibility = Visibility.Collapsed;
+                // Скрываем сетку (если она была инициализирована)
+                if (isGridInitialized && gridRectangle != null)
+                {
+                    gridRectangle.Visibility = Visibility.Collapsed;
+                }
                 gridToggleMenuItem.IsChecked = false;
                 gridToggleMenuItem.Header = "Показать сетку";
             }
@@ -139,8 +205,10 @@ namespace Graphic_Editor
                 if (!isGridEnabled)
                 {
                     isGridEnabled = true;
+                    // Инициализируем gridRectangle только при первом включении
+                    EnsureGridInitialized();
                     CreateGrid();
-                    gridPath.Visibility = Visibility.Visible;
+                    gridRectangle.Visibility = Visibility.Visible;
                     gridToggleMenuItem.IsChecked = true;
                     gridToggleMenuItem.Header = "Скрыть сетку";
                 }
@@ -182,7 +250,7 @@ namespace Graphic_Editor
             foreach (UIElement element in mainCanvas.Children)
             {
                 // Пропускаем сетку и другие служебные элементы
-                if (element == gridPath || element is Path)
+                if ((isGridInitialized && element == gridRectangle) || element is Path)
                     continue;
 
                 // Пропускаем элементы из панели нотации

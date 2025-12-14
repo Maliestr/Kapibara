@@ -44,6 +44,7 @@ namespace Graphic_Editor
         private GridManager gridManager; // Система сетки
         private ClipboardManager clipboardManager; // Система буфера обмена и отмены/повтора
         private PoolManager poolManager; // Система управления пулами (swimlanes)
+        private CanvasPanningManager canvasPanningManager;
         private AutoSave autoSave; // Система автоматического сохранения проекта
 
         // Константы
@@ -109,6 +110,8 @@ namespace Graphic_Editor
             InitializeCommentManager(); // Инициализация менеджера комментариев
             InitializeClipboardManager(); // Инициализация менеджера буфера обмена и отмены/повтора
             InitializePoolManager(); // Инициализация менеджера пулов
+            canvasPanningManager = new CanvasPanningManager(MainCanvas);
+            canvasPanningManager.Mode = CanvasPanningManager.PanningMode.MiddleButton;
         }
 
         private void InitializeDragManager()

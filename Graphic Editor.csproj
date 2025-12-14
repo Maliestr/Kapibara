@@ -58,6 +58,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="functions\ArrowManager.cs" />
+    <Compile Include="functions\CanvasPanningManager.cs" />
     <Compile Include="functions\ClipboardManager.cs" />
     <Compile Include="functions\CommentManager.cs" />
     <Compile Include="functions\DragManager.cs" />
