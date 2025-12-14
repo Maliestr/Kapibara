@@ -136,7 +136,13 @@ namespace Graphic_Editor
             if (element is FrameworkElement frameworkElement)
             {
                 frameworkElement.Opacity = 1;
-                frameworkElement.ContextMenu = null;
+                
+                // Закрываем контекстное меню перед удалением, чтобы избежать появления стандартного меню
+                if (frameworkElement.ContextMenu != null)
+                {
+                    frameworkElement.ContextMenu.IsOpen = false;
+                    frameworkElement.ContextMenu = null;
+                }
             }
 
             if (element == selectedElement)

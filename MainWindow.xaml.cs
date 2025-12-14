@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.Win32;
 using System.IO;
 using System.Windows.Media.Imaging;
@@ -77,6 +77,10 @@ namespace Graphic_Editor
 
             // Добавляем обработчик клика по Canvas для сброса выделения
             MainCanvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
+            
+            // Перехватываем события правой кнопки мыши на уровне Preview для предотвращения стандартного меню
+            MainCanvas.PreviewMouseRightButtonDown += MainCanvas_PreviewMouseRightButtonDown;
+            this.PreviewMouseRightButtonDown += MainWindow_PreviewMouseRightButtonDown;
 
             // Кнопка курсора для обработки взаимодействия с объектами
             cursor.Click += CursorButton_Click;
@@ -96,6 +100,14 @@ namespace Graphic_Editor
             this.Closing += MainWindow_Closing;
 
             MainCanvas.Loaded += MainCanvas_Loaded;
+
+            // Устанавливаем пустое контекстное меню на Canvas и Window, чтобы предотвратить показ стандартного меню
+            MainCanvas.ContextMenu = new ContextMenu { IsEnabled = false };
+            this.ContextMenu = new ContextMenu { IsEnabled = false };
+
+            // Обработчики для предотвращения показа стандартного контекстного меню
+            this.ContextMenuOpening += MainWindow_ContextMenuOpening;
+            MainCanvas.ContextMenuOpening += MainCanvas_ContextMenuOpening;
         }
 
         private void InitializeManagers()
@@ -381,6 +393,101 @@ namespace Graphic_Editor
             {
                 // Завершаем рисование стрелки по правой кнопке
                 arrowManager.CompleteArrow();
+                e.Handled = true;
+                return;
+            }
+
+            // Если клик на пустой области Canvas, предотвращаем показ стандартного контекстного меню
+            if (e.OriginalSource == MainCanvas)
+            {
+                e.Handled = true;
+            }
+        }
+
+        private void MainCanvas_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Если клик на пустой области Canvas или элемент без контекстного меню, предотвращаем стандартное меню
+            if (e.OriginalSource == MainCanvas)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            // Если элемент имеет контекстное меню, позволяем ему обработать событие
+            FrameworkElement source = e.OriginalSource as FrameworkElement;
+            if (source != null && source.ContextMenu == null)
+            {
+                // Проверяем родительские элементы на наличие контекстного меню
+                DependencyObject parent = VisualTreeHelper.GetParent(source);
+                bool hasContextMenu = false;
+                while (parent != null)
+                {
+                    if (parent is FrameworkElement fe && fe.ContextMenu != null)
+                    {
+                        hasContextMenu = true;
+                        break;
+                    }
+                    parent = VisualTreeHelper.GetParent(parent);
+                }
+
+                // Если ни у одного родителя нет контекстного меню, предотвращаем стандартное
+                if (!hasContextMenu)
+                {
+                    e.Handled = true;
+                }
+            }
+        }
+
+        private void MainWindow_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Предотвращаем стандартное контекстное меню на уровне Window
+            FrameworkElement source = e.OriginalSource as FrameworkElement;
+            
+            // Если источник - Window или элемент без контекстного меню, предотвращаем
+            if (source == this || (source != null && source.ContextMenu == null && 
+                !(source is MenuItem) && !(source is ContextMenu)))
+            {
+                // Проверяем, не является ли источник частью контекстного меню
+                DependencyObject parent = VisualTreeHelper.GetParent(source);
+                bool isPartOfContextMenu = false;
+                while (parent != null)
+                {
+                    if (parent is ContextMenu || parent is MenuItem)
+                    {
+                        isPartOfContextMenu = true;
+                        break;
+                    }
+                    parent = VisualTreeHelper.GetParent(parent);
+                }
+
+                if (!isPartOfContextMenu)
+                {
+                    e.Handled = true;
+                }
+            }
+        }
+
+        private void MainWindow_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            // Предотвращаем показ стандартного контекстного меню на уровне Window
+            FrameworkElement source = e.Source as FrameworkElement;
+            
+            // Если источник - Window, отменяем
+            if (source == this)
+            {
+                e.Handled = true;
+                return;
+            }
+        }
+
+        private void MainCanvas_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            // Предотвращаем показ стандартного контекстного меню на Canvas
+            FrameworkElement source = e.Source as FrameworkElement;
+            
+            // Если источник - Canvas или элемент без кастомного контекстного меню, отменяем
+            if (source == MainCanvas || (source != null && source.ContextMenu == null))
+            {
                 e.Handled = true;
             }
         }
@@ -1084,39 +1191,86 @@ namespace Graphic_Editor
 
         private void CreateContextMenu(FrameworkElement element)
         {
-            ContextMenu contextMenu = new ContextMenu
+            ContextMenu contextMenu = new ContextMenu();
+            
+            // Флаги для отслеживания действий, которые нужно выполнить после закрытия меню
+            bool shouldCut = false;
+            bool shouldDelete = false;
+
+            // Обработчик открытия меню
+            contextMenu.Opened += (s, e) =>
             {
-                Background = Brushes.White,
-                Foreground = Brushes.Black,
-                FontSize = 12,
-                Padding = new Thickness(5)
+                // Убеждаемся, что меню использует наш стиль
+                e.Handled = false;
+            };
+
+            // Обработчик закрытия меню - выполняем действия сразу после закрытия
+            contextMenu.Closed += (s, e) =>
+            {
+                // Убеждаемся, что меню полностью закрыто
+                contextMenu.IsOpen = false;
+                
+                // Выполняем отложенные действия сразу после закрытия (минимальная задержка)
+                if (shouldCut)
+                {
+                    shouldCut = false;
+                    // Используем минимальную задержку для гарантии закрытия меню
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        clipboardManager?.CutSelectedElement();
+                    }), System.Windows.Threading.DispatcherPriority.Render);
+                }
+                else if (shouldDelete)
+                {
+                    shouldDelete = false;
+                    // Используем минимальную задержку для гарантии закрытия меню
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        clipboardManager?.DeleteSelectedElement();
+                    }), System.Windows.Threading.DispatcherPriority.Render);
+                }
             };
 
             // Пункт "Вырезать"
             MenuItem cutMenuItem = new MenuItem
             {
-                Header = "Вырезать (Ctrl+X)",
-                Icon = new TextBlock { Text = "✂", FontSize = 14 }
+                Header = "Вырезать",
+                InputGestureText = "Ctrl+X"
             };
-            cutMenuItem.Click += (s, e) => clipboardManager?.CutSelectedElement(); // Используем clipboardManager
+            cutMenuItem.Click += (s, e) =>
+            {
+                e.Handled = true;
+                // Устанавливаем флаг для выполнения после закрытия меню
+                shouldCut = true;
+                // Закрываем меню - действие выполнится в обработчике Closed
+                contextMenu.IsOpen = false;
+            };
             contextMenu.Items.Add(cutMenuItem);
 
             // Пункт "Копировать"
             MenuItem copyMenuItem = new MenuItem
             {
-                Header = "Копировать (Ctrl+C)",
-                Icon = new TextBlock { Text = "📄", FontSize = 14 }
+                Header = "Копировать",
+                InputGestureText = "Ctrl+C"
             };
-            copyMenuItem.Click += (s, e) => clipboardManager?.CopySelectedElement(); // Используем clipboardManager
+            copyMenuItem.Click += (s, e) =>
+            {
+                e.Handled = true;
+                clipboardManager?.CopySelectedElement();
+            };
             contextMenu.Items.Add(copyMenuItem);
 
             // Пункт "Вставить"
             MenuItem pasteMenuItem = new MenuItem
             {
-                Header = "Вставить (Ctrl+V)",
-                Icon = new TextBlock { Text = "📋", FontSize = 14 }
+                Header = "Вставить",
+                InputGestureText = "Ctrl+V"
             };
-            pasteMenuItem.Click += (s, e) => clipboardManager?.PasteElement(); // Используем clipboardManager
+            pasteMenuItem.Click += (s, e) =>
+            {
+                e.Handled = true;
+                clipboardManager?.PasteElement();
+            };
             contextMenu.Items.Add(pasteMenuItem);
 
             contextMenu.Items.Add(new Separator());
@@ -1124,10 +1278,17 @@ namespace Graphic_Editor
             // Пункт "Удалить"
             MenuItem deleteMenuItem = new MenuItem
             {
-                Header = "Удалить (Delete)",
-                Icon = new TextBlock { Text = "🗑", FontSize = 14 }
+                Header = "Удалить",
+                InputGestureText = "Delete"
             };
-            deleteMenuItem.Click += (s, e) => clipboardManager?.DeleteSelectedElement(); // Используем clipboardManager
+            deleteMenuItem.Click += (s, e) =>
+            {
+                e.Handled = true;
+                // Устанавливаем флаг для выполнения после закрытия меню
+                shouldDelete = true;
+                // Закрываем меню - действие выполнится в обработчике Closed
+                contextMenu.IsOpen = false;
+            };
             contextMenu.Items.Add(deleteMenuItem);
 
             contextMenu.Items.Add(new Separator());
@@ -1135,19 +1296,25 @@ namespace Graphic_Editor
             // Пункт "Перенести на передний план"
             MenuItem bringToFrontMenuItem = new MenuItem
             {
-                Header = "Перенести на передний план",
-                Icon = new TextBlock { Text = "⬆", FontSize = 14 }
+                Header = "Перенести на передний план"
             };
-            bringToFrontMenuItem.Click += (s, e) => BringToFront(element);
+            bringToFrontMenuItem.Click += (s, e) =>
+            {
+                e.Handled = true;
+                BringToFront(element);
+            };
             contextMenu.Items.Add(bringToFrontMenuItem);
 
             // Пункт "Перенести на задний план"
             MenuItem sendToBackMenuItem = new MenuItem
             {
-                Header = "Перенести на задний план",
-                Icon = new TextBlock { Text = "⬇", FontSize = 14 }
+                Header = "Перенести на задний план"
             };
-            sendToBackMenuItem.Click += (s, e) => SendToBack(element);
+            sendToBackMenuItem.Click += (s, e) =>
+            {
+                e.Handled = true;
+                SendToBack(element);
+            };
             contextMenu.Items.Add(sendToBackMenuItem);
 
             // Устанавливаем контекстное меню для элемента
