@@ -19,7 +19,7 @@
         Background="#FF252525"
         FontFamily="Gotham Pro">
     <!--Widht и Height нужны для правильной визуализации окна-->
-    
+    <!--есть тесты-->
     <Window.Resources>
         <!-- Общий стиль для кнопок заголовка (минимизация/максимизация) с подсветкой при наведении -->
         <Style x:Key="TitleBarButtonStyle" TargetType="Button">
@@ -120,6 +120,248 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Стиль для всех ToolTip -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="#565656"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                BorderThickness="0">
+                            <ContentPresenter Content="{TemplateBinding Content}"
+                                            Margin="{TemplateBinding Padding}"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Стиль для выпадающего меню и наведения (применяется ко всем MenuItem) -->
+        <Style TargetType="MenuItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="12"/>
+            
+            <Style.Resources>
+                <!-- Стиль для разделителей -->
+                <Style TargetType="Separator">
+                    <Setter Property="Background" Value="#555555"/>
+                    <Setter Property="Margin" Value="8,2"/>
+                    <Setter Property="Height" Value="1"/>
+                </Style>
+            </Style.Resources>
+            
+            <Style.Triggers>
+                <!-- Стиль для верхнего уровня меню (кнопки вверху) -->
+                <Trigger Property="Role" Value="TopLevelHeader">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="MenuItem">
+                                <Grid x:Name="Grid">
+                                    <!-- Основная кнопка верхнего уровня -->
+                                    <Border x:Name="Border"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="0"
+                                            CornerRadius="4"
+                                            Padding="8,6"
+                                            Margin="0,0,0,0">
+                                        <ContentPresenter x:Name="Content"
+                                                          ContentSource="Header"
+                                                          RecognizesAccessKey="True"
+                                                          VerticalAlignment="Center"
+                                                          HorizontalAlignment="Left"/>
+                                    </Border>
+                                    
+                                    <!-- Выпадающее меню для верхнего уровня -->
+                                    <Popup x:Name="PART_Popup"
+                                           Placement="Bottom"
+                                           HorizontalOffset="0"
+                                           VerticalOffset="2"
+                                           AllowsTransparency="True"
+                                           PopupAnimation="Fade"
+                                           StaysOpen="False"
+                                           IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
+                                        <Border x:Name="SubMenuBorder"
+                                                Background="#FF343434"
+                                                BorderBrush="#555555"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="4">
+
+                                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
+                                
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="#3A3A3A"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="#272727"/>
+                                    </Trigger>
+                                    <Trigger Property="IsSubmenuOpen" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="#272727"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Foreground" Value="#888888"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+                
+                <!-- Стиль для элементов внутри выпадающего меню -->
+                <Trigger Property="Role" Value="SubmenuItem">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="MenuItem">
+                                <Grid x:Name="Grid">
+                                    <!-- Основная часть кнопки меню -->
+                                    <Border x:Name="Bg" 
+                                            Background="Transparent"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="0"
+                                            CornerRadius="3"
+                                            Padding="10,6">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <!-- Текст -->
+                                            <ContentPresenter x:Name="HeaderHost" 
+                                                              Grid.Column="1"
+                                                              ContentSource="Header"
+                                                              RecognizesAccessKey="True"
+                                                              VerticalAlignment="Center"/>
+                                            
+                                            <!-- Горячие клавиши -->
+                                            <TextBlock x:Name="InputGestureText"
+                                                       Grid.Column="2"
+                                                       Text="{TemplateBinding InputGestureText}"
+                                                       Foreground="#AAAAAA"
+                                                       Margin="10,0,0,0"
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                    
+                                    <!-- Выпадающее меню -->
+                                    <Popup x:Name="PART_Popup"
+                                           Placement="Right"
+                                           HorizontalOffset="-4"
+                                           VerticalOffset="-2"
+                                           AllowsTransparency="True"
+                                           PopupAnimation="Fade"
+                                           StaysOpen="False"
+                                           IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
+                                        <Border x:Name="SubMenuBorder"
+                                                Background="#FF343434"
+                                                BorderBrush="#555555"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="4">
+
+                                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
+                                
+                                <ControlTemplate.Triggers>
+                                    <!-- Наведение на основную кнопку -->
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bg" Property="Background" Value="#3F3F3F"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                    
+                                    <!-- Нажатие на основную кнопку -->
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="Bg" Property="Background" Value="#272727"/>
+                                    </Trigger>
+                                    
+                                    <!-- Когда меню открыто -->
+                                    <Trigger Property="IsSubmenuOpen" Value="True">
+                                        <Setter TargetName="Bg" Property="Background" Value="#272727"/>
+                                    </Trigger>
+                                    
+                                    <!-- Отключенное состояние -->
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Foreground" Value="#888888"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+                
+                <!-- Стиль для обычных элементов меню (без подменю) -->
+                <Trigger Property="Role" Value="TopLevelItem">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="MenuItem">
+                                <Border x:Name="Border"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"
+                                        BorderThickness="0"
+                                        CornerRadius="3"
+                                        Padding="10,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <!-- Текст -->
+                                        <ContentPresenter x:Name="Content"
+                                                          Grid.Column="1"
+                                                          ContentSource="Header"
+                                                          RecognizesAccessKey="True"
+                                                          VerticalAlignment="Center"/>
+                                        
+                                        <!-- Горячие клавиши -->
+                                        <TextBlock x:Name="GestureText"
+                                                   Grid.Column="2"
+                                                   Text="{TemplateBinding InputGestureText}"
+                                                   Foreground="#AAAAAA"
+                                                   Margin="10,0,0,0"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                                
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="#3F3F3F"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="#272727"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Foreground" Value="#888888"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
     <WindowChrome.WindowChrome>
@@ -136,7 +378,8 @@
 
         <!-- Title Bar -->
         <Border Grid.Row="0" Background="#424242"
-                MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                MouseLeftButtonDown="TitleBar_MouseLeftButtonDown"
+                Panel.ZIndex="1000">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -149,8 +392,8 @@
                     <Image Source="/Icons/L.png" Width="25.82" Height="25.82" Margin="15,11,15,3"/>
 
                     <Menu Background="Transparent" FontSize="12" Foreground="White" 
-                          WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom" Height="34">
-                        <MenuItem Header="Файл" Margin="0,2,18,0" Height="32">
+                          WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Bottom" Height="32">
+                        <MenuItem Header="Файл" Margin="0,0,18,0" Height="32">
                             <MenuItem Header="Новый" Click="NewFile_Click"/>
                             <MenuItem Header="Открыть..." Click="OpenFile_Click"/>
                             <MenuItem Header="Сохранить" Click="SaveFile_Click"/>
@@ -161,7 +404,7 @@
                             <MenuItem Header="Выход" Click="Exit_Click"/>
                         </MenuItem>
 
-                        <MenuItem Header="Вид" Margin="0,2,18,0" Height="32" Width="36">
+                        <MenuItem Header="Вид" Margin="0,0,18,0" Height="32" Width="36">
                             <MenuItem Header="Увеличить" Click="ZoomIn_Click"/>
                             <MenuItem Header="Уменьшить" Click="ZoomOut_Click"/>
                             <MenuItem Header="Сбросить масштаб" Click="ResetZoom_Click"/>
@@ -177,7 +420,7 @@
                                       IsCheckable="True"/>
                         </MenuItem>
 
-                        <MenuItem Header="Правка" Margin="0,2,18,0" Height="32">
+                        <MenuItem Header="Правка" Margin="0,0,18,0" Height="32">
                             <MenuItem Header="Отменить" InputGestureText="Ctrl+Z" Click="Undo_Click"/>
                             <MenuItem Header="Повторить" InputGestureText="Ctrl+Y" Click="Redo_Click"/>
                             <Separator/>
@@ -189,7 +432,7 @@
                             <MenuItem Header="Удалить" InputGestureText="Delete"/>
                         </MenuItem>
 
-                        <MenuItem Header="Справка" Height="32" Margin="0,2,0,0">
+                        <MenuItem Header="Справка" Height="32" Margin="0,0,0,0">
                             <MenuItem Header="Справка" InputGestureText="F1" Click="Help_Click"/>
                             <MenuItem Header="О программе" Click="About_Click"/>
                         </MenuItem>
@@ -232,9 +475,9 @@
 
             <!-- Основной Canvas для всех элементов -->
             <Canvas x:Name="MainCanvas" Background="#252525" 
-                    Grid.Row="1" Grid.ColumnSpan="3" 
-                    ClipToBounds="True"
-                    Loaded="MainCanvas_Loaded"/>
+                    Grid.Row="1" Grid.ColumnSpan="3" Loaded="MainCanvas_Loaded"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Width="5000" Height="5000"/>
 
             <Border x:Name="Titl" Grid.Column="0"
                     Width="270" Height="60"
@@ -335,8 +578,12 @@
                                          StrokeThickness="3"
                                          Grid.Column="0"
                                          Cursor="Hand" HorizontalAlignment="Center" 
-                                         VerticalAlignment="Center"/>
-                            
+                                         VerticalAlignment="Center">
+                                    <Ellipse.ToolTip>
+                                        <ToolTip Content="Начальное состояние/узел"/>
+                                    </Ellipse.ToolTip>
+                                </Ellipse>
+
                                 <Ellipse x:Name="SimpleRing"
                                          Width="70"
                                          Height="70"
@@ -344,8 +591,12 @@
                                          StrokeThickness="3"
                                          Fill="Transparent"
                                          Grid.Column="1" HorizontalAlignment="Center" 
-                                         VerticalAlignment="Center" Cursor="Hand"/>
-                            
+                                         VerticalAlignment="Center" Cursor="Hand">
+                                    <Ellipse.ToolTip>
+                                        <ToolTip Content="Круг"/>
+                                    </Ellipse.ToolTip>
+                                </Ellipse>
+
                                 <!-- Кольцо -->
                                 <Ellipse x:Name="Ellipse"
                                         Stroke="White"
@@ -353,7 +604,11 @@
                                         Fill="Transparent" Grid.Column="1" Grid.Row="1"
                                          HorizontalAlignment="Center" 
                                         VerticalAlignment="Center"
-                                        Cursor="Hand" Height="42" Width="90"/>
+                                        Cursor="Hand" Height="42" Width="90">
+                                    <Ellipse.ToolTip>
+                                        <ToolTip Content="Активное состояние"/>
+                                    </Ellipse.ToolTip>
+                                </Ellipse>
 
                                 <Border x:Name="UmlInitialNode" 
                                         Width="70" 
@@ -365,14 +620,16 @@
                                         VerticalAlignment="Center"
                                         CornerRadius="35" Grid.Column="0" Grid.Row="1"
                                         Cursor="Hand">
-
+                                    <Border.ToolTip>
+                                        <ToolTip Content="Конечное состояние/узел"/>
+                                    </Border.ToolTip>
                                     <Ellipse Width="56"
                                         Height="56"
                                         Fill="White"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"/>
                                 </Border>
-                                
+
                                 <Border x:Name="Square"
                                         Width="60"
                                         Height="60"
@@ -382,15 +639,23 @@
                                         HorizontalAlignment="Center" 
                                         VerticalAlignment="Center" 
                                         Grid.Column="0" Grid.Row="2"
-                                        Cursor="Hand"/>
-                                
+                                        Cursor="Hand">
+                                    <Border.ToolTip>
+                                        <ToolTip Content="Комментарий"/>
+                                    </Border.ToolTip>
+                                </Border>
+
                                 <Border x:Name="Rectangle"
                                         Background="Transparent"
                                         BorderBrush="White"
                                         HorizontalAlignment="Center" 
                                         VerticalAlignment="Center"
                                         BorderThickness="3" Grid.Column="1" Grid.Row="2"
-                                        Cursor="Hand" RenderTransformOrigin="0.506,0.529" Height="38" Width="80"/>
+                                        Cursor="Hand" RenderTransformOrigin="0.506,0.529" Height="38" Width="80">
+                                    <Border.ToolTip>
+                                        <ToolTip Content="Активное состояние"/>
+                                    </Border.ToolTip>
+                                </Border>
 
                                 <!-- Прямоугольник -->
                                 <Border x:Name="SuperEllipse"
@@ -399,8 +664,12 @@
                                         BorderThickness="3"
                                         CornerRadius="25" Grid.Column="0" Grid.Row="3" 
                                         Cursor="Hand" RenderTransformOrigin="0.506,0.529" Height="38" Width="80" 
-                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                
+                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Border.ToolTip>
+                                        <ToolTip Content="Активное состояние"/>
+                                    </Border.ToolTip>
+                                </Border>
+
                                 <Border x:Name="ResizableSquare"
                                         Width="50"
                                         Height="50"
@@ -410,6 +679,9 @@
                                         VerticalAlignment="Center"
                                         CornerRadius="0" Grid.Column="1" Grid.Row="3"
                                         Cursor="Hand" RenderTransformOrigin="0.557,0.5">
+                                    <Border.ToolTip>
+                                        <ToolTip Content="Принятие/узел решения"/>
+                                    </Border.ToolTip>
                                     <Border.RenderTransform>
                                         <TransformGroup>
                                             <ScaleTransform/>
@@ -425,12 +697,17 @@
                                         BorderThickness="3" HorizontalAlignment="Center" 
                                         VerticalAlignment="Center"
                                         Grid.ColumnSpan="2" Grid.Row="4"
-                                        Cursor="Hand" Height="6" Width="150"/>
+                                        Cursor="Hand" Height="6" Width="150">
+                                    <Border.ToolTip>
+                                        <ToolTip Content="Разветвитель/узел разделения"/>
+                                    </Border.ToolTip>
+                                </Border>
 
                             </Grid>
                         </Canvas>
                     </ScrollViewer>
                 </Grid>
+
 
             </Border>
             <!-- Прямоугольная панель снизу -->
@@ -464,7 +741,8 @@
                                 Background="#FF343434"
                                 BorderBrush="Transparent"
                                 FocusVisualStyle="{x:Null}" 
-                                HorizontalAlignment="Center">
+                                HorizontalAlignment="Center"
+                                ToolTip="Выделение и перемещение элементов">
                             <Image Source="/Icons/Cursor.png"
                                    Width="30" 
                                    Height="30"
@@ -480,7 +758,8 @@
                                 Grid.Column="2"
                                 Background="#FF343434"
                                 BorderBrush="Transparent"
-                                FocusVisualStyle="{x:Null}">
+                                FocusVisualStyle="{x:Null}"
+                                ToolTip="Перо - рисование стрелок">
                             <Image Source="/Icons/Pencil.png"
                                    Width="30" 
                                    Height="30"
@@ -496,7 +775,8 @@
                                 Grid.Column="3"
                                 Background="#FF343434"
                                 BorderBrush="Transparent"
-                                FocusVisualStyle="{x:Null}">
+                                FocusVisualStyle="{x:Null}"
+                                ToolTip="">
                             <Image Source="/Icons/Rectangle.png"
                                    Width="30" 
                                    Height="30"
@@ -513,7 +793,8 @@
                                 Background="#FF343434"
                                 BorderBrush="Transparent"
                                 FocusVisualStyle="{x:Null}"
-                                Click="TextButton_Click">
+                                Click="TextButton_Click"
+                                ToolTip="Текст">
                             <Image Source="/Icons/Writing.png"
                                 Width="30" 
                                 Height="30"
@@ -529,7 +810,8 @@
                             Grid.Column="5"
                             Background="#FF343434"
                             BorderBrush="Transparent"
-                            FocusVisualStyle="{x:Null}">
+                            FocusVisualStyle="{x:Null}"
+                            ToolTip="Комментарий">
                             <Image Source="/Icons/Com.png"
                                 Width="30" 
                                 Height="30"
@@ -537,7 +819,7 @@
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center"/>
                         </Button>
-                        <!-- Квадратики -->
+                        <!-- Пулы (Swimlanes) -->
                         <Button x:Name="dash" Style="{StaticResource ControlButtonStyle}"
                             Width="34" 
                             Height="34"
@@ -545,7 +827,8 @@
                             Grid.Column="6"
                             Background="#FF343434"
                             BorderBrush="Transparent"
-                            FocusVisualStyle="{x:Null}">
+                            FocusVisualStyle="{x:Null}"
+                            ToolTip="Пулы (Swimlanes) - создание разделителей участников">
                             <Image Source="/Icons/dashboard.png"
                                 Width="30" 
                                 Height="30"
@@ -766,17 +1049,6 @@
                         <StackPanel Orientation="Horizontal" 
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center">
-                            <StackPanel x:Name="StrokeWidthPanel" Orientation="Vertical" Margin="0,5,0,0" Visibility="Collapsed">
-                                <TextBlock Text="Толщина обводки:" FontSize="11" Margin="0,0,0,2"/>
-                                <ComboBox x:Name="StrokeWidthComboBox" Height="25" FontSize="11" SelectionChanged="StrokeWidthComboBox_SelectionChanged">
-                                    <ComboBoxItem Content="1 px" Tag="1"/>
-                                    <ComboBoxItem Content="2 px" Tag="2"/>
-                                    <ComboBoxItem Content="3 px" Tag="3"/>
-                                    <ComboBoxItem Content="5 px" Tag="5"/>
-                                    <ComboBoxItem Content="8 px" Tag="8"/>
-                                    <ComboBoxItem Content="10 px" Tag="10"/>
-                                </ComboBox>
-                            </StackPanel>
                             <!-- Превью цвета обводки -->
                             <Border x:Name="StrokeColorPreview"
                         CornerRadius="5"
@@ -886,7 +1158,7 @@
                               FontSize="11"
                               VerticalContentAlignment="Center"
                               Padding="5,0"
-                              SelectionChanged="FontComboBox_SelectionChanged">
+                              >
                                     <ComboBoxItem Content="Gotham Pro" IsSelected="True"/>
                                     <ComboBoxItem Content="Arial"/>
                                     <ComboBoxItem Content="Times New Roman"/>
@@ -920,7 +1192,7 @@
                                   VerticalContentAlignment="Center"
                                   Padding="5,0" 
                                   Margin="0,0,-8,0"
-                                  SelectionChanged="FontStyleComboBox_SelectionChanged">
+                                  >
                                         <ComboBoxItem Content="Regular" IsSelected="True"/>
                                         <ComboBoxItem Content="Bold"/>
                                         <ComboBoxItem Content="Italic"/>
@@ -946,7 +1218,7 @@
                                   FontSize="11"
                                   VerticalContentAlignment="Center"
                                   Padding="5,0"
-                                  SelectionChanged="FontSizeComboBox_SelectionChanged">
+                                  >
                                         <ComboBoxItem Content="8"/>
                                         <ComboBoxItem Content="9"/>
                                         <ComboBoxItem Content="10" IsSelected="True"/>
@@ -965,6 +1237,45 @@
 
                         </StackPanel>
 
+                    </StackPanel>
+                </Border>
+
+                <!-- Панель с шириной обводки -->
+                <Border x:Name="StrokeWidthPanel" CornerRadius="10"
+                        BorderBrush="#CCCCCC"
+                        BorderThickness="1"
+                        Background="#FF343434" 
+                        Width="270" 
+                        Height="84"
+                        Margin="0,20,0,0" 
+                        HorizontalAlignment="Center" 
+                        VerticalAlignment="Top"
+                        Visibility="Collapsed">
+                    <StackPanel Orientation="Vertical" 
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Width="200">
+                        <TextBlock Text="Ширина обводки" 
+                            Foreground="White" 
+                            FontSize="14"
+                            FontWeight="Bold"
+                            HorizontalAlignment="Center"
+                            Margin="0,0,0,10"/>
+                        <ComboBox x:Name="StrokeWidthComboBox" 
+                            Height="25" 
+                            Width="150"
+                            FontSize="11" 
+                            Background="#D9D9D9"
+                            BorderThickness="0"
+                            HorizontalAlignment="Center"
+                            SelectionChanged="StrokeWidthComboBox_SelectionChanged">
+                            <ComboBoxItem Content="1 px" Tag="1"/>
+                            <ComboBoxItem Content="2 px" Tag="2"/>
+                            <ComboBoxItem Content="3 px" Tag="3"/>
+                            <ComboBoxItem Content="5 px" Tag="5"/>
+                            <ComboBoxItem Content="8 px" Tag="8"/>
+                            <ComboBoxItem Content="10 px" Tag="10"/>
+                        </ComboBox>
                     </StackPanel>
                 </Border>
             </StackPanel>
