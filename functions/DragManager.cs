@@ -46,6 +46,10 @@ namespace Graphic_Editor
         
         // Доступ к выделенным элементам для группового перемещения
         public Func<List<UIElement>> GetSelectedElements { get; set; }
+        
+        // Делегаты для управления ручками изменения размера
+        public Action<UIElement> HideResizeHandlesForElement { get; set; }
+        public Action<UIElement> ShowResizeHandlesForElement { get; set; }
 
         // Canvas для работы
         private Canvas mainCanvas;
@@ -367,6 +371,16 @@ namespace Graphic_Editor
                     }
                 }
                 
+                // Скрываем ручки изменения размера для всех выделенных элементов
+                if (GetSelectedElements != null && HideResizeHandlesForElement != null)
+                {
+                    var selectedElements = GetSelectedElements();
+                    foreach (var selectedElement in selectedElements)
+                    {
+                        HideResizeHandlesForElement(selectedElement);
+                    }
+                }
+                
                 e.Handled = true;
             }
         }
@@ -652,6 +666,16 @@ namespace Graphic_Editor
                         {
                             ApplyCanvasDragVisualFeedback(selectedElement, false);
                         }
+                    }
+                }
+
+                // Показываем ручки изменения размера для всех выделенных элементов
+                if (GetSelectedElements != null && ShowResizeHandlesForElement != null)
+                {
+                    var selectedElements = GetSelectedElements();
+                    foreach (var selectedElement in selectedElements)
+                    {
+                        ShowResizeHandlesForElement(selectedElement);
                     }
                 }
 

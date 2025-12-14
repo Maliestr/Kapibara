@@ -142,6 +142,35 @@ namespace Graphic_Editor
                 BringToFront = BringToFront,
                 MakeCanvasShapeDraggable = MakeCanvasShapeDraggable,
                 GetSelectedElements = () => selectionManager?.SelectedElements.ToList() ?? new List<UIElement>(),
+                HideResizeHandlesForElement = (element) =>
+                {
+                    if (element != null && resizableElements.ContainsKey(element))
+                    {
+                        resizableElements[element].HideResizeHandles();
+                    }
+                },
+                ShowResizeHandlesForElement = (element) =>
+                {
+                    if (element == null) return;
+                    
+                    // Проверяем, не находится ли элемент в панели нотации
+                    if (IsElementInNotation(element))
+                    {
+                        return;
+                    }
+
+                    // Создаем или используем существующий ResizableElement для элемента
+                    if (!resizableElements.ContainsKey(element))
+                    {
+                        resizableElements[element] = new ResizableElement(
+                            element,
+                            MainCanvas,
+                            gridManager.SnapToGrid,
+                            gridManager.IsSnapToGridEnabled);
+                    }
+
+                    resizableElements[element].ShowResizeHandles();
+                },
                 SetOriginalStyles = (copy, original) =>
                 {
                     if (original is Ellipse originalEllipse && copy is Ellipse copyEllipse)
