@@ -14,6 +14,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using System.Windows.Controls.Primitives;
 namespace Graphic_Editor
 {
     public partial class MainWindow : Window
@@ -52,12 +53,17 @@ namespace Graphic_Editor
         private const double WorkAreaBottom = 100; // Отступ снизу (над панелью инструментов)
 
         private bool isCursor = true;
+        private object canvas;
+
+        public object StrokeWidthPanel { get; private set; }
+        public ToggleButton TogglePanelsButton { get; private set; }
+        public Ellipse SimpleRing { get; private set; }
 
         #endregion
 
         #region Конструктор и инициализация
 
-        public MainWindow()
+        public MainWindow(string filePath)
         {
             InitializeComponent(); // Инициализация WPF компонентов
 
@@ -76,26 +82,47 @@ namespace Graphic_Editor
                                                 // F12/Ctrl+H - скрытие панелей
 
             // Добавляем обработчик клика по Canvas для сброса выделения
-            MainCanvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
+            var mainCanvas = FindName("MainCanvas") as Canvas;
+            if (mainCanvas != null)
+            {
+                mainCanvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
+                mainCanvas.Loaded += MainCanvas_Loaded;
+            }
 
             // Кнопка курсора для обработки взаимодействия с объектами
-            cursor.Click += CursorButton_Click;
+            var cursorBtn = FindName("cursor") as Button;
+            if (cursorBtn != null) cursorBtn.Click += CursorButton_Click;
             // Кнопка пера включает/выключает режим рисования стрелок
-            pencil.Click += PenButton_Click;
+            var pencilBtn = FindName("pencil") as Button;
+            if (pencilBtn != null) pencilBtn.Click += PenButton_Click;
 
             // Обработчики для размеров текстовых полей
-            WidthTextBox.LostFocus += DimensionTextBox_LostFocus;
-            HeightTextBox.LostFocus += DimensionTextBox_LostFocus;
-            WidthTextBox.KeyDown += DimensionTextBox_KeyDown;
-            HeightTextBox.KeyDown += DimensionTextBox_KeyDown;
+            var widthTextBox = FindName("WidthTextBox") as TextBox;
+            var heightTextBox = FindName("HeightTextBox") as TextBox;
+            if (widthTextBox != null)
+            {
+                widthTextBox.LostFocus += DimensionTextBox_LostFocus;
+                widthTextBox.KeyDown += DimensionTextBox_KeyDown;
+            }
+            if (heightTextBox != null)
+            {
+                heightTextBox.LostFocus += DimensionTextBox_LostFocus;
+                heightTextBox.KeyDown += DimensionTextBox_KeyDown;
+            }
 
             // Инициализация системы автосохранения (интервал 60 секунд)
-            autoSave = new AutoSave(MainCanvas, intervalSeconds: 60, enabled: true);
+            if (mainCanvas != null)
+            {
+                autoSave = new AutoSave(mainCanvas, intervalSeconds: 60, enabled: true);
+            }
 
             // Обработчик закрытия окна для очистки ресурсов
             this.Closing += MainWindow_Closing;
+        }
 
-            MainCanvas.Loaded += MainCanvas_Loaded;
+        private void InitializeComponent()
+        {
+            throw new NotImplementedException();
         }
 
         private void InitializeManagers()
@@ -103,20 +130,33 @@ namespace Graphic_Editor
             InitializeGridManager(); // Создает и инициализирует визуальную сетку
             InitializeDragManager(); // Делает фигуры в панели инструментов перетаскиваемыми
             InitializeArrowManager(); // Инициализация менеджера стрелок
-            InitializeSelectionSystem(); // Настраивает систему выделения через SelectionManager
+            InitializeSelectionSystem(canvas); // Настраивает систему выделения через SelectionManager
             InitializeFillStrokeManager(); // Инициализация менеджера заливки и обводки
             InitializeTextManager(); // Инициализация менеджера текста
             InitializeFileManager(); // Инициализация менеджера файлов
             InitializeCommentManager(); // Инициализация менеджера комментариев
             InitializeClipboardManager(); // Инициализация менеджера буфера обмена и отмены/повтора
             InitializePoolManager(); // Инициализация менеджера пулов
-            canvasPanningManager = new CanvasPanningManager(MainCanvas);
-            canvasPanningManager.Mode = CanvasPanningManager.PanningMode.MiddleButton;
+            var mainCanvasForPanning = FindName("MainCanvas") as Canvas;
+            if (mainCanvasForPanning != null)
+            {
+                canvasPanningManager = new CanvasPanningManager(mainCanvasForPanning);
+                canvasPanningManager.Mode = CanvasPanningManager.PanningMode.MiddleButton;
+            }
+        }
+
+        private void InitializeSelectionSystem(object canvas)
+        {
+            throw new NotImplementedException();
         }
 
         private void InitializeDragManager()
         {
-            dragManager = new DragManager(MainCanvas, NotationCanvas)
+            var mainCanvas = FindName("MainCanvas") as Canvas;
+            var notationCanvas = FindName("NotationCanvas") as Canvas;
+            if (mainCanvas == null || notationCanvas == null) return;
+
+            dragManager = new DragManager(mainCanvas, notationCanvas)
             {
                 SnapToGrid = gridManager.SnapToGrid, // Используем метод из GridManager
                 SelectElement = SelectElement,
@@ -141,7 +181,11 @@ namespace Graphic_Editor
                 AnimateShapeAppearance = AnimateShapeAppearance,
                 IsShapeFromNotation = IsShapeFromNotation,
                 GetShapeType = GetShapeType,
-                OnElementMoved = (element, position) => poolManager?.HandleElementMove(element, position) // Обработка прикрепления к пулам
+                OnElementMoved = (element, position) => 
+                {
+                    poolManager?.HandleElementMove(element, position); // Обработка прикрепления к пулам
+                    arrowManager?.UpdateAttachedArrows(element); // Обновление прикрепленных стрелок
+                }
             };
 
             // Передаем состояние привязки к сетке
@@ -151,18 +195,44 @@ namespace Graphic_Editor
             gridManager.SetDragManager(dragManager);
 
             // Делаем фигуры перетаскиваемыми
-            dragManager.MakeAllShapesDraggable(
-                Circle, SimpleRing, Square, ResizableSquare,
-                Rectangle, SuperEllipse, Ellipse, UmlInitialNode, stick
-            );
+            var circle = FindName("Circle") as Ellipse;
+            var simpleRing = FindName("SimpleRing") as Ellipse;
+            var square = FindName("Square") as Border;
+            var resizableSquare = FindName("ResizableSquare") as Border;
+            var rectangle = FindName("Rectangle") as Border;
+            var superEllipse = FindName("SuperEllipse") as Border;
+            var ellipse = FindName("Ellipse") as Ellipse;
+            var umlInitialNode = FindName("UmlInitialNode") as Border;
+            var stickShape = FindName("stick") as Border;
+
+            List<UIElement> shapes = new List<UIElement>();
+            if (circle != null) shapes.Add(circle);
+            if (simpleRing != null) shapes.Add(simpleRing);
+            if (square != null) shapes.Add(square);
+            if (resizableSquare != null) shapes.Add(resizableSquare);
+            if (rectangle != null) shapes.Add(rectangle);
+            if (superEllipse != null) shapes.Add(superEllipse);
+            if (ellipse != null) shapes.Add(ellipse);
+            if (umlInitialNode != null) shapes.Add(umlInitialNode);
+            if (stickShape != null) shapes.Add(stickShape);
+
+            if (shapes.Count > 0)
+            {
+                dragManager.MakeAllShapesDraggable(shapes.ToArray());
+            }
         }
 
         private void InitializeGridManager()
         {
+            var mainCanvas = FindName("MainCanvas") as Canvas;
+            var gridToggleMenuItem = FindName("GridToggleMenuItem") as MenuItem;
+            var snapToGridMenuItem = FindName("SnapToGridMenuItem") as MenuItem;
+            if (mainCanvas == null || gridToggleMenuItem == null || snapToGridMenuItem == null) return;
+
             gridManager = new GridManager(
-                MainCanvas,
-                GridToggleMenuItem,
-                SnapToGridMenuItem,
+                mainCanvas,
+                gridToggleMenuItem,
+                snapToGridMenuItem,
                 dragManager);
 
             // Подписываемся на события изменения сетки
@@ -180,7 +250,11 @@ namespace Graphic_Editor
 
         private void InitializeCommentManager()
         {
-            commentManager = new CommentManager(MainCanvas, comment);
+            var mainCanvas = FindName("MainCanvas") as Canvas;
+            var commentBtn = FindName("comment") as Button;
+            if (mainCanvas == null || commentBtn == null) return;
+
+            commentManager = new CommentManager(mainCanvas, commentBtn);
 
             // Подписка на события, если нужно
             commentManager.CommentModeChanged += (isActive) =>
@@ -203,8 +277,11 @@ namespace Graphic_Editor
 
         private void InitializeClipboardManager()
         {
+            var mainCanvas = FindName("MainCanvas") as Canvas;
+            if (mainCanvas == null) return;
+
             clipboardManager = new ClipboardManager(
-                MainCanvas,
+                mainCanvas,
                 selectionManager,
                 resizableElements,
                 gridManager);
@@ -247,9 +324,12 @@ namespace Graphic_Editor
 
         private void MainCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            var mainCanvas = sender as Canvas ?? FindName("MainCanvas") as Canvas;
+            if (mainCanvas == null) return;
+
             if (arrowManager != null && arrowManager.IsArrowModeActive)
             {
-                Point clickPoint = e.GetPosition(MainCanvas);
+                Point clickPoint = e.GetPosition(mainCanvas);
 
                 if (arrowManager.CurrentArrow == null)
                 {
@@ -264,26 +344,26 @@ namespace Graphic_Editor
                 return;
             }
 
-            if (commentManager != null && commentManager.HandleMouseClick(e.GetPosition(MainCanvas), e.OriginalSource))
+            if (commentManager != null && commentManager.HandleMouseClick(e.GetPosition(mainCanvas), e.OriginalSource))
             {
                 e.Handled = true;
                 return;
             }
 
-            if (poolManager != null && poolManager.HandleMouseClick(e.GetPosition(MainCanvas), e.OriginalSource))
+            if (poolManager != null && poolManager.HandleMouseClick(e.GetPosition(mainCanvas), e.OriginalSource))
             {
                 e.Handled = true;
                 return;
             }
 
-            if (textManager != null && textManager.HandleMouseClick(e.GetPosition(MainCanvas), e.OriginalSource))
+            if (textManager != null && textManager.HandleMouseClick(e.GetPosition(mainCanvas), e.OriginalSource))
             {
                 e.Handled = true;
                 return;
             }
 
             // Если кликнули на пустую область канваса - снимаем выделение и скрываем ручки
-            if (e.OriginalSource == MainCanvas)
+            if (e.OriginalSource == mainCanvas)
             {
                 DeselectAll();
                 HideAllResizeHandles();
@@ -293,12 +373,15 @@ namespace Graphic_Editor
 
         private void MainCanvas_MouseMove(object sender, MouseEventArgs e)
         {
+            var mainCanvas = sender as Canvas ?? FindName("MainCanvas") as Canvas;
+            if (mainCanvas == null) return;
+
             // Обработка рисования стрелки
             if (arrowManager != null && arrowManager.IsArrowModeActive)
             {
                 if (arrowManager.CurrentArrow != null)
                 {
-                    arrowManager.UpdateArrowDrawing(e.GetPosition(MainCanvas));
+                    arrowManager.UpdateArrowDrawing(e.GetPosition(mainCanvas));
                 }
                 e.Handled = true;
                 return;
@@ -307,7 +390,7 @@ namespace Graphic_Editor
             // Обработка выделения
             if (selectionManager?.IsSelecting == true)
             {
-                var currentPos = e.GetPosition(MainCanvas);
+                var currentPos = e.GetPosition(mainCanvas);
                 selectionManager.UpdateSelectionRect(currentPos);
             }
 
@@ -467,16 +550,18 @@ namespace Graphic_Editor
         private void NewFile_Click(object sender, RoutedEventArgs e)
         {
             // Очищаем холст
-            MainCanvas.Children.Clear();
+            var mainCanvas = FindName("MainCanvas") as Canvas;
+            if (mainCanvas != null) mainCanvas.Children.Clear();
             canvasElements.Clear();
             currentFilePath = null;
             commentManager?.ClearAllComments();
             poolManager?.ClearAllPools();
 
             // Сбрасываем имя файла на "Untitled"
-            if (FileNameTextBox != null)
+            var fileNameTextBox = FindName("FileNameTextBox") as TextBox;
+            if (fileNameTextBox != null)
             {
-                FileNameTextBox.Text = "Untitled";
+                fileNameTextBox.Text = "Untitled";
             }
 
             UpdateWindowTitle();
@@ -546,9 +631,10 @@ namespace Graphic_Editor
             };
 
             // Используем имя из TextBox для предложения имени файла
-            if (FileNameTextBox != null && !string.IsNullOrEmpty(FileNameTextBox.Text) && FileNameTextBox.Text != "Untitled")
+            var fileNameTextBox = FindName("FileNameTextBox") as TextBox;
+            if (fileNameTextBox != null && !string.IsNullOrEmpty(fileNameTextBox.Text) && fileNameTextBox.Text != "Untitled")
             {
-                string fileNameFromTextBox = FileNameTextBox.Text;
+                string fileNameFromTextBox = fileNameTextBox.Text;
                 // Убираем недопустимые символы для имени файла
                 string invalidChars = new string(System.IO.Path.GetInvalidFileNameChars());
                 foreach (char c in invalidChars)
@@ -566,10 +652,10 @@ namespace Graphic_Editor
                     currentFilePath = saveFileDialog.FileName;
 
                     // Обновляем TextBox с именем файла без расширения
-                    if (FileNameTextBox != null)
+                    if (FindName("FileNameTextBox") as TextBox != null)
                     {
                         string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(saveFileDialog.FileName);
-                        FileNameTextBox.Text = fileNameWithoutExtension;
+                        (FindName("FileNameTextBox") as TextBox).Text = fileNameWithoutExtension;
                     }
 
                     UpdateWindowTitle();
@@ -705,9 +791,10 @@ namespace Graphic_Editor
         {
             // Используем текст из TextBox, если он доступен, иначе имя файла из файловой системы
             string fileName;
-            if (FileNameTextBox != null && !string.IsNullOrEmpty(FileNameTextBox.Text) && FileNameTextBox.Text != "Untitled")
+            var fileNameTextBox = FindName("FileNameTextBox") as TextBox;
+            if (fileNameTextBox != null && !string.IsNullOrEmpty(fileNameTextBox.Text) && fileNameTextBox.Text != "Untitled")
             {
-                fileName = FileNameTextBox.Text;
+                fileName = fileNameTextBox.Text;
             }
             else if (!string.IsNullOrEmpty(currentFilePath))
             {
@@ -750,10 +837,10 @@ namespace Graphic_Editor
             var strokePanel = FindName("StrokePanel") as Border;
             var textPanel = FindName("TextPanel") as Border;
 
-            DimensionsPanel.Visibility = Visibility.Collapsed;
-            FillPanel.Visibility = Visibility.Collapsed;
-            StrokePanel.Visibility = Visibility.Collapsed;
-            TextPanel.Visibility = Visibility.Collapsed;
+            if (dimensionsPanel != null) dimensionsPanel.Visibility = Visibility.Collapsed;
+            if (fillPanel != null) fillPanel.Visibility = Visibility.Collapsed;
+            if (strokePanel != null) strokePanel.Visibility = Visibility.Collapsed;
+            if (textPanel != null) textPanel.Visibility = Visibility.Collapsed;
         }
 
         private void TogglePanelsButton_Click(object sender, RoutedEventArgs e)
@@ -787,34 +874,41 @@ namespace Graphic_Editor
             // Скрываем панель ширины обводки
             if (StrokeWidthPanel != null)
             {
-                StrokeWidthPanel.Visibility = Visibility.Collapsed;
+                //StrokeWidthPanel.Visibility = Visibility.Collapsed;
             }
         }
 
         private void ShowAllPanels()
         {
-            NotationCard.Visibility = Visibility.Visible;
+            var notationCard = FindName("NotationCard") as Border;
+            if (notationCard != null) notationCard.Visibility = Visibility.Visible;
 
             var selectedElement = selectionManager?.SelectedElement;
+            var dimensionsPanel = FindName("DimensionsPanel") as Border;
+            var fillPanel = FindName("FillPanel") as Border;
+            var strokePanel = FindName("StrokePanel") as Border;
+            var textPanel = FindName("TextPanel") as Border;
+            var strokeWidthPanel = FindName("StrokeWidthPanel") as Border;
+
             if (selectedElement is Ellipse ellipse || selectedElement is Border border || selectedElement is Line line)
             {
-                DimensionsPanel.Visibility = Visibility.Visible;
-                FillPanel.Visibility = Visibility.Visible;
-                StrokePanel.Visibility = Visibility.Visible;
+                if (dimensionsPanel != null) dimensionsPanel.Visibility = Visibility.Visible;
+                if (fillPanel != null) fillPanel.Visibility = Visibility.Visible;
+                if (strokePanel != null) strokePanel.Visibility = Visibility.Visible;
                 // Показываем панель ширины обводки только если элемент НЕ в нотации
                 if (!IsElementInNotation(selectedElement))
                 {
-                    StrokeWidthPanel.Visibility = Visibility.Visible;
+                    if (strokeWidthPanel != null) strokeWidthPanel.Visibility = Visibility.Visible;
                 }
             }
             else if (selectedElement is TextBlock textBlock)
             {
-                DimensionsPanel.Visibility = Visibility.Visible;
+                if (dimensionsPanel != null) dimensionsPanel.Visibility = Visibility.Visible;
                 // Не показываем панель обводки для текста
-                StrokePanel.Visibility = Visibility.Collapsed;
-                TextPanel.Visibility = Visibility.Visible;
+                if (strokePanel != null) strokePanel.Visibility = Visibility.Collapsed;
+                if (textPanel != null) textPanel.Visibility = Visibility.Visible;
                 // Не показываем панель ширины обводки для текста
-                StrokeWidthPanel.Visibility = Visibility.Collapsed;
+                if (strokeWidthPanel != null) strokeWidthPanel.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -827,12 +921,18 @@ namespace Graphic_Editor
             if (element == null) return;
             selectionManager?.SelectElement(element);
 
-            if (TogglePanelsButton.IsChecked == false && element is TextBlock textBlock)
+            var togglePanelsButton = FindName("TogglePanelsButton") as ToggleButton;
+            var dimensionsPanel = FindName("DimensionsPanel") as Border;
+            var strokePanel = FindName("StrokePanel") as Border;
+            var textPanel = FindName("TextPanel") as Border;
+            var strokeWidthPanel = FindName("StrokeWidthPanel") as Border;
+
+            if (togglePanelsButton != null && togglePanelsButton.IsChecked == false && element is TextBlock textBlock)
             {
-                DimensionsPanel.Visibility = Visibility.Visible;
-                StrokePanel.Visibility = Visibility.Visible;
-                TextPanel.Visibility = Visibility.Visible;
-                StrokeWidthPanel.Visibility = Visibility.Visible;
+                if (dimensionsPanel != null) dimensionsPanel.Visibility = Visibility.Visible;
+                if (strokePanel != null) strokePanel.Visibility = Visibility.Visible;
+                if (textPanel != null) textPanel.Visibility = Visibility.Visible;
+                if (strokeWidthPanel != null) strokeWidthPanel.Visibility = Visibility.Visible;
             }
         }
 
@@ -941,8 +1041,12 @@ namespace Graphic_Editor
             var selectedShape = selectionManager?.SelectedShape;
             if (selectedShape == null) return;
 
-            if (double.TryParse(WidthTextBox.Text, out double width) &&
-                double.TryParse(HeightTextBox.Text, out double height))
+            var widthTextBox = FindName("WidthTextBox") as TextBox;
+            var heightTextBox = FindName("HeightTextBox") as TextBox;
+            if (widthTextBox == null || heightTextBox == null) return;
+
+            if (double.TryParse(widthTextBox.Text, out double width) &&
+                double.TryParse(heightTextBox.Text, out double height))
             {
                 // Применяем новые размеры
                 if (selectedShape is FrameworkElement frameworkElement)
@@ -962,14 +1066,16 @@ namespace Graphic_Editor
         public void UpdateDimensions(double width, double height)
         {
             // Обновляем текстовые поля размеров если они существуют
-            if (WidthTextBox != null && !double.IsNaN(width))
+            var widthTextBox = FindName("WidthTextBox") as TextBox;
+            var heightTextBox = FindName("HeightTextBox") as TextBox;
+            if (widthTextBox != null && !double.IsNaN(width))
             {
-                WidthTextBox.Text = Math.Round(width).ToString();
+                widthTextBox.Text = Math.Round(width).ToString();
             }
 
-            if (HeightTextBox != null && !double.IsNaN(height))
+            if (heightTextBox != null && !double.IsNaN(height))
             {
-                HeightTextBox.Text = Math.Round(height).ToString();
+                heightTextBox.Text = Math.Round(height).ToString();
             }
         }
 
@@ -992,22 +1098,31 @@ namespace Graphic_Editor
                 currentResizableElement = null;
             }
 
-            if (TogglePanelsButton.IsChecked == false && (element is Ellipse ellipse || element is Border border || element is Line line))
+            var togglePanelsButton = FindName("TogglePanelsButton") as ToggleButton;
+            var dimensionsPanel = FindName("DimensionsPanel") as Border;
+            var fillPanel = FindName("FillPanel") as Border;
+            var strokePanel = FindName("StrokePanel") as Border;
+
+            if (togglePanelsButton != null && togglePanelsButton.IsChecked == false && (element is Ellipse ellipse || element is Border border || element is Line line))
             {
-                DimensionsPanel.Visibility = Visibility.Visible;
-                FillPanel.Visibility = Visibility.Visible;
-                StrokePanel.Visibility = Visibility.Visible;
+                if (dimensionsPanel != null) dimensionsPanel.Visibility = Visibility.Visible;
+                if (fillPanel != null) fillPanel.Visibility = Visibility.Visible;
+                if (strokePanel != null) strokePanel.Visibility = Visibility.Visible;
             }
 
             // Создаем или используем существующий ResizableElement для текущего элемента
             if (!resizableElements.ContainsKey(element))
             {
                 // Создаем новый ResizableElement, передавая состояние сетки
-                resizableElements[element] = new ResizableElement(
-                    element,
-                    MainCanvas,
-                    gridManager.SnapToGrid, // Используем метод GridManager
-                    gridManager.IsSnapToGridEnabled); // Используем свойство GridManager
+                var mainCanvas = FindName("MainCanvas") as Canvas;
+                if (mainCanvas != null)
+                {
+                    resizableElements[element] = new ResizableElement(
+                        element,
+                        mainCanvas,
+                        gridManager.SnapToGrid, // Используем метод GridManager
+                        gridManager.IsSnapToGridEnabled); // Используем свойство GridManager
+                }
             }
 
             currentResizableElement = resizableElements[element];
@@ -1026,32 +1141,37 @@ namespace Graphic_Editor
 
         private void BringToFront(FrameworkElement element)
         {
-            if (element == null || !MainCanvas.Children.Contains(element)) return;
+            var mainCanvas = FindName("MainCanvas") as Canvas;
+            if (element == null || mainCanvas == null || !mainCanvas.Children.Contains(element)) return;
 
             int maxZIndex = GetMaxZIndex();
             Canvas.SetZIndex(element, maxZIndex + 1);
 
             // Также перемещаем элемент в конец коллекции для гарантии
-            MainCanvas.Children.Remove(element);
-            MainCanvas.Children.Add(element);
+            mainCanvas.Children.Remove(element);
+            mainCanvas.Children.Add(element);
         }
 
         private void SendToBack(FrameworkElement element)
         {
-            if (element == null || !MainCanvas.Children.Contains(element)) return;
+            var mainCanvas = FindName("MainCanvas") as Canvas;
+            if (element == null || mainCanvas == null || !mainCanvas.Children.Contains(element)) return;
 
             int minZIndex = GetMinZIndex();
             Canvas.SetZIndex(element, minZIndex - 1);
 
             // Также перемещаем элемент в начало коллекции для гарантии
-            MainCanvas.Children.Remove(element);
-            MainCanvas.Children.Insert(0, element);
+            mainCanvas.Children.Remove(element);
+            mainCanvas.Children.Insert(0, element);
         }
 
         private int GetMaxZIndex()
         {
+            var mainCanvas = FindName("MainCanvas") as Canvas;
+            if (mainCanvas == null) return 0;
+
             int maxZIndex = 0;
-            foreach (UIElement child in MainCanvas.Children)
+            foreach (UIElement child in mainCanvas.Children)
             {
                 int zIndex = Canvas.GetZIndex(child);
                 if (zIndex > maxZIndex)
@@ -1064,9 +1184,12 @@ namespace Graphic_Editor
 
         private int GetMinZIndex()
         {
+            var mainCanvas = FindName("MainCanvas") as Canvas;
+            if (mainCanvas == null) return 0;
+
             int minZIndex = 0;
             bool first = true;
-            foreach (UIElement child in MainCanvas.Children)
+            foreach (UIElement child in mainCanvas.Children)
             {
                 int zIndex = Canvas.GetZIndex(child);
                 if (first || zIndex < minZIndex)
@@ -1160,17 +1283,18 @@ namespace Graphic_Editor
 
         private bool IsElementInNotation(UIElement element)
         {
-            if (element == null || NotationCanvas == null) return false;
+            var notationCanvas = FindName("NotationCanvas") as Canvas;
+            if (element == null || notationCanvas == null) return false;
 
             // Проверяем, содержится ли элемент непосредственно в NotationCanvas
-            if (NotationCanvas.Children.Contains(element))
+            if (notationCanvas.Children.Contains(element))
                 return true;
 
             // Проверяем родителей элемента
             DependencyObject parent = VisualTreeHelper.GetParent(element);
             while (parent != null)
             {
-                if (parent == NotationCanvas)
+                if (parent == notationCanvas)
                     return true;
 
                 parent = VisualTreeHelper.GetParent(parent);
@@ -1191,20 +1315,31 @@ namespace Graphic_Editor
 
         private bool IsShapeFromNotation(UIElement element)
         {
-            return NotationCanvas?.Children.Contains(element) == true;
+            var notationCanvas = FindName("NotationCanvas") as Canvas;
+            return notationCanvas?.Children.Contains(element) == true;
         }
 
         private string GetShapeType(UIElement element)
         {
-            if (element == Circle) return "Circle";
-            if (element == SimpleRing) return "SimpleRing";
-            if (element == Square) return "Square";
-            if (element == ResizableSquare) return "ResizableSquare";
-            if (element == Rectangle) return "Rectangle";
-            if (element == SuperEllipse) return "SuperEllipse";
-            if (element == Ellipse) return "Ellipse";
-            if (element == UmlInitialNode) return "UmlInitialNode";
-            if (element == stick) return "stick";
+            var circle = FindName("Circle") as Ellipse;
+            var simpleRing = FindName("SimpleRing") as Ellipse;
+            var square = FindName("Square") as Border;
+            var resizableSquare = FindName("ResizableSquare") as Border;
+            var rectangle = FindName("Rectangle") as Border;
+            var superEllipse = FindName("SuperEllipse") as Border;
+            var ellipse = FindName("Ellipse") as Ellipse;
+            var umlInitialNode = FindName("UmlInitialNode") as Border;
+            var stickShape = FindName("stick") as Border;
+
+            if (element == circle) return "Circle";
+            if (element == simpleRing) return "SimpleRing";
+            if (element == square) return "Square";
+            if (element == resizableSquare) return "ResizableSquare";
+            if (element == rectangle) return "Rectangle";
+            if (element == superEllipse) return "SuperEllipse";
+            if (element == ellipse) return "Ellipse";
+            if (element == umlInitialNode) return "UmlInitialNode";
+            if (element == stickShape) return "stick";
             return "Unknown";
         }
 
@@ -1312,9 +1447,13 @@ namespace Graphic_Editor
 
         private void InitializeArrowManager()
         {
+            var mainCanvas = FindName("MainCanvas") as Canvas;
+            var pencilBtn = FindName("pencil") as Button;
+            if (mainCanvas == null || pencilBtn == null) return;
+
             arrowManager = new ArrowManager(
-                MainCanvas,
-                pencil,
+                mainCanvas,
+                pencilBtn,
                 gridManager.IsSnapToGridEnabled, // Используем свойство GridManager
                 WorkAreaTop,
                 WorkAreaBottom,
@@ -1344,32 +1483,37 @@ namespace Graphic_Editor
             try
             {
                 // Показываем панель обводки для стрелки
-                if (StrokeWidthPanel != null)
+                var strokeWidthPanel = FindName("StrokeWidthPanel") as Border;
+                if (strokeWidthPanel != null)
                 {
-                    StrokeWidthPanel.Visibility = Visibility.Visible;
+                    strokeWidthPanel.Visibility = Visibility.Visible;
                 }
 
                 // Обновляем комбо-бокс толщины
-                if (StrokeWidthComboBox != null)
+                var strokeWidthComboBox = FindName("StrokeWidthComboBox") as ComboBox;
+                if (strokeWidthComboBox != null)
                 {
                     fillStrokeManager?.UpdateStrokeWidthComboBoxSelection(arrowContainer.Line.StrokeThickness);
                 }
 
                 // Обновляем комбо-бокс цвета обводки
-                if (StrokeColorComboBox != null && arrowContainer.Line.Stroke is SolidColorBrush strokeBrush)
+                var strokeColorComboBox = FindName("StrokeColorComboBox") as ComboBox;
+                if (strokeColorComboBox != null && arrowContainer.Line.Stroke is SolidColorBrush strokeBrush)
                 {
                     string strokeHexColor = strokeBrush.Color.ToString().Substring(3);
-                    fillStrokeManager?.UpdateColorComboBoxSelection(StrokeColorComboBox, strokeHexColor);
+                    fillStrokeManager?.UpdateColorComboBoxSelection(strokeColorComboBox, strokeHexColor);
                 }
 
                 // Скрываем панели, которые не применимы к стрелкам
-                if (FillPanel != null)
+                var fillPanel = FindName("FillPanel") as Border;
+                var textPanel = FindName("TextPanel") as Border;
+                if (fillPanel != null)
                 {
-                    FillPanel.Visibility = Visibility.Collapsed;
+                    fillPanel.Visibility = Visibility.Collapsed;
                 }
-                if (TextPanel != null)
+                if (textPanel != null)
                 {
-                    TextPanel.Visibility = Visibility.Collapsed;
+                    textPanel.Visibility = Visibility.Collapsed;
                 }
             }
             catch (Exception ex)
@@ -1382,10 +1526,13 @@ namespace Graphic_Editor
 
         #region Система выделения
 
-        private void InitializeSelectionSystem()
+        private void InitializeSelectionSystem(Canvas mainCanvas)
         {
             // Создаем менеджер выделения
-            selectionManager = new SelectionManager(MainCanvas, this);
+            Canvas canvas = FindName("MainCanvas") as Canvas;
+            if (canvas == null) return;
+
+            selectionManager = new SelectionManager(canvas, this);
 
             // Настраиваем делегат для снятия выделения стрелки
             selectionManager.OnDeselectArrow = () => arrowManager.DeselectArrow();
@@ -1418,18 +1565,25 @@ namespace Graphic_Editor
             selectionManager.OnSelectionCleared += () =>
             {
                 // Скрываем панели свойств
-                StrokeWidthPanel.Visibility = Visibility.Collapsed;
-                DimensionsPanel.Visibility = Visibility.Collapsed;
-                FillPanel.Visibility = Visibility.Collapsed;
-                StrokePanel.Visibility = Visibility.Collapsed;
-                TextPanel.Visibility = Visibility.Collapsed;
-            };
+                var strokeWidthPanel = FindName("StrokeWidthPanel") as Border;
+                var dimensionsPanel = FindName("DimensionsPanel") as Border;
+                var fillPanel = FindName("FillPanel") as Border;
+                var strokePanel = FindName("StrokePanel") as Border;
+                var textPanel = FindName("TextPanel") as Border;
 
-            // Добавляем обработчики событий для выделения
-            MainCanvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
-            MainCanvas.MouseMove += MainCanvas_MouseMove;
-            MainCanvas.MouseLeftButtonUp += MainCanvas_MouseLeftButtonUp;
-            MainCanvas.MouseRightButtonDown += MainCanvas_MouseRightButtonDown;
+                if (strokeWidthPanel != null) strokeWidthPanel.Visibility = Visibility.Collapsed;
+                if (dimensionsPanel != null) dimensionsPanel.Visibility = Visibility.Collapsed;
+                if (fillPanel != null) fillPanel.Visibility = Visibility.Collapsed;
+                if (strokePanel != null) strokePanel.Visibility = Visibility.Collapsed;
+                if (textPanel != null) textPanel.Visibility = Visibility.Collapsed;
+            };
+            if (canvas != null)
+            {
+                canvas.MouseLeftButtonDown += MainCanvas_MouseLeftButtonDown;
+                canvas.MouseMove += MainCanvas_MouseMove;
+                canvas.MouseLeftButtonUp += MainCanvas_MouseLeftButtonUp;
+                canvas.MouseRightButtonDown += MainCanvas_MouseRightButtonDown;
+            }
         }
 
         #endregion
@@ -1493,10 +1647,15 @@ namespace Graphic_Editor
 
         private void ClearColorComboBoxes()
         {
-            FillColorComboBox.SelectedIndex = -1;
-            StrokeColorComboBox.SelectedIndex = -1;
-            FillColorPreview.Background = Brushes.Transparent;
-            StrokeColorPreview.Background = Brushes.Transparent;
+            var fillColorComboBox = FindName("FillColorComboBox") as ComboBox;
+            var strokeColorComboBox = FindName("StrokeColorComboBox") as ComboBox;
+            var fillColorPreview = FindName("FillColorPreview") as Border;
+            var strokeColorPreview = FindName("StrokeColorPreview") as Border;
+
+            if (fillColorComboBox != null) fillColorComboBox.SelectedIndex = -1;
+            if (strokeColorComboBox != null) strokeColorComboBox.SelectedIndex = -1;
+            if (fillColorPreview != null) fillColorPreview.Background = Brushes.Transparent;
+            if (strokeColorPreview != null) strokeColorPreview.Background = Brushes.Transparent;
         }
 
         #endregion
@@ -1505,13 +1664,15 @@ namespace Graphic_Editor
 
         private void InitializeTextManager()
         {
+            var mainCanvas = FindName("MainCanvas") as Canvas;
             var fontComboBox = FindName("FontComboBox") as ComboBox;
             var fontStyleComboBox = FindName("FontStyleComboBox") as ComboBox;
             var fontSizeComboBox = FindName("FontSizeComboBox") as ComboBox;
             var textPanel = FindName("TextPanel") as Border;
+            if (mainCanvas == null) return;
 
             textManager = new TextManager(
-                MainCanvas,
+                mainCanvas,
                 selectionManager,
                 fontComboBox,
                 fontStyleComboBox,
@@ -1529,19 +1690,20 @@ namespace Graphic_Editor
             );
 
             // Подписываемся на события для выделения кнопки
+            var textBtn = FindName("text") as Button;
             textManager.OnTextModeActivated += () =>
             {
-                if (text != null)
+                if (textBtn != null)
                 {
-                    text.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
+                    textBtn.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
                 }
             };
 
             textManager.OnTextModeDeactivated += () =>
             {
-                if (text != null)
+                if (textBtn != null)
                 {
-                    text.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF343434"));
+                    textBtn.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF343434"));
                 }
             };
         }
@@ -1563,9 +1725,13 @@ namespace Graphic_Editor
 
         private void InitializeFileManager()
         {
+            var mainCanvas = FindName("MainCanvas") as Canvas;
+            var fileNameTextBox = FindName("FileNameTextBox") as TextBox;
+            if (mainCanvas == null || fileNameTextBox == null) return;
+
             fileManager = new FileManager(
-                MainCanvas,
-                FileNameTextBox,
+                mainCanvas,
+                fileNameTextBox,
                 arrowManager,
                 resizableElements,
                 canvasElements,
@@ -1586,9 +1752,13 @@ namespace Graphic_Editor
 
         private void InitializePoolManager()
         {
+            var mainCanvas = FindName("MainCanvas") as Canvas;
+            var rectangleBtn = FindName("rectangle") as Button;
+            if (mainCanvas == null || rectangleBtn == null) return;
+
             poolManager = new PoolManager(
-                MainCanvas,
-                rectangle, // Кнопка rectangle (3-я кнопка) на нижней панели
+                mainCanvas,
+                rectangleBtn, // Кнопка rectangle (3-я кнопка) на нижней панели
                 gridManager.IsSnapToGridEnabled, // Используем свойство GridManager
                 gridManager.SnapToGrid, // Используем метод GridManager
                 (element, actionType) => clipboardManager?.SaveToUndoStack(element, actionType)
@@ -1726,13 +1896,16 @@ namespace Graphic_Editor
 
         private void isActiveCursor()
         {
+            var cursorBtn = FindName("cursor") as Button;
+            if (cursorBtn == null) return;
+
             if (isCursor)
             {
-                cursor.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
+                cursorBtn.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
             }
             else
             {
-                cursor.Background = Brushes.Transparent;
+                cursorBtn.Background = Brushes.Transparent;
             }
         }
 

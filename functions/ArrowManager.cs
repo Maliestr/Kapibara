@@ -39,6 +39,7 @@ namespace Graphic_Editor
         private ArrowContainer draggedArrowContainer;
         private Point arrowOffset;
         private Point arrowDragStartPoint;
+        private ArrowAttachmentManager attachmentManager; // Менеджер прикрепления стрелок к объектам
 
         // Зависимости (передаются из MainWindow)
         private Canvas mainCanvas;
@@ -94,6 +95,9 @@ namespace Graphic_Editor
             getMaxZIndexFunc = getMaxZIndex;
             getMinZIndexFunc = getMinZIndex;
             updateArrowPropertiesInPanelsAction = updateArrowProperties;
+            
+            // Инициализируем менеджер прикрепления стрелок
+            attachmentManager = new ArrowAttachmentManager(canvas);
         }
 
         // Метод для обновления зависимостей (если они изменяются)
@@ -235,6 +239,9 @@ namespace Graphic_Editor
             arrows.Add(arrowContainer);
             MakeArrowDraggable(arrowContainer);
             MakeArrowPointsDraggable(arrowContainer);
+            
+            // Прикрепляем стрелку к объектам, если они находятся рядом
+            attachmentManager?.AttachArrowOnCreation(arrowContainer);
         }
 
         private void CaptureArrowOriginalAppearance(ArrowContainer arrowContainer)
@@ -836,6 +843,9 @@ namespace Graphic_Editor
                     DeselectArrow();
                 }
 
+                // Открепляем стрелку от объектов
+                attachmentManager?.DetachArrow(arrowContainer);
+                
                 // Удаляем с холста
                 if (mainCanvas != null)
                 {
@@ -1071,6 +1081,13 @@ namespace Graphic_Editor
             arrows.Clear();
             selectedArrowContainer = null;
             currentArrow = null;
+            attachmentManager?.ClearAllAttachments();
+        }
+        
+        // Метод для обновления прикрепленных стрелок при перемещении объекта
+        public void UpdateAttachedArrows(UIElement element)
+        {
+            attachmentManager?.UpdateAttachedArrows(element);
         }
     }
 }

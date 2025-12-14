@@ -57,6 +57,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="functions\ArrowAttachmentManager.cs" />
     <Compile Include="functions\ArrowManager.cs" />
     <Compile Include="functions\CanvasPanningManager.cs" />
     <Compile Include="functions\ClipboardManager.cs" />
