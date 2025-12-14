@@ -414,18 +414,136 @@ namespace Graphic_Editor
                 }
             }
 
-            // Обновляем комбо-бокс заливки
-            if (fillBrush is SolidColorBrush fillSolidBrush && fillBrush != Brushes.Transparent)
+            // Обновляем комбо-бокс заливки и превью
+            if (fillBrush is SolidColorBrush fillSolidBrush)
             {
-                string fillHexColor = fillSolidBrush.Color.ToString().Substring(3);
-                UpdateComboBoxSelection(fillColorComboBox, fillHexColor);
+                // Проверяем, является ли цвет прозрачным
+                bool isTransparent = fillSolidBrush.Color.A == 0 || 
+                                     fillSolidBrush == Brushes.Transparent ||
+                                     fillSolidBrush.Color == Colors.Transparent;
+                
+                if (!isTransparent)
+                {
+                    string fillHexColor = fillSolidBrush.Color.ToString().Substring(3);
+                    // Пытаемся найти цвет в списке
+                    bool colorFound = false;
+                    if (fillColorComboBox != null)
+                    {
+                        foreach (ComboBoxItem item in fillColorComboBox.Items)
+                        {
+                            if (item.Tag as string == fillHexColor)
+                            {
+                                fillColorComboBox.SelectedItem = item;
+                                colorFound = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Обновляем превью цвета заливки
+                    if (fillColorPreview != null)
+                    {
+                        fillColorPreview.Background = fillSolidBrush;
+                    }
+                    
+                    // Если цвет не найден в списке, очищаем комбо-бокс
+                    if (!colorFound && fillColorComboBox != null)
+                    {
+                        fillColorComboBox.SelectedIndex = -1;
+                    }
+                }
+                else
+                {
+                    // Если цвет прозрачный, очищаем комбо-бокс и превью
+                    if (fillColorComboBox != null)
+                    {
+                        fillColorComboBox.SelectedIndex = -1;
+                    }
+                    if (fillColorPreview != null)
+                    {
+                        fillColorPreview.Background = Brushes.Transparent;
+                    }
+                }
+            }
+            else if (fillBrush == null)
+            {
+                // Если цвет не задан, очищаем комбо-бокс и превью
+                if (fillColorComboBox != null)
+                {
+                    fillColorComboBox.SelectedIndex = -1;
+                }
+                if (fillColorPreview != null)
+                {
+                    fillColorPreview.Background = Brushes.Transparent;
+                }
+            }
+            else
+            {
+                // Если это не SolidColorBrush, очищаем
+                if (fillColorComboBox != null)
+                {
+                    fillColorComboBox.SelectedIndex = -1;
+                }
+                if (fillColorPreview != null)
+                {
+                    fillColorPreview.Background = Brushes.Transparent;
+                }
             }
 
-            // Обновляем комбо-бокс обводки
+            // Обновляем комбо-бокс обводки и превью
             if (strokeBrush is SolidColorBrush strokeSolidBrush)
             {
                 string strokeHexColor = strokeSolidBrush.Color.ToString().Substring(3);
-                UpdateComboBoxSelection(strokeColorComboBox, strokeHexColor);
+                // Пытаемся найти цвет в списке
+                bool colorFound = false;
+                if (strokeColorComboBox != null)
+                {
+                    foreach (ComboBoxItem item in strokeColorComboBox.Items)
+                    {
+                        if (item.Tag as string == strokeHexColor)
+                        {
+                            strokeColorComboBox.SelectedItem = item;
+                            colorFound = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // Обновляем превью цвета обводки
+                if (strokeColorPreview != null)
+                {
+                    strokeColorPreview.Background = strokeSolidBrush;
+                }
+                
+                // Если цвет не найден в списке, очищаем комбо-бокс
+                if (!colorFound && strokeColorComboBox != null)
+                {
+                    strokeColorComboBox.SelectedIndex = -1;
+                }
+            }
+            else if (strokeBrush == null)
+            {
+                // Если цвет не задан, очищаем комбо-бокс и превью
+                if (strokeColorComboBox != null)
+                {
+                    strokeColorComboBox.SelectedIndex = -1;
+                }
+                if (strokeColorPreview != null)
+                {
+                    strokeColorPreview.Background = Brushes.Transparent;
+                }
+            }
+            else
+            {
+                // Если это не SolidColorBrush, очищаем
+                if (strokeColorComboBox != null)
+                {
+                    strokeColorComboBox.SelectedIndex = -1;
+                }
+                if (strokeColorPreview != null)
+                {
+                    strokeColorPreview.Background = Brushes.Transparent;
+                }
             }
         }
 
