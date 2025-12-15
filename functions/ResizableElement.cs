@@ -13,6 +13,7 @@ namespace Graphic_Editor
         private UIElement element;
         private Canvas canvas;
         private Rectangle[] cornerHandles;
+        private Rectangle[] sideHandles; // Ручки для изменения размера по сторонам
         private bool isResizing = false;
         private ResizeDirection resizeDirection;
         private Point startPoint;
@@ -84,6 +85,7 @@ namespace Graphic_Editor
         private void InitializeResizeHandles()
         {
             cornerHandles = new Rectangle[4];
+            sideHandles = new Rectangle[4]; // Top, Right, Bottom, Left
 
             // Угловые маркеры
             for (int i = 0; i < 4; i++)
@@ -108,6 +110,45 @@ namespace Graphic_Editor
 
                 canvas.Children.Add(cornerHandles[i]);
             }
+
+            // Боковые маркеры (для изменения размера по сторонам)
+            sideHandles[0] = CreateSideHandle(ResizeDirection.Top); // Top
+            sideHandles[1] = CreateSideHandle(ResizeDirection.Right); // Right
+            sideHandles[2] = CreateSideHandle(ResizeDirection.Bottom); // Bottom
+            sideHandles[3] = CreateSideHandle(ResizeDirection.Left); // Left
+        }
+
+        private Rectangle CreateSideHandle(ResizeDirection direction)
+        {
+            Rectangle handle = new Rectangle
+            {
+                Fill = Brushes.Blue,
+                Stroke = Brushes.White,
+                StrokeThickness = 1,
+                Visibility = Visibility.Collapsed
+            };
+
+            // Размеры ручек зависят от направления
+            if (direction == ResizeDirection.Top || direction == ResizeDirection.Bottom)
+            {
+                handle.Width = 20; // Ширина для верхней/нижней стороны
+                handle.Height = 6;
+            }
+            else // Left или Right
+            {
+                handle.Width = 6; // Ширина для левой/правой стороны
+                handle.Height = 20;
+            }
+
+            handle.MouseLeftButtonDown += CornerHandle_MouseLeftButtonDown;
+            handle.MouseLeftButtonUp += ResizeHandle_MouseLeftButtonUp;
+            handle.MouseMove += ResizeHandle_MouseMove;
+            handle.MouseEnter += Handle_MouseEnter;
+            handle.MouseLeave += Handle_MouseLeave;
+            handle.Tag = direction;
+
+            canvas.Children.Add(handle);
+            return handle;
         }
 
         private void Handle_MouseEnter(object sender, MouseEventArgs e)
@@ -173,6 +214,15 @@ namespace Graphic_Editor
                 handle.Visibility = Visibility.Visible;
                 Canvas.SetZIndex(handle, 1001);
             }
+
+            foreach (var handle in sideHandles)
+            {
+                if (handle != null)
+                {
+                    handle.Visibility = Visibility.Visible;
+                    Canvas.SetZIndex(handle, 1001);
+                }
+            }
         }
 
         public void HideResizeHandles()
@@ -181,6 +231,15 @@ namespace Graphic_Editor
             if (cornerHandles != null)
             {
                 foreach (var handle in cornerHandles)
+                {
+                    if (handle != null)
+                        handle.Visibility = Visibility.Collapsed;
+                }
+            }
+
+            if (sideHandles != null)
+            {
+                foreach (var handle in sideHandles)
                 {
                     if (handle != null)
                         handle.Visibility = Visibility.Collapsed;
@@ -208,6 +267,32 @@ namespace Graphic_Editor
             PositionCornerHandle(cornerHandles[1], left + width - 4, top - 4, ResizeDirection.TopRight);
             PositionCornerHandle(cornerHandles[2], left + width - 4, top + height - 4, ResizeDirection.BottomRight);
             PositionCornerHandle(cornerHandles[3], left - 4, top + height - 4, ResizeDirection.BottomLeft);
+
+            // Боковые маркеры
+            if (sideHandles != null && sideHandles.Length >= 4)
+            {
+                // Top - верхняя сторона (центрирована по горизонтали)
+                PositionSideHandle(sideHandles[0], left + width / 2 - 10, top - 3, ResizeDirection.Top);
+                
+                // Right - правая сторона (центрирована по вертикали)
+                PositionSideHandle(sideHandles[1], left + width - 3, top + height / 2 - 10, ResizeDirection.Right);
+                
+                // Bottom - нижняя сторона (центрирована по горизонтали)
+                PositionSideHandle(sideHandles[2], left + width / 2 - 10, top + height - 3, ResizeDirection.Bottom);
+                
+                // Left - левая сторона (центрирована по вертикали)
+                PositionSideHandle(sideHandles[3], left - 3, top + height / 2 - 10, ResizeDirection.Left);
+            }
+        }
+
+        private void PositionSideHandle(Rectangle handle, double left, double top, ResizeDirection direction)
+        {
+            if (handle != null)
+            {
+                Canvas.SetLeft(handle, left);
+                Canvas.SetTop(handle, top);
+                handle.Tag = direction;
+            }
         }
 
         private void PositionCornerHandle(Rectangle handle, double left, double top, ResizeDirection direction)
@@ -486,6 +571,17 @@ namespace Graphic_Editor
             if (cornerHandles != null)
             {
                 foreach (var handle in cornerHandles)
+                {
+                    if (handle != null && canvas.Children.Contains(handle))
+                    {
+                        canvas.Children.Remove(handle);
+                    }
+                }
+            }
+
+            if (sideHandles != null)
+            {
+                foreach (var handle in sideHandles)
                 {
                     if (handle != null && canvas.Children.Contains(handle))
                     {
