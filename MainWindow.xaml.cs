@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.Win32;
 using System.IO;
 using System.Windows.Media.Imaging;
@@ -46,6 +46,7 @@ namespace Graphic_Editor
         private ClipboardManager clipboardManager; // Система буфера обмена и отмены/повтора
         private PoolManager poolManager; // Система управления пулами (swimlanes)
         private CanvasPanningManager canvasPanningManager;
+        private ZoomManager zoomManager; // Система масштабирования
         private AutoSave autoSave; // Система автоматического сохранения проекта
 
         // Константы
@@ -126,6 +127,7 @@ namespace Graphic_Editor
             InitializePoolManager(); // Инициализация менеджера пулов
             canvasPanningManager = new CanvasPanningManager(MainCanvas);
             canvasPanningManager.Mode = CanvasPanningManager.PanningMode.MiddleButton;
+            InitializeZoomManager(); // Инициализация менеджера масштабирования
             
             // Устанавливаем ссылку на ArrowManager в FillStrokeManager после инициализации всех менеджеров
             if (arrowManager != null && fillStrokeManager != null)
@@ -818,19 +820,45 @@ namespace Graphic_Editor
 
         #region Меню "Вид"
 
+        private void InitializeZoomManager()
+        {
+            zoomManager = new ZoomManager(MainCanvas, canvasPanningManager);
+            
+            // Подписываемся на событие изменения масштаба для обновления UI
+            zoomManager.OnZoomChanged += (zoom) =>
+            {
+                UpdateZoomDisplay();
+            };
+            
+            // Инициализируем отображение масштаба
+            UpdateZoomDisplay();
+        }
+
         private void ZoomIn_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Увеличить");
+            zoomManager?.ZoomIn();
         }
 
         private void ZoomOut_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Уменьшить");
+            zoomManager?.ZoomOut();
         }
 
         private void ResetZoom_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Сбросить масштаб");
+            zoomManager?.ResetZoom();
+        }
+
+        private void UpdateZoomDisplay()
+        {
+            if (zoomManager != null)
+            {
+                var zoomTextBlock = FindName("ZoomPercentageTextBlock") as TextBlock;
+                if (zoomTextBlock != null)
+                {
+                    zoomTextBlock.Text = $"{zoomManager.GetZoomPercentage()}%";
+                }
+            }
         }
 
         #endregion
