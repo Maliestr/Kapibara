@@ -13,6 +13,7 @@ namespace Graphic_Editor
         // Зависимости
         private SelectionManager selectionManager;
         private ToggleButton togglePanelsButton;
+        private ArrowManager arrowManager; // Добавляем ссылку на ArrowManager
         
         // UI элементы
         private ComboBox fillColorComboBox;
@@ -46,6 +47,42 @@ namespace Graphic_Editor
             this.fillPanel = fillPanel;
             this.strokePanel = strokePanel;
             this.strokeWidthPanel = strokeWidthPanel;
+        }
+
+        // Метод для установки ссылки на ArrowManager
+        public void SetArrowManager(ArrowManager arrowManager)
+        {
+            this.arrowManager = arrowManager;
+        }
+
+        // Метод для получения текущей толщины из комбо-бокса
+        public double GetCurrentStrokeThickness()
+        {
+            if (strokeWidthComboBox?.SelectedItem is ComboBoxItem selectedItem)
+            {
+                string thicknessValue = selectedItem.Tag as string;
+                if (!string.IsNullOrEmpty(thicknessValue))
+                {
+                    if (double.TryParse(thicknessValue, out double thickness))
+                    {
+                        return thickness;
+                    }
+                }
+            }
+            // Если ничего не выбрано, возвращаем значение по умолчанию 3px
+            // Ищем элемент с Tag="3" (индекс 2)
+            if (strokeWidthComboBox?.Items.Count > 2)
+            {
+                if (strokeWidthComboBox.Items[2] is ComboBoxItem defaultItem)
+                {
+                    string defaultValue = defaultItem.Tag as string;
+                    if (!string.IsNullOrEmpty(defaultValue) && double.TryParse(defaultValue, out double defaultThickness))
+                    {
+                        return defaultThickness;
+                    }
+                }
+            }
+            return 3; // Значение по умолчанию, если комбо-бокс недоступен
         }
 
         // Метод для показа/скрытия панели толщины обводки
@@ -86,7 +123,17 @@ namespace Graphic_Editor
                     try
                     {
                         double thickness = double.Parse(thicknessValue);
-                        ApplyStrokeThicknessToSelectedShape(thickness);
+                        
+                        // Сначала проверяем, выделена ли стрелка
+                        if (arrowManager?.SelectedArrowContainer != null)
+                        {
+                            ApplyStrokeThicknessToArrow(arrowManager.SelectedArrowContainer, thickness);
+                        }
+                        else
+                        {
+                            // Применяем к обычным элементам
+                            ApplyStrokeThicknessToSelectedShape(thickness);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -131,6 +178,11 @@ namespace Graphic_Editor
             {
                 line.StrokeThickness = thickness;
             }
+            else if (shape is Polyline polyline)
+            {
+                // Для стрелок (Polyline) применяем толщину
+                polyline.StrokeThickness = thickness;
+            }
             else if (shape is TextBlock textBlock)
             {
                 // Для текста толщина не применяется
@@ -140,28 +192,66 @@ namespace Graphic_Editor
             selectionManager?.UpdateOriginalStrokeThickness(shape, thickness);
         }
 
+        // Метод для применения толщины к стрелке
+        private void ApplyStrokeThicknessToArrow(ArrowContainer arrowContainer, double thickness)
+        {
+            if (arrowContainer?.Line == null) return;
+
+            try
+            {
+                // Сохраняем новую толщину как оригинальную
+                arrowContainer.OriginalThickness = thickness;
+                
+                // Применяем толщину к линии стрелки
+                // Если стрелка выделена, визуальное выделение будет обновлено ниже
+                arrowContainer.Line.StrokeThickness = thickness;
+                
+                // Если стрелка выделена, обновляем визуальное выделение с новой толщиной
+                if (arrowManager?.SelectedArrowContainer == arrowContainer)
+                {
+                    // Вызываем SelectArrow заново, чтобы обновить визуальное выделение
+                    // с правильной толщиной (выделение использует OriginalThickness + 2)
+                    arrowManager.SelectArrow(arrowContainer.Line);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Ошибка в ApplyStrokeThicknessToArrow: {ex.Message}");
+            }
+        }
+
         // Метод обновления комбо-бокса толщины на основе фигуры
         private void UpdateStrokeWidthComboBoxFromShape(UIElement shape)
         {
             if (shape == null) return;
 
-            double currentThickness = 0;
+            // Используем оригинальную (сохраненную) толщину, а не текущую
+            // Текущая толщина может быть увеличена при выделении
+            double originalThickness = selectionManager?.GetOriginalStrokeThickness(shape) ?? 0;
 
-            if (shape is Ellipse ellipse)
+            // Если оригинальная толщина не сохранена, берем текущую
+            if (originalThickness == 0)
             {
-                currentThickness = ellipse.StrokeThickness;
-            }
-            else if (shape is Border border)
-            {
-                currentThickness = border.BorderThickness.Left;
-            }
-            else if (shape is Line line)
-            {
-                currentThickness = line.StrokeThickness;
+                if (shape is Ellipse ellipse)
+                {
+                    originalThickness = ellipse.StrokeThickness;
+                }
+                else if (shape is Border border)
+                {
+                    originalThickness = border.BorderThickness.Left;
+                }
+                else if (shape is Line line)
+                {
+                    originalThickness = line.StrokeThickness;
+                }
+                else if (shape is Polyline polyline)
+                {
+                    originalThickness = polyline.StrokeThickness;
+                }
             }
 
-            // Обновляем комбо-бокс
-            UpdateStrokeWidthComboBoxSelection(currentThickness);
+            // Обновляем комбо-бокс оригинальной толщиной
+            UpdateStrokeWidthComboBoxSelection(originalThickness);
         }
 
         // Вспомогательный метод для обновления комбо-бокса толщины
@@ -195,6 +285,10 @@ namespace Graphic_Editor
             else if (element is Line line)
             {
                 line.StrokeThickness = thickness;
+            }
+            else if (element is Polyline polyline)
+            {
+                polyline.StrokeThickness = thickness;
             }
 
             // Сохраняем в словарь
@@ -260,8 +354,20 @@ namespace Graphic_Editor
         {
             if (shape is Ellipse ellipse)
             {
-                // Для эллипсов меняем Fill (заливку), только если это не кольцо
-                if (ellipse.Fill != Brushes.Transparent)
+                // Проверяем, была ли фигура изначально прозрачной
+                Brush originalFill = selectionManager?.GetOriginalFillColor(shape);
+                Brush currentFill = ellipse.Fill;
+                
+                // Определяем, была ли фигура изначально прозрачной
+                // Используем оригинальный цвет, если он сохранен, иначе текущий
+                Brush fillToCheck = originalFill ?? currentFill;
+                bool wasTransparent = fillToCheck == null || 
+                                     fillToCheck == Brushes.Transparent ||
+                                     (fillToCheck is SolidColorBrush fillSolid && 
+                                      (fillSolid.Color.A == 0 || fillSolid.Color == Colors.Transparent));
+                
+                // Для эллипсов меняем Fill (заливку), только если изначально не была прозрачной
+                if (!wasTransparent)
                 {
                     ellipse.Fill = brush;
                     // Сохраняем новый цвет как оригинальный
@@ -270,10 +376,25 @@ namespace Graphic_Editor
             }
             else if (shape is Border border)
             {
-                // Для Border меняем Background (заливку)
-                border.Background = brush;
-                // Сохраняем новый цвет как оригинальный
-                selectionManager?.UpdateOriginalFillColor(shape, brush);
+                // Проверяем, была ли фигура изначально прозрачной
+                Brush originalFill = selectionManager?.GetOriginalFillColor(shape);
+                Brush currentFill = border.Background;
+                
+                // Определяем, была ли фигура изначально прозрачной
+                // Используем оригинальный цвет, если он сохранен, иначе текущий
+                Brush fillToCheck = originalFill ?? currentFill;
+                bool wasTransparent = fillToCheck == null || 
+                                     fillToCheck == Brushes.Transparent ||
+                                     (fillToCheck is SolidColorBrush fillSolid && 
+                                      (fillSolid.Color.A == 0 || fillSolid.Color == Colors.Transparent));
+                
+                // Для Border меняем Background (заливку), только если изначально не была прозрачной
+                if (!wasTransparent)
+                {
+                    border.Background = brush;
+                    // Сохраняем новый цвет как оригинальный
+                    selectionManager?.UpdateOriginalFillColor(shape, brush);
+                }
             }
             // Для Line и TextBlock заливка не применяется
         }
@@ -414,18 +535,136 @@ namespace Graphic_Editor
                 }
             }
 
-            // Обновляем комбо-бокс заливки
-            if (fillBrush is SolidColorBrush fillSolidBrush && fillBrush != Brushes.Transparent)
+            // Обновляем комбо-бокс заливки и превью
+            if (fillBrush is SolidColorBrush fillSolidBrush)
             {
-                string fillHexColor = fillSolidBrush.Color.ToString().Substring(3);
-                UpdateComboBoxSelection(fillColorComboBox, fillHexColor);
+                // Проверяем, является ли цвет прозрачным
+                bool isTransparent = fillSolidBrush.Color.A == 0 || 
+                                     fillSolidBrush == Brushes.Transparent ||
+                                     fillSolidBrush.Color == Colors.Transparent;
+                
+                if (!isTransparent)
+                {
+                    string fillHexColor = fillSolidBrush.Color.ToString().Substring(3);
+                    // Пытаемся найти цвет в списке
+                    bool colorFound = false;
+                    if (fillColorComboBox != null)
+                    {
+                        foreach (ComboBoxItem item in fillColorComboBox.Items)
+                        {
+                            if (item.Tag as string == fillHexColor)
+                            {
+                                fillColorComboBox.SelectedItem = item;
+                                colorFound = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Обновляем превью цвета заливки
+                    if (fillColorPreview != null)
+                    {
+                        fillColorPreview.Background = fillSolidBrush;
+                    }
+                    
+                    // Если цвет не найден в списке, очищаем комбо-бокс
+                    if (!colorFound && fillColorComboBox != null)
+                    {
+                        fillColorComboBox.SelectedIndex = -1;
+                    }
+                }
+                else
+                {
+                    // Если цвет прозрачный, очищаем комбо-бокс и превью
+                    if (fillColorComboBox != null)
+                    {
+                        fillColorComboBox.SelectedIndex = -1;
+                    }
+                    if (fillColorPreview != null)
+                    {
+                        fillColorPreview.Background = Brushes.Transparent;
+                    }
+                }
+            }
+            else if (fillBrush == null)
+            {
+                // Если цвет не задан, очищаем комбо-бокс и превью
+                if (fillColorComboBox != null)
+                {
+                    fillColorComboBox.SelectedIndex = -1;
+                }
+                if (fillColorPreview != null)
+                {
+                    fillColorPreview.Background = Brushes.Transparent;
+                }
+            }
+            else
+            {
+                // Если это не SolidColorBrush, очищаем
+                if (fillColorComboBox != null)
+                {
+                    fillColorComboBox.SelectedIndex = -1;
+                }
+                if (fillColorPreview != null)
+                {
+                    fillColorPreview.Background = Brushes.Transparent;
+                }
             }
 
-            // Обновляем комбо-бокс обводки
+            // Обновляем комбо-бокс обводки и превью
             if (strokeBrush is SolidColorBrush strokeSolidBrush)
             {
                 string strokeHexColor = strokeSolidBrush.Color.ToString().Substring(3);
-                UpdateComboBoxSelection(strokeColorComboBox, strokeHexColor);
+                // Пытаемся найти цвет в списке
+                bool colorFound = false;
+                if (strokeColorComboBox != null)
+                {
+                    foreach (ComboBoxItem item in strokeColorComboBox.Items)
+                    {
+                        if (item.Tag as string == strokeHexColor)
+                        {
+                            strokeColorComboBox.SelectedItem = item;
+                            colorFound = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // Обновляем превью цвета обводки
+                if (strokeColorPreview != null)
+                {
+                    strokeColorPreview.Background = strokeSolidBrush;
+                }
+                
+                // Если цвет не найден в списке, очищаем комбо-бокс
+                if (!colorFound && strokeColorComboBox != null)
+                {
+                    strokeColorComboBox.SelectedIndex = -1;
+                }
+            }
+            else if (strokeBrush == null)
+            {
+                // Если цвет не задан, очищаем комбо-бокс и превью
+                if (strokeColorComboBox != null)
+                {
+                    strokeColorComboBox.SelectedIndex = -1;
+                }
+                if (strokeColorPreview != null)
+                {
+                    strokeColorPreview.Background = Brushes.Transparent;
+                }
+            }
+            else
+            {
+                // Если это не SolidColorBrush, очищаем
+                if (strokeColorComboBox != null)
+                {
+                    strokeColorComboBox.SelectedIndex = -1;
+                }
+                if (strokeColorPreview != null)
+                {
+                    strokeColorPreview.Background = Brushes.Transparent;
+                }
             }
         }
 
@@ -436,6 +675,23 @@ namespace Graphic_Editor
             strokeColorComboBox.SelectedIndex = -1;
             fillColorPreview.Background = Brushes.Transparent;
             strokeColorPreview.Background = Brushes.Transparent;
+        }
+
+        // Метод для сохранения оригинальных стилей с правильной толщиной из копии
+        public void SetOriginalStylesFromCopy(UIElement copy, UIElement original)
+        {
+            if (copy == null || original == null || selectionManager == null) return;
+
+            if (original is Ellipse originalEllipse && copy is Ellipse copyEllipse)
+            {
+                // Используем толщину из копии (которая установлена при создании), а не из оригинала
+                selectionManager.SetOriginalStyles(copyEllipse, originalEllipse.Stroke, originalEllipse.Fill, copyEllipse.StrokeThickness);
+            }
+            else if (original is Border originalBorder && copy is Border copyBorder)
+            {
+                // Используем толщину из копии (которая установлена при создании), а не из оригинала
+                selectionManager.SetOriginalStyles(copyBorder, originalBorder.BorderBrush, originalBorder.Background, copyBorder.BorderThickness.Left);
+            }
         }
     }
 }

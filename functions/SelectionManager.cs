@@ -456,10 +456,14 @@ namespace Graphic_Editor
                 {
                     ellipse.StrokeThickness = savedThickness;
                 }
-                // Сохраняем текущие цвета и толщину
+                // Сохраняем текущие цвета
                 originalStrokeColors[shape] = ellipse.Stroke;
                 originalFillColors[shape] = ellipse.Fill;
-                originalStrokeThickness[shape] = ellipse.StrokeThickness;
+                // Сохраняем толщину только если она еще не была сохранена
+                if (!originalStrokeThickness.ContainsKey(shape))
+                {
+                    originalStrokeThickness[shape] = ellipse.StrokeThickness;
+                }
             }
             else if (shape is Border border)
             {
@@ -468,10 +472,14 @@ namespace Graphic_Editor
                 {
                     border.BorderThickness = new Thickness(savedThickness);
                 }
-                // Сохраняем текущие цвета и толщину
+                // Сохраняем текущие цвета
                 originalStrokeColors[shape] = border.BorderBrush;
                 originalFillColors[shape] = border.Background;
-                originalStrokeThickness[shape] = border.BorderThickness.Left;
+                // Сохраняем толщину только если она еще не была сохранена
+                if (!originalStrokeThickness.ContainsKey(shape))
+                {
+                    originalStrokeThickness[shape] = border.BorderThickness.Left;
+                }
             }
             else if (shape is Line line)
             {
@@ -480,9 +488,13 @@ namespace Graphic_Editor
                 {
                     line.StrokeThickness = savedThickness;
                 }
-                // Сохраняем текущие цвета и толщину
+                // Сохраняем текущие цвета
                 originalStrokeColors[shape] = line.Stroke;
-                originalStrokeThickness[shape] = line.StrokeThickness;
+                // Сохраняем толщину только если она еще не была сохранена
+                if (!originalStrokeThickness.ContainsKey(shape))
+                {
+                    originalStrokeThickness[shape] = line.StrokeThickness;
+                }
             }
             else if (shape is TextBlock textBlock)
             {

@@ -59,6 +59,11 @@ namespace Graphic_Editor
         private Func<int> getMaxZIndexFunc;
         private Func<int> getMinZIndexFunc;
         private Action<ArrowContainer> updateArrowPropertiesInPanelsAction;
+        private Func<double> getCurrentStrokeThicknessFunc; // Функция для получения текущей толщины из комбо-бокса
+        
+        // События для уведомления об изменениях
+        public event Action OnArrowDeleted; // Вызывается при удалении выделенной стрелки
+        public event Action OnArrowDeselected; // Вызывается при снятии выделения со стрелки
 
         public bool IsArrowModeActive => isArrowModeActive;
         public Polyline CurrentArrow => currentArrow;
@@ -79,7 +84,8 @@ namespace Graphic_Editor
             Func<Point, Point> snapToGrid,
             Func<int> getMaxZIndex,
             Func<int> getMinZIndex,
-            Action<ArrowContainer> updateArrowProperties)
+            Action<ArrowContainer> updateArrowProperties,
+            Func<double> getCurrentStrokeThickness = null)
         {
             mainCanvas = canvas;
             pencilButton = pencil;
@@ -94,6 +100,7 @@ namespace Graphic_Editor
             getMaxZIndexFunc = getMaxZIndex;
             getMinZIndexFunc = getMinZIndex;
             updateArrowPropertiesInPanelsAction = updateArrowProperties;
+            getCurrentStrokeThicknessFunc = getCurrentStrokeThickness;
         }
 
         // Метод для обновления зависимостей (если они изменяются)
@@ -131,10 +138,17 @@ namespace Graphic_Editor
         {
             arrowStartPoint = startPoint;
 
+            // Получаем текущую толщину из комбо-бокса, если функция доступна
+            double strokeThickness = 4; // Значение по умолчанию
+            if (getCurrentStrokeThicknessFunc != null)
+            {
+                strokeThickness = getCurrentStrokeThicknessFunc();
+            }
+
             currentArrow = new Polyline
             {
                 Stroke = Brushes.Black,
-                StrokeThickness = 4,
+                StrokeThickness = strokeThickness,
                 StrokeLineJoin = PenLineJoin.Round,
                 StrokeStartLineCap = PenLineCap.Flat,
                 StrokeEndLineCap = PenLineCap.Triangle,
@@ -322,6 +336,8 @@ namespace Graphic_Editor
             {
                 RestoreArrowAppearance(selectedArrowContainer);
                 selectedArrowContainer = null;
+                // Уведомляем о снятии выделения
+                OnArrowDeselected?.Invoke();
             }
         }
 
@@ -831,7 +847,9 @@ namespace Graphic_Editor
                 // Сохраняем в стек отмены
                 SaveArrowToUndoStack(arrowContainer);
 
-                if (selectedArrowContainer == arrowContainer)
+                bool wasSelected = selectedArrowContainer == arrowContainer;
+                
+                if (wasSelected)
                 {
                     DeselectArrow();
                 }
@@ -850,6 +868,12 @@ namespace Graphic_Editor
                 }
 
                 arrows?.Remove(arrowContainer);
+                
+                // Уведомляем об удалении стрелки, если она была выделена
+                if (wasSelected)
+                {
+                    OnArrowDeleted?.Invoke();
+                }
             }
             catch (Exception ex)
             {

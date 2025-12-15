@@ -1330,6 +1330,7 @@
                             Background="#D9D9D9"
                             BorderThickness="0"
                             HorizontalAlignment="Center"
+                            SelectedIndex="2"
                             SelectionChanged="StrokeWidthComboBox_SelectionChanged">
                             <ComboBoxItem Content="1 px" Tag="1"/>
                             <ComboBoxItem Content="2 px" Tag="2"/>

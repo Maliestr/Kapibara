@@ -35,11 +35,19 @@ namespace Graphic_Editor
         public Func<UIElement, double> GetElementHeight { get; set; }
         public Action<FrameworkElement> BringToFront { get; set; }
         public Action<UIElement> MakeCanvasShapeDraggable { get; set; }
-        public Action<UIElement, UIElement> SetOriginalStyles { get; set; }
+        public Action<UIElement, UIElement> SetOriginalStyles { get; set; } // Оставлено для обратной совместимости
         public Action<UIElement> AnimateShapeAppearance { get; set; }
         public Func<UIElement, bool> IsShapeFromNotation { get; set; }
         public Func<UIElement, string> GetShapeType { get; set; }
         public Action<UIElement, Point> OnElementMoved { get; set; } // Обработчик перемещения элемента
+        
+        // Ссылка на FillStrokeManager для сохранения оригинальных стилей
+        private FillStrokeManager fillStrokeManager;
+        
+        public void SetFillStrokeManager(FillStrokeManager manager)
+        {
+            fillStrokeManager = manager;
+        }
 
         // Добавляем ссылку на ResizableElement
         public Func<UIElement, bool> GetIsDragging { get; set; }
@@ -753,7 +761,16 @@ namespace Graphic_Editor
                     StrokeThickness = 3,
                     Cursor = Cursors.Hand
                 };
-                SetOriginalStyles?.Invoke(copy, original);
+                // Используем FillStrokeManager для сохранения оригинальных стилей, если он доступен
+                if (fillStrokeManager != null)
+                {
+                    fillStrokeManager.SetOriginalStylesFromCopy(copy, original);
+                }
+                else
+                {
+                    // Fallback на делегат для обратной совместимости
+                    SetOriginalStyles?.Invoke(copy, original);
+                }
                 return copy;
             }
             else if (elementName == "UmlInitialNode")
@@ -781,7 +798,16 @@ namespace Graphic_Editor
                 };
 
                 border.Child = circle;
-                SetOriginalStyles?.Invoke(border, original);
+                // Используем FillStrokeManager для сохранения оригинальных стилей, если он доступен
+                if (fillStrokeManager != null)
+                {
+                    fillStrokeManager.SetOriginalStylesFromCopy(border, original);
+                }
+                else
+                {
+                    // Fallback на делегат для обратной совместимости
+                    SetOriginalStyles?.Invoke(border, original);
+                }
                 return border;
             }
             else if (elementName == "SimpleRing")
@@ -791,11 +817,20 @@ namespace Graphic_Editor
                     Width = 110,
                     Height = 110,
                     Stroke = Brushes.White,
-                    StrokeThickness = 5,
+                    StrokeThickness = 3,
                     Fill = Brushes.Transparent,
                     Cursor = Cursors.Hand
                 };
-                SetOriginalStyles?.Invoke(copy, original);
+                // Используем FillStrokeManager для сохранения оригинальных стилей, если он доступен
+                if (fillStrokeManager != null)
+                {
+                    fillStrokeManager.SetOriginalStylesFromCopy(copy, original);
+                }
+                else
+                {
+                    // Fallback на делегат для обратной совместимости
+                    SetOriginalStyles?.Invoke(copy, original);
+                }
                 return copy;
             }
             else if (elementName == "Ellipse")
@@ -809,84 +844,173 @@ namespace Graphic_Editor
                     Fill = Brushes.Transparent,
                     Cursor = Cursors.Hand
                 };
-                SetOriginalStyles?.Invoke(copy, original);
+                // Используем FillStrokeManager для сохранения оригинальных стилей, если он доступен
+                if (fillStrokeManager != null)
+                {
+                    fillStrokeManager.SetOriginalStylesFromCopy(copy, original);
+                }
+                else
+                {
+                    // Fallback на делегат для обратной совместимости
+                    SetOriginalStyles?.Invoke(copy, original);
+                }
                 return copy;
             }
             else if (elementName == "Square")
             {
+                // Получаем оригинальный цвет заливки
+                Brush originalBackground = Brushes.Transparent;
+                if (original is Border originalBorder)
+                {
+                    originalBackground = originalBorder.Background ?? Brushes.Transparent;
+                }
+                
                 var copy = new Border
                 {
                     Width = 100,
                     Height = 100,
-                    Background = Brushes.White,
+                    Background = originalBackground,
                     BorderBrush = Brushes.White,
-                    BorderThickness = new Thickness(2),
+                    BorderThickness = new Thickness(3),
                     CornerRadius = new CornerRadius(0),
                     Cursor = Cursors.Hand
                 };
-                SetOriginalStyles?.Invoke(copy, original);
+                // Используем FillStrokeManager для сохранения оригинальных стилей, если он доступен
+                if (fillStrokeManager != null)
+                {
+                    fillStrokeManager.SetOriginalStylesFromCopy(copy, original);
+                }
+                else
+                {
+                    // Fallback на делегат для обратной совместимости
+                    SetOriginalStyles?.Invoke(copy, original);
+                }
                 return copy;
             }
             else if (elementName == "ResizableSquare")
             {
+                // Получаем оригинальный цвет заливки
+                Brush originalBackground = Brushes.Transparent;
+                if (original is Border originalBorder)
+                {
+                    originalBackground = originalBorder.Background ?? Brushes.Transparent;
+                }
+                
                 var copy = new Border
                 {
                     Width = 70,
                     Height = 71,
-                    Background = Brushes.White,
+                    Background = originalBackground,
                     BorderBrush = Brushes.White,
-                    BorderThickness = new Thickness(2),
+                    BorderThickness = new Thickness(3),
                     CornerRadius = new CornerRadius(0),
                     Cursor = Cursors.Hand,
                     RenderTransformOrigin = new Point(0.5, 0.5)
                 };
                 copy.RenderTransform = new RotateTransform(45);
-                SetOriginalStyles?.Invoke(copy, original);
+                // Используем FillStrokeManager для сохранения оригинальных стилей, если он доступен
+                if (fillStrokeManager != null)
+                {
+                    fillStrokeManager.SetOriginalStylesFromCopy(copy, original);
+                }
+                else
+                {
+                    // Fallback на делегат для обратной совместимости
+                    SetOriginalStyles?.Invoke(copy, original);
+                }
                 return copy;
             }
             else if (elementName == "Rectangle")
             {
+                // Получаем оригинальный цвет заливки
+                Brush originalBackground = Brushes.Transparent;
+                if (original is Border originalBorder)
+                {
+                    originalBackground = originalBorder.Background ?? Brushes.Transparent;
+                }
+                
                 var copy = new Border
                 {
                     Width = 150,
                     Height = 80,
-                    Background = Brushes.White,
+                    Background = originalBackground,
                     BorderBrush = Brushes.White,
-                    BorderThickness = new Thickness(2),
+                    BorderThickness = new Thickness(3),
                     CornerRadius = new CornerRadius(0),
                     Cursor = Cursors.Hand
                 };
-                SetOriginalStyles?.Invoke(copy, original);
+                // Используем FillStrokeManager для сохранения оригинальных стилей, если он доступен
+                if (fillStrokeManager != null)
+                {
+                    fillStrokeManager.SetOriginalStylesFromCopy(copy, original);
+                }
+                else
+                {
+                    // Fallback на делегат для обратной совместимости
+                    SetOriginalStyles?.Invoke(copy, original);
+                }
                 return copy;
             }
             else if (elementName == "stick")
             {
+                // Получаем оригинальный цвет заливки
+                Brush originalBackground = Brushes.White;
+                if (original is Border originalBorder)
+                {
+                    originalBackground = originalBorder.Background ?? Brushes.White;
+                }
+                
                 var copy = new Border
                 {
                     Width = 200,
                     Height = 30,
-                    Background = Brushes.White,
+                    Background = originalBackground,
                     BorderBrush = Brushes.White,
-                    BorderThickness = new Thickness(2),
+                    BorderThickness = new Thickness(3),
                     CornerRadius = new CornerRadius(0),
                     Cursor = Cursors.Hand
                 };
-                SetOriginalStyles?.Invoke(copy, original);
+                // Используем FillStrokeManager для сохранения оригинальных стилей, если он доступен
+                if (fillStrokeManager != null)
+                {
+                    fillStrokeManager.SetOriginalStylesFromCopy(copy, original);
+                }
+                else
+                {
+                    // Fallback на делегат для обратной совместимости
+                    SetOriginalStyles?.Invoke(copy, original);
+                }
                 return copy;
             }
             else if (elementName == "SuperEllipse")
             {
+                // Получаем оригинальный цвет заливки
+                Brush originalBackground = Brushes.Transparent;
+                if (original is Border originalBorder)
+                {
+                    originalBackground = originalBorder.Background ?? Brushes.Transparent;
+                }
+                
                 var copy = new Border
                 {
                     Width = 120,
                     Height = 80,
-                    Background = Brushes.White,
+                    Background = originalBackground,
                     BorderBrush = Brushes.White,
-                    BorderThickness = new Thickness(2),
+                    BorderThickness = new Thickness(3),
                     CornerRadius = new CornerRadius(10),
                     Cursor = Cursors.Hand
                 };
-                SetOriginalStyles?.Invoke(copy, original);
+                // Используем FillStrokeManager для сохранения оригинальных стилей, если он доступен
+                if (fillStrokeManager != null)
+                {
+                    fillStrokeManager.SetOriginalStylesFromCopy(copy, original);
+                }
+                else
+                {
+                    // Fallback на делегат для обратной совместимости
+                    SetOriginalStyles?.Invoke(copy, original);
+                }
                 return copy;
             }
 
