@@ -171,7 +171,9 @@ namespace Graphic_Editor
             
             if (ShouldStartPanning(e))
             {
-                Point mousePos = e.GetPosition(_canvas);
+                // Получаем позицию мыши относительно родителя сразу, чтобы избежать "прыжков"
+                FrameworkElement parent = _canvas.Parent as FrameworkElement;
+                Point mousePos = parent != null ? e.GetPosition(parent) : e.GetPosition(_canvas);
                 StartPanning(mousePos);
                 e.Handled = true; // Предотвращаем дальнейшую обработку другими менеджерами
             }
@@ -215,8 +217,9 @@ namespace Graphic_Editor
                 return;
             }
 
-            // Используем координаты относительно Canvas (они будут преобразованы в UpdatePanning)
-            Point currentPosition = e.GetPosition(_canvas);
+            // Получаем позицию мыши относительно родителя для согласованности с StartPanning
+            FrameworkElement parent = _canvas.Parent as FrameworkElement;
+            Point currentPosition = parent != null ? Mouse.GetPosition(parent) : e.GetPosition(_canvas);
             UpdatePanning(currentPosition);
             e.Handled = true;
         }
@@ -254,7 +257,16 @@ namespace Graphic_Editor
 
             _isPanning = true;
             
-            // Используем координаты относительно родительского контейнера для стабильности
+            // ВАЖНО: Синхронизируем _transformMatrix с реальным состоянием MatrixTransform
+            // Это необходимо, так как ZoomManager может обновлять MatrixTransform напрямую
+            // и _transformMatrix может содержать устаревшие значения
+            if (_matrixTransform != null)
+            {
+                _transformMatrix = _matrixTransform.Matrix;
+            }
+            
+            // Получаем актуальную позицию мыши СРАЗУ после синхронизации матрицы
+            // Это гарантирует, что координаты синхронизированы с текущим состоянием Canvas
             FrameworkElement parent = _canvas.Parent as FrameworkElement;
             if (parent != null)
             {
@@ -310,6 +322,8 @@ namespace Graphic_Editor
             
             if (parent != null)
             {
+                // Используем Mouse.GetPosition для получения актуальной позиции мыши
+                // Это гарантирует согласованность с StartPanning
                 currentScreenPosition = Mouse.GetPosition(parent);
             }
             else
@@ -324,6 +338,16 @@ namespace Graphic_Editor
             // Игнорируем очень маленькие смещения для уменьшения дрожания
             if (Math.Abs(deltaX) < 0.1 && Math.Abs(deltaY) < 0.1)
             {
+                return;
+            }
+            
+            // Защита от резких "прыжков" при первом движении после начала панорамирования
+            // Если смещение слишком большое (больше 20 пикселей), это может быть ошибка синхронизации
+            // В этом случае обновляем _lastMousePosition без применения смещения
+            // Это предотвращает "телепортацию" Canvas после масштабирования
+            if (Math.Abs(deltaX) > 20 || Math.Abs(deltaY) > 20)
+            {
+                _lastMousePosition = currentScreenPosition;
                 return;
             }
 
@@ -346,7 +370,14 @@ namespace Graphic_Editor
             _transformMatrix.OffsetY = newOffsetY;
 
             // Применяем трансформацию
-            _matrixTransform.Matrix = _transformMatrix;
+            // ВАЖНО: Обновляем Matrix напрямую, чтобы сохранить другие компоненты матрицы (масштаб и т.д.)
+            Matrix newMatrix = _matrixTransform.Matrix;
+            newMatrix.OffsetX = newOffsetX;
+            newMatrix.OffsetY = newOffsetY;
+            _matrixTransform.Matrix = newMatrix;
+            
+            // Синхронизируем _transformMatrix с реальным состоянием
+            _transformMatrix = newMatrix;
 
             // Вызываем событие
             PanningChanged?.Invoke(new Point(_transformMatrix.OffsetX, _transformMatrix.OffsetY));

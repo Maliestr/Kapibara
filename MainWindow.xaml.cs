@@ -119,7 +119,7 @@ namespace Graphic_Editor
             zoomManager.ZoomChanged += ZoomManager_ZoomChanged;
             // Передаем функцию получения текущего масштаба в панорамирование
             canvasPanningManager.GetCurrentZoom = () => zoomManager?.CurrentZoom ?? 1.0;
-            UpdateZoomTextBox();
+            UpdateZoomIndicator();
         }
 
         private void InitializeDragManager()
@@ -398,6 +398,7 @@ namespace Graphic_Editor
             // Масштабирование колесиком мыши при зажатом Ctrl
             if (Keyboard.Modifiers == ModifierKeys.Control && zoomManager != null)
             {
+                // Передаем позицию мыши относительно Canvas (ZoomManager сам преобразует в viewport)
                 Point mousePosition = e.GetPosition(MainCanvas);
                 zoomManager.ZoomWithMouseWheel(e.Delta, mousePosition);
                 e.Handled = true;
@@ -650,59 +651,19 @@ namespace Graphic_Editor
 
         private void ZoomManager_ZoomChanged(double zoom)
         {
-            UpdateZoomTextBox();
+            UpdateZoomIndicator();
         }
 
-        private void UpdateZoomTextBox()
+        private void UpdateZoomIndicator()
         {
-            if (ZoomTextBox != null && zoomManager != null)
+            if (ZoomIndicator != null && zoomManager != null)
             {
                 int zoomPercent = (int)(zoomManager.CurrentZoom * 100);
-                ZoomTextBox.Text = $"{zoomPercent}%";
+                ZoomIndicator.Text = $"{zoomPercent}%";
             }
         }
 
-        private void ZoomTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            // Обновление происходит при потере фокуса или нажатии Enter
-        }
 
-        private void ZoomTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            ApplyZoomFromTextBox();
-        }
-
-        private void ZoomTextBox_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter)
-            {
-                ApplyZoomFromTextBox();
-                e.Handled = true;
-            }
-        }
-
-        private void ApplyZoomFromTextBox()
-        {
-            if (ZoomTextBox == null || zoomManager == null) return;
-
-            string text = ZoomTextBox.Text.Trim();
-            if (string.IsNullOrEmpty(text)) return;
-
-            // Убираем символ процента, если есть
-            text = text.Replace("%", "").Trim();
-
-            if (double.TryParse(text, out double zoomPercent))
-            {
-                // Преобразуем проценты в коэффициент (100% = 1.0)
-                double zoom = zoomPercent / 100.0;
-                zoomManager.SetZoom(zoom, animate: true);
-            }
-            else
-            {
-                // Если не удалось распарсить, восстанавливаем текущее значение
-                UpdateZoomTextBox();
-            }
-        }
 
         #endregion
 

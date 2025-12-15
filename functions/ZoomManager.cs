@@ -54,6 +54,9 @@ namespace Graphic_Editor
         private void InitializeTransform()
         {
             _scaleTransform = new ScaleTransform(1.0, 1.0);
+            
+            // Устанавливаем точку привязки масштабирования в центр Canvas
+            _canvas.RenderTransformOrigin = new Point(0.5, 0.5);
 
             // Проверяем, есть ли уже RenderTransform
             if (_canvas.RenderTransform == null || !(_canvas.RenderTransform is TransformGroup))
@@ -211,13 +214,25 @@ namespace Graphic_Editor
                 
                 if (parent != null)
                 {
-                    Point screenPoint = new Point(
-                        centerPoint.X * fromZoom + offsetX,
-                        centerPoint.Y * fromZoom + offsetY
-                    );
+                    // Получаем размеры Canvas и viewport
+                    double canvasWidth = _canvas.Width > 0 ? _canvas.Width : _canvas.ActualWidth;
+                    double canvasHeight = _canvas.Height > 0 ? _canvas.Height : _canvas.ActualHeight;
+                    double viewportWidth = parent.ActualWidth;
+                    double viewportHeight = parent.ActualHeight;
                     
-                    double newOffsetX = screenPoint.X - centerPoint.X * targetZoom;
-                    double newOffsetY = screenPoint.Y - centerPoint.Y * targetZoom;
+                    // Вычисляем центр Canvas и viewport
+                    double canvasCenterX = canvasWidth / 2.0;
+                    double canvasCenterY = canvasHeight / 2.0;
+                    double viewportCenterX = viewportWidth / 2.0;
+                    double viewportCenterY = viewportHeight / 2.0;
+                    
+                    // Преобразуем координаты точки Canvas в координаты viewport (до масштабирования)
+                    double viewportX = (centerPoint.X - canvasCenterX) * fromZoom + viewportCenterX + offsetX;
+                    double viewportY = (centerPoint.Y - canvasCenterY) * fromZoom + viewportCenterY + offsetY;
+                    
+                    // Вычисляем новое смещение для сохранения точки под курсором
+                    double newOffsetX = viewportX - viewportCenterX - (centerPoint.X - canvasCenterX) * targetZoom;
+                    double newOffsetY = viewportY - viewportCenterY - (centerPoint.Y - canvasCenterY) * targetZoom;
                     
                     matrix.OffsetX = newOffsetX;
                     matrix.OffsetY = newOffsetY;
@@ -296,18 +311,28 @@ namespace Graphic_Editor
                 
                 if (parent != null)
                 {
-                    // Преобразуем координаты точки мыши из координат Canvas в координаты родителя
-                    // centerPoint - это координаты относительно Canvas (до трансформаций)
-                    // Нужно найти, где эта точка находится на экране с учетом текущих трансформаций
-                    Point screenPoint = new Point(
-                        centerPoint.X * oldZoom + offsetX,
-                        centerPoint.Y * oldZoom + offsetY
-                    );
+                    // Получаем размеры Canvas и viewport
+                    double canvasWidth = _canvas.Width > 0 ? _canvas.Width : _canvas.ActualWidth;
+                    double canvasHeight = _canvas.Height > 0 ? _canvas.Height : _canvas.ActualHeight;
+                    double viewportWidth = parent.ActualWidth;
+                    double viewportHeight = parent.ActualHeight;
+                    
+                    // Вычисляем центр Canvas и viewport
+                    double canvasCenterX = canvasWidth / 2.0;
+                    double canvasCenterY = canvasHeight / 2.0;
+                    double viewportCenterX = viewportWidth / 2.0;
+                    double viewportCenterY = viewportHeight / 2.0;
+                    
+                    // Преобразуем координаты точки Canvas в координаты viewport (до масштабирования)
+                    // Формула: viewportPoint = (canvasPoint - canvasCenter) * zoom + viewportCenter + offset
+                    double viewportX = (centerPoint.X - canvasCenterX) * oldZoom + viewportCenterX + offsetX;
+                    double viewportY = (centerPoint.Y - canvasCenterY) * oldZoom + viewportCenterY + offsetY;
                     
                     // Теперь вычисляем новое смещение так, чтобы после масштабирования
-                    // эта же точка на экране соответствовала той же точке на Canvas
-                    double newOffsetX = screenPoint.X - centerPoint.X * targetZoom;
-                    double newOffsetY = screenPoint.Y - centerPoint.Y * targetZoom;
+                    // эта же точка в viewport соответствовала той же точке на Canvas
+                    // Обратная формула: offset = viewportPoint - viewportCenter - (canvasPoint - canvasCenter) * newZoom
+                    double newOffsetX = viewportX - viewportCenterX - (centerPoint.X - canvasCenterX) * targetZoom;
+                    double newOffsetY = viewportY - viewportCenterY - (centerPoint.Y - canvasCenterY) * targetZoom;
                     
                     matrix.OffsetX = newOffsetX;
                     matrix.OffsetY = newOffsetY;
@@ -342,20 +367,94 @@ namespace Graphic_Editor
         }
 
         /// <summary>
-        /// Масштабирование колесиком мыши
+        /// Масштабирование колесиком мыши (как в draw.io - относительно позиции курсора)
         /// </summary>
         /// <param name="delta">Изменение колесика (положительное - увеличение, отрицательное - уменьшение)</param>
         /// <param name="mousePosition">Позиция мыши относительно Canvas</param>
         public void ZoomWithMouseWheel(int delta, Point mousePosition)
         {
+            // Получаем позицию мыши относительно родительского контейнера (viewport)
+            // Это важно для правильного масштабирования относительно курсора
+            FrameworkElement parent = _canvas.Parent as FrameworkElement;
+            Point viewportPoint;
+            
+            if (parent != null)
+            {
+                // Получаем позицию мыши относительно viewport
+                viewportPoint = Mouse.GetPosition(parent);
+            }
+            else
+            {
+                // Fallback на координаты Canvas
+                viewportPoint = mousePosition;
+            }
+            
+            // Преобразуем координаты viewport в координаты Canvas для масштабирования
+            Point canvasPoint = ViewportToCanvasPoint(viewportPoint);
+            
             if (delta > 0)
             {
-                ZoomAtPoint(_currentZoom + ZoomStep, mousePosition);
+                ZoomAtPoint(_currentZoom + ZoomStep, canvasPoint);
             }
             else if (delta < 0)
             {
-                ZoomAtPoint(_currentZoom - ZoomStep, mousePosition);
+                ZoomAtPoint(_currentZoom - ZoomStep, canvasPoint);
             }
+        }
+        
+        /// <summary>
+        /// Преобразование координат viewport в координаты Canvas
+        /// </summary>
+        private Point ViewportToCanvasPoint(Point viewportPoint)
+        {
+            FrameworkElement parent = _canvas.Parent as FrameworkElement;
+            if (parent == null)
+            {
+                return viewportPoint;
+            }
+            
+            // Получаем текущее смещение из панорамирования
+            MatrixTransform matrixTransform = null;
+            if (_canvas.RenderTransform is TransformGroup tg)
+            {
+                foreach (Transform transform in tg.Children)
+                {
+                    if (transform is MatrixTransform mt)
+                    {
+                        matrixTransform = mt;
+                        break;
+                    }
+                }
+            }
+            
+            if (matrixTransform != null)
+            {
+                Matrix matrix = matrixTransform.Matrix;
+                double offsetX = matrix.OffsetX;
+                double offsetY = matrix.OffsetY;
+                
+                // Получаем размеры Canvas и viewport
+                double canvasWidth = _canvas.Width > 0 ? _canvas.Width : _canvas.ActualWidth;
+                double canvasHeight = _canvas.Height > 0 ? _canvas.Height : _canvas.ActualHeight;
+                double viewportWidth = parent.ActualWidth;
+                double viewportHeight = parent.ActualHeight;
+                
+                // Вычисляем центр Canvas и viewport
+                double canvasCenterX = canvasWidth / 2.0;
+                double canvasCenterY = canvasHeight / 2.0;
+                double viewportCenterX = viewportWidth / 2.0;
+                double viewportCenterY = viewportHeight / 2.0;
+                
+                // Преобразуем координаты viewport в координаты Canvas
+                // Обратная формула: canvasPoint = (viewportPoint - viewportCenter - offset) / zoom + canvasCenter
+                double canvasX = (viewportPoint.X - viewportCenterX - offsetX) / _currentZoom + canvasCenterX;
+                double canvasY = (viewportPoint.Y - viewportCenterY - offsetY) / _currentZoom + canvasCenterY;
+                
+                return new Point(canvasX, canvasY);
+            }
+            
+            // Если нет трансформации, просто возвращаем координаты
+            return viewportPoint;
         }
     }
 }

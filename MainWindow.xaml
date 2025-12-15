@@ -481,22 +481,24 @@
                         HorizontalAlignment="Center" VerticalAlignment="Center"
                         Width="5000" Height="5000"/>
                 
-                <!-- Отображение масштаба в правом нижнем углу -->
-                <Border Background="#80000000" CornerRadius="5" 
-                        HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                        Margin="0,0,10,78" Padding="8,4">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Масштаб:" Foreground="White" 
-                                   VerticalAlignment="Center" Margin="0,0,5,0" FontSize="12"/>
-                        <TextBox x:Name="ZoomTextBox" Text="100%" Background="Transparent"
-                                 Height="20" Width="55"
-                                 Foreground="White" VerticalAlignment="Center"
-                                 AcceptsReturn="False" MaxLength="10"
-                                 BorderThickness="0" FontSize="12"
-                                 TextChanged="ZoomTextBox_TextChanged"
-                                 LostFocus="ZoomTextBox_LostFocus"
-                                 KeyDown="ZoomTextBox_KeyDown"/>
-                    </StackPanel>
+                <!-- Индикатор масштаба в правом нижнем углу -->
+                <Border x:Name="ZoomIndicatorPanel"
+                        CornerRadius="8"
+                        Background="#E0252525"
+                        BorderBrush="#4DCCCCCC"
+                        BorderThickness="0.5"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,30,78"
+                        Padding="10,6"
+                        Panel.ZIndex="100"
+                        Opacity="0.85">
+                    <TextBlock x:Name="ZoomIndicator" 
+                              Foreground="#E0FFFFFF" 
+                              FontSize="12"
+                              FontWeight="SemiBold"
+                              Text="100%"
+                              ToolTip="Текущий масштаб"/>
                 </Border>
             </Grid>
 
