@@ -444,10 +444,20 @@ namespace Graphic_Editor
             }
 
             // Удаление выделенного элемента
-            if (e.Key == Key.Delete && selectionManager?.SelectedElement != null)
+            if (e.Key == Key.Delete)
             {
-                clipboardManager?.DeleteSelectedElement();
-                e.Handled = true;
+                // Сначала проверяем, выделена ли стрелка
+                if (arrowManager?.SelectedArrowContainer != null)
+                {
+                    arrowManager.DeleteArrow(arrowManager.SelectedArrowContainer.Line);
+                    e.Handled = true;
+                }
+                // Затем проверяем обычные элементы
+                else if (selectionManager?.SelectedElement != null)
+                {
+                    clipboardManager?.DeleteSelectedElement();
+                    e.Handled = true;
+                }
             }
         }
 
