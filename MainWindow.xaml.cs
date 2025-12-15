@@ -112,6 +112,12 @@ namespace Graphic_Editor
             InitializePoolManager(); // Инициализация менеджера пулов
             canvasPanningManager = new CanvasPanningManager(MainCanvas);
             canvasPanningManager.Mode = CanvasPanningManager.PanningMode.MiddleButton;
+            
+            // Устанавливаем ссылку на ArrowManager в FillStrokeManager после инициализации всех менеджеров
+            if (arrowManager != null && fillStrokeManager != null)
+            {
+                fillStrokeManager.SetArrowManager(arrowManager);
+            }
         }
 
         private void InitializeDragManager()
@@ -1326,8 +1332,27 @@ namespace Graphic_Editor
                 gridManager.SnapToGrid, // Используем метод из GridManager
                 GetMaxZIndex,
                 GetMinZIndex,
-                UpdateArrowPropertiesInPanels
+                UpdateArrowPropertiesInPanels,
+                () => fillStrokeManager?.GetCurrentStrokeThickness() ?? 3 // Функция для получения текущей толщины
             );
+            
+            // Подписываемся на события стрелки для скрытия панели толщины
+            arrowManager.OnArrowDeleted += () =>
+            {
+                if (StrokeWidthPanel != null)
+                {
+                    StrokeWidthPanel.Visibility = Visibility.Collapsed;
+                }
+            };
+            
+            arrowManager.OnArrowDeselected += () =>
+            {
+                // Скрываем панель толщины при снятии выделения со стрелки
+                if (StrokeWidthPanel != null)
+                {
+                    StrokeWidthPanel.Visibility = Visibility.Collapsed;
+                }
+            };
         }
 
         private void PenButton_Click(object sender, RoutedEventArgs e)
@@ -1350,10 +1375,14 @@ namespace Graphic_Editor
                     StrokeWidthPanel.Visibility = Visibility.Visible;
                 }
 
-                // Обновляем комбо-бокс толщины
+                // Обновляем комбо-бокс толщины, используя оригинальную толщину
+                // (текущая может быть увеличена при выделении)
                 if (StrokeWidthComboBox != null)
                 {
-                    fillStrokeManager?.UpdateStrokeWidthComboBoxSelection(arrowContainer.Line.StrokeThickness);
+                    double thickness = arrowContainer.OriginalThickness > 0 
+                        ? arrowContainer.OriginalThickness 
+                        : arrowContainer.Line.StrokeThickness;
+                    fillStrokeManager?.UpdateStrokeWidthComboBoxSelection(thickness);
                 }
 
                 // Обновляем комбо-бокс цвета обводки

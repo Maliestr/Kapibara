@@ -13,6 +13,7 @@ namespace Graphic_Editor
         // Зависимости
         private SelectionManager selectionManager;
         private ToggleButton togglePanelsButton;
+        private ArrowManager arrowManager; // Добавляем ссылку на ArrowManager
         
         // UI элементы
         private ComboBox fillColorComboBox;
@@ -46,6 +47,42 @@ namespace Graphic_Editor
             this.fillPanel = fillPanel;
             this.strokePanel = strokePanel;
             this.strokeWidthPanel = strokeWidthPanel;
+        }
+
+        // Метод для установки ссылки на ArrowManager
+        public void SetArrowManager(ArrowManager arrowManager)
+        {
+            this.arrowManager = arrowManager;
+        }
+
+        // Метод для получения текущей толщины из комбо-бокса
+        public double GetCurrentStrokeThickness()
+        {
+            if (strokeWidthComboBox?.SelectedItem is ComboBoxItem selectedItem)
+            {
+                string thicknessValue = selectedItem.Tag as string;
+                if (!string.IsNullOrEmpty(thicknessValue))
+                {
+                    if (double.TryParse(thicknessValue, out double thickness))
+                    {
+                        return thickness;
+                    }
+                }
+            }
+            // Если ничего не выбрано, возвращаем значение по умолчанию 3px
+            // Ищем элемент с Tag="3" (индекс 2)
+            if (strokeWidthComboBox?.Items.Count > 2)
+            {
+                if (strokeWidthComboBox.Items[2] is ComboBoxItem defaultItem)
+                {
+                    string defaultValue = defaultItem.Tag as string;
+                    if (!string.IsNullOrEmpty(defaultValue) && double.TryParse(defaultValue, out double defaultThickness))
+                    {
+                        return defaultThickness;
+                    }
+                }
+            }
+            return 3; // Значение по умолчанию, если комбо-бокс недоступен
         }
 
         // Метод для показа/скрытия панели толщины обводки
@@ -86,7 +123,17 @@ namespace Graphic_Editor
                     try
                     {
                         double thickness = double.Parse(thicknessValue);
-                        ApplyStrokeThicknessToSelectedShape(thickness);
+                        
+                        // Сначала проверяем, выделена ли стрелка
+                        if (arrowManager?.SelectedArrowContainer != null)
+                        {
+                            ApplyStrokeThicknessToArrow(arrowManager.SelectedArrowContainer, thickness);
+                        }
+                        else
+                        {
+                            // Применяем к обычным элементам
+                            ApplyStrokeThicknessToSelectedShape(thickness);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -131,6 +178,11 @@ namespace Graphic_Editor
             {
                 line.StrokeThickness = thickness;
             }
+            else if (shape is Polyline polyline)
+            {
+                // Для стрелок (Polyline) применяем толщину
+                polyline.StrokeThickness = thickness;
+            }
             else if (shape is TextBlock textBlock)
             {
                 // Для текста толщина не применяется
@@ -138,6 +190,34 @@ namespace Graphic_Editor
 
             // Сохраняем толщину в словарь оригинальных толщин
             selectionManager?.UpdateOriginalStrokeThickness(shape, thickness);
+        }
+
+        // Метод для применения толщины к стрелке
+        private void ApplyStrokeThicknessToArrow(ArrowContainer arrowContainer, double thickness)
+        {
+            if (arrowContainer?.Line == null) return;
+
+            try
+            {
+                // Сохраняем новую толщину как оригинальную
+                arrowContainer.OriginalThickness = thickness;
+                
+                // Применяем толщину к линии стрелки
+                // Если стрелка выделена, визуальное выделение будет обновлено ниже
+                arrowContainer.Line.StrokeThickness = thickness;
+                
+                // Если стрелка выделена, обновляем визуальное выделение с новой толщиной
+                if (arrowManager?.SelectedArrowContainer == arrowContainer)
+                {
+                    // Вызываем SelectArrow заново, чтобы обновить визуальное выделение
+                    // с правильной толщиной (выделение использует OriginalThickness + 2)
+                    arrowManager.SelectArrow(arrowContainer.Line);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Ошибка в ApplyStrokeThicknessToArrow: {ex.Message}");
+            }
         }
 
         // Метод обновления комбо-бокса толщины на основе фигуры
@@ -163,6 +243,10 @@ namespace Graphic_Editor
                 else if (shape is Line line)
                 {
                     originalThickness = line.StrokeThickness;
+                }
+                else if (shape is Polyline polyline)
+                {
+                    originalThickness = polyline.StrokeThickness;
                 }
             }
 
@@ -201,6 +285,10 @@ namespace Graphic_Editor
             else if (element is Line line)
             {
                 line.StrokeThickness = thickness;
+            }
+            else if (element is Polyline polyline)
+            {
+                polyline.StrokeThickness = thickness;
             }
 
             // Сохраняем в словарь
