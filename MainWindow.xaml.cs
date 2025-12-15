@@ -134,6 +134,12 @@ namespace Graphic_Editor
             {
                 fillStrokeManager.SetArrowManager(arrowManager);
             }
+            
+            // Устанавливаем менеджеры в FileManager после их инициализации
+            if (fileManager != null)
+            {
+                fileManager.SetManagers(textManager, commentManager, poolManager);
+            }
         }
 
         private void InitializeDragManager()
@@ -716,7 +722,6 @@ namespace Graphic_Editor
 
         private void SaveFile_Click(object sender, RoutedEventArgs e)
         {
-            fileManager.SaveComments(commentManager, currentFilePath);
             if (string.IsNullOrEmpty(currentFilePath))
             {
                 SaveAsFile_Click(sender, e);
@@ -737,9 +742,7 @@ namespace Graphic_Editor
 
         private void LoadFile_Click(object sender, RoutedEventArgs e)
         {
-            // ... существующий код ...
-            fileManager.LoadComments(commentManager, currentFilePath);
-            // ... существующий код ...
+            // Метод больше не используется, загрузка происходит в OpenFile_Click
         }
 
         private void SaveAsFile_Click(object sender, RoutedEventArgs e)
@@ -1936,6 +1939,9 @@ namespace Graphic_Editor
                 gridManager.SnapToGrid, // Используем метод GridManager
                 () => gridManager.IsSnapToGridEnabled // Используем свойство GridManager
             );
+            
+            // Устанавливаем менеджеры после их инициализации
+            // Это будет вызвано после InitializeManagers
         }
 
         private void FileNameTextBox_TextChanged(object sender, TextChangedEventArgs e)
