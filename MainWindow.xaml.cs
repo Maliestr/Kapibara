@@ -107,6 +107,11 @@ namespace Graphic_Editor
             MainCanvas.ContextMenu = new ContextMenu { IsEnabled = false };
             this.ContextMenu = new ContextMenu { IsEnabled = false };
 
+            // Включаем поддержку перетаскивания файлов из проводника
+            this.AllowDrop = true;
+            this.Drop += MainWindow_Drop;
+            this.DragOver += MainWindow_DragOver;
+
             // Обработчики для предотвращения показа стандартного контекстного меню
             this.ContextMenuOpening += MainWindow_ContextMenuOpening;
             MainCanvas.ContextMenuOpening += MainCanvas_ContextMenuOpening;
@@ -705,18 +710,30 @@ namespace Graphic_Editor
 
             if (openFileDialog.ShowDialog() == true)
             {
-                try
-                {
-                    fileManager.LoadFromFile(openFileDialog.FileName);
-                    currentFilePath = openFileDialog.FileName;
-                    // LoadFromFile уже обновляет TextBox, но обновим заголовок окна
-                    UpdateWindowTitle();
-                    MessageBox.Show("Файл успешно открыт", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Ошибка при открытии файла: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                LoadFileFromPath(openFileDialog.FileName);
+            }
+        }
+
+        /// <summary>
+        /// Загружает файл по указанному пути. Используется для открытия файлов из проводника.
+        /// </summary>
+        public void LoadFileFromPath(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
+            {
+                return;
+            }
+
+            try
+            {
+                fileManager.LoadFromFile(filePath);
+                currentFilePath = filePath;
+                // LoadFromFile уже обновляет TextBox, но обновим заголовок окна
+                UpdateWindowTitle();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при открытии файла: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -2081,6 +2098,43 @@ namespace Graphic_Editor
             }
 
             Canvas.SetZIndex(element, 1);
+        }
+
+        #endregion
+
+        #region Перетаскивание файлов из проводника
+
+        private void MainWindow_DragOver(object sender, DragEventArgs e)
+        {
+            // Разрешаем перетаскивание только если это файл
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effects = DragDropEffects.Copy;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+            e.Handled = true;
+        }
+
+        private void MainWindow_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (files != null && files.Length > 0)
+                {
+                    string filePath = files[0];
+                    // Проверяем расширение файла
+                    if (System.IO.Path.GetExtension(filePath).ToLower() == ".ged" || 
+                        System.IO.File.Exists(filePath))
+                    {
+                        LoadFileFromPath(filePath);
+                    }
+                }
+            }
+            e.Handled = true;
         }
 
         #endregion

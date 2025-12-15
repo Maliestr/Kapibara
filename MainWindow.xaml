@@ -10,6 +10,7 @@
         WindowStyle="None"
         AllowsTransparency="False"
         ResizeMode="CanResize"
+        AllowDrop="True"
         Icon="/Icons/L.png"
         Title="Kapibara"
         MinHeight="800"
