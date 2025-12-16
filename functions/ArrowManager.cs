@@ -19,6 +19,7 @@ namespace Graphic_Editor
         public double OriginalThickness { get; set; }
         public Brush OriginalArrowheadFill { get; set; }
         public Brush OriginalArrowheadStroke { get; set; }
+        public List<Ellipse> PointMarkers { get; set; } = new List<Ellipse>(); // Маркеры точек стрелки
     }
 
     // Менеджер для управления всеми операциями со стрелками
@@ -39,6 +40,7 @@ namespace Graphic_Editor
         private ArrowContainer draggedArrowContainer;
         private Point arrowOffset;
         private Point arrowDragStartPoint;
+        private bool isDraggingPoint = false; // Флаг для отслеживания перетаскивания точки
 
         // Зависимости (передаются из MainWindow)
         private Canvas mainCanvas;
@@ -288,6 +290,9 @@ namespace Graphic_Editor
                     arrowContainer.Arrowhead.Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#AC1C1C"));
                     arrowContainer.Arrowhead.StrokeThickness = 2;
                 }
+
+                // Показываем маркеры точек при выделении
+                ShowPointMarkers(arrowContainer);
             }
             catch (Exception ex)
             {
@@ -323,6 +328,9 @@ namespace Graphic_Editor
 
                     arrowContainer.Arrowhead.Opacity = 1.0;
                 }
+
+                // Скрываем маркеры точек при снятии выделения
+                HidePointMarkers(arrowContainer);
             }
             catch (Exception ex)
             {
@@ -489,6 +497,8 @@ namespace Graphic_Editor
 
         private void Arrow_MouseMove(object sender, MouseEventArgs e)
         {
+            // Не перетаскиваем всю стрелку, если перетаскивается отдельная точка
+            if (isDraggingPoint) return;
             if (!isArrowDragging || draggedArrowContainer == null || draggedArrowContainer.Line == null) return;
             if (e.LeftButton != MouseButtonState.Pressed) return;
 
@@ -528,6 +538,18 @@ namespace Graphic_Editor
                 // Обновляем точки стрелки
                 draggedArrowContainer.Line.Points = newPoints;
 
+                // Обновляем позиции всех маркеров точек при перемещении стрелки
+                if (draggedArrowContainer.PointMarkers != null && draggedArrowContainer.Line.Points != null)
+                {
+                    for (int i = 0; i < draggedArrowContainer.PointMarkers.Count && i < draggedArrowContainer.Line.Points.Count; i++)
+                    {
+                        var marker = draggedArrowContainer.PointMarkers[i];
+                        Point pt = draggedArrowContainer.Line.Points[i];
+                        Canvas.SetLeft(marker, pt.X - 5);
+                        Canvas.SetTop(marker, pt.Y - 5);
+                    }
+                }
+
                 // Синхронно обновляем позицию наконечника
                 if (draggedArrowContainer.Arrowhead != null)
                 {
@@ -542,8 +564,21 @@ namespace Graphic_Editor
 
         private void MakeArrowPointsDraggable(ArrowContainer arrowContainer)
         {
-            // Создаем невидимые маркеры для точек излома
-            for (int i = 1; i < arrowContainer.Line.Points.Count - 1; i++)
+            // Очищаем старые маркеры если есть
+            if (arrowContainer.PointMarkers != null)
+            {
+                foreach (var oldMarker in arrowContainer.PointMarkers)
+                {
+                    if (mainCanvas.Children.Contains(oldMarker))
+                    {
+                        mainCanvas.Children.Remove(oldMarker);
+                    }
+                }
+            }
+            arrowContainer.PointMarkers.Clear();
+
+            // Создаем маркеры для всех точек стрелки (включая первую и последнюю)
+            for (int i = 0; i < arrowContainer.Line.Points.Count; i++)
             {
                 var pointMarker = new Ellipse
                 {
@@ -552,7 +587,8 @@ namespace Graphic_Editor
                     Fill = Brushes.Transparent,
                     Stroke = Brushes.Transparent,
                     Cursor = Cursors.SizeAll,
-                    Tag = i // Сохраняем индекс точки
+                    Tag = i, // Сохраняем индекс точки
+                    Visibility = Visibility.Collapsed // По умолчанию скрыты, показываются при выделении
                 };
 
                 // Позиционируем маркер на точке
@@ -561,13 +597,20 @@ namespace Graphic_Editor
                 Canvas.SetTop(pointMarker, point.Y - 5);
 
                 mainCanvas.Children.Add(pointMarker);
+                arrowContainer.PointMarkers.Add(pointMarker);
 
                 // Обработчики для перетаскивания точки
                 pointMarker.MouseLeftButtonDown += (s, e) =>
                 {
+                    if (isArrowModeActive) return;
+
                     var marker = s as Ellipse;
                     if (marker != null && marker.Tag is int pointIndex)
                     {
+                        // Предотвращаем перетаскивание всей стрелки при клике на маркер
+                        e.Handled = true;
+                        
+                        isDraggingPoint = true; // Устанавливаем флаг перетаскивания точки
                         isDragging = true;
                         draggedElement = marker;
                         marker.CaptureMouse();
@@ -575,7 +618,6 @@ namespace Graphic_Editor
 
                         // Сохраняем оригинальные точки
                         arrowContainer.OriginalPoints = new PointCollection(arrowContainer.Line.Points);
-                        e.Handled = true;
                     }
                 };
 
@@ -586,6 +628,12 @@ namespace Graphic_Editor
                         arrowContainer.OriginalPoints != null)
                     {
                         Point currentPosition = e.GetPosition(mainCanvas);
+                        
+                        // Применяем привязку к сетке, если включена
+                        if (snapToGridFunc != null)
+                        {
+                            currentPosition = snapToGridFunc(currentPosition);
+                        }
 
                         // Обновляем конкретную точку в стрелке
                         var newPoints = new PointCollection(arrowContainer.Line.Points);
@@ -597,8 +645,9 @@ namespace Graphic_Editor
                         Canvas.SetLeft(marker, currentPosition.X - 5);
                         Canvas.SetTop(marker, currentPosition.Y - 5);
 
-                        // Обновляем наконечник если это последняя точка
-                        if (pointIndex == arrowContainer.Line.Points.Count - 2)
+                        // Обновляем наконечник если это последняя точка (Count - 1) или предпоследняя (Count - 2)
+                        if (pointIndex == arrowContainer.Line.Points.Count - 1 || 
+                            pointIndex == arrowContainer.Line.Points.Count - 2)
                         {
                             UpdateArrowheadPosition(arrowContainer);
                         }
@@ -608,10 +657,35 @@ namespace Graphic_Editor
                 pointMarker.MouseLeftButtonUp += (s, e) =>
                 {
                     var marker = s as Ellipse;
-                    if (marker != null)
+                    if (marker != null && marker.Tag is int pointIndex)
                     {
+                        isDraggingPoint = false; // Сбрасываем флаг перетаскивания точки
                         isDragging = false;
                         marker.ReleaseMouseCapture();
+                        
+                        // Применяем привязку к сетке при завершении перетаскивания
+                        if (arrowContainer.Line.Points != null && snapToGridFunc != null)
+                        {
+                            var newPoints = new PointCollection();
+                            foreach (Point pt in arrowContainer.Line.Points)
+                            {
+                                newPoints.Add(snapToGridFunc(pt));
+                            }
+                            arrowContainer.Line.Points = newPoints;
+                            
+                            // Обновляем позицию маркера после привязки
+                            Point snappedPoint = arrowContainer.Line.Points[pointIndex];
+                            Canvas.SetLeft(marker, snappedPoint.X - 5);
+                            Canvas.SetTop(marker, snappedPoint.Y - 5);
+                            
+                            // Обновляем наконечник если это последняя или предпоследняя точка
+                            if (pointIndex == arrowContainer.Line.Points.Count - 1 || 
+                                pointIndex == arrowContainer.Line.Points.Count - 2)
+                            {
+                                UpdateArrowheadPosition(arrowContainer);
+                            }
+                        }
+                        
                         arrowContainer.OriginalPoints = null;
                         draggedElement = null;
                         e.Handled = true;
@@ -658,6 +732,14 @@ namespace Graphic_Editor
                     {
                         UpdateArrowheadPosition(draggedArrowContainer);
                     }
+
+                    // Обновляем позиции маркеров после привязки к сетке
+                    UpdatePointMarkersPosition(draggedArrowContainer);
+                }
+                else
+                {
+                    // Обновляем позиции маркеров даже без привязки к сетке
+                    UpdatePointMarkersPosition(draggedArrowContainer);
                 }
 
                 // Восстанавливаем визуальное оформление
@@ -865,6 +947,18 @@ namespace Graphic_Editor
                     {
                         mainCanvas.Children.Remove(arrowContainer.Arrowhead);
                     }
+                    // Удаляем маркеры точек
+                    if (arrowContainer.PointMarkers != null)
+                    {
+                        foreach (var marker in arrowContainer.PointMarkers)
+                        {
+                            if (mainCanvas.Children.Contains(marker))
+                            {
+                                mainCanvas.Children.Remove(marker);
+                            }
+                        }
+                        arrowContainer.PointMarkers.Clear();
+                    }
                 }
 
                 arrows?.Remove(arrowContainer);
@@ -1035,6 +1129,50 @@ namespace Graphic_Editor
             arrowhead.Points = new PointCollection { arrowTip, arrowLeft, arrowRight };
             arrowhead.Fill = color;
             arrowhead.Stroke = color;
+        }
+
+        // Показать маркеры точек стрелки
+        private void ShowPointMarkers(ArrowContainer arrowContainer)
+        {
+            if (arrowContainer?.PointMarkers == null) return;
+
+            foreach (var marker in arrowContainer.PointMarkers)
+            {
+                marker.Visibility = Visibility.Visible;
+                marker.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#4A90E2")); // Синий цвет для маркеров
+                marker.Stroke = Brushes.White;
+                marker.StrokeThickness = 1;
+                // Убеждаемся, что маркеры поверх других элементов
+                if (mainCanvas.Children.Contains(marker))
+                {
+                    Canvas.SetZIndex(marker, 2000);
+                }
+            }
+        }
+
+        // Скрыть маркеры точек стрелки
+        private void HidePointMarkers(ArrowContainer arrowContainer)
+        {
+            if (arrowContainer?.PointMarkers == null) return;
+
+            foreach (var marker in arrowContainer.PointMarkers)
+            {
+                marker.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        // Обновить позиции маркеров точек стрелки
+        private void UpdatePointMarkersPosition(ArrowContainer arrowContainer)
+        {
+            if (arrowContainer?.PointMarkers == null || arrowContainer.Line?.Points == null) return;
+
+            for (int i = 0; i < arrowContainer.PointMarkers.Count && i < arrowContainer.Line.Points.Count; i++)
+            {
+                var marker = arrowContainer.PointMarkers[i];
+                Point pt = arrowContainer.Line.Points[i];
+                Canvas.SetLeft(marker, pt.X - 5);
+                Canvas.SetTop(marker, pt.Y - 5);
+            }
         }
 
         // Перенести стрелку на передний план (линия и наконечник вместе)
