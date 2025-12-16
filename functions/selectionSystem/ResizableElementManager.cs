@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace Graphic_Editor
 {
-    public class ResizableElement
+    public class ResizableElementManager
     {
         #region Поля
 
@@ -47,7 +47,7 @@ namespace Graphic_Editor
 
         #region Конструктор и инициализация
 
-        public ResizableElement(UIElement element, Canvas canvas, Func<Point, Point> snapToGridFunction = null, bool isSnapToGridEnabled = false)
+        public ResizableElementManager(UIElement element, Canvas canvas, Func<Point, Point> snapToGridFunction = null, bool isSnapToGridEnabled = false)
         {
             this.element = element;
             this.canvas = canvas;

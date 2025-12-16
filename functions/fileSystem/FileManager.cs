@@ -18,7 +18,7 @@ namespace Graphic_Editor
         private Canvas mainCanvas;
         private TextBox fileNameTextBox;
         private ArrowManager arrowManager;
-        private Dictionary<UIElement, ResizableElement> resizableElements;
+        private Dictionary<UIElement, ResizableElementManager> resizableElements;
         private List<UIElement> canvasElements;
         private TextManager textManager;
         private CommentManager commentManager;
@@ -37,7 +37,7 @@ namespace Graphic_Editor
             Canvas mainCanvas,
             TextBox fileNameTextBox,
             ArrowManager arrowManager,
-            Dictionary<UIElement, ResizableElement> resizableElements,
+            Dictionary<UIElement, ResizableElementManager> resizableElements,
             List<UIElement> canvasElements,
             Action<UIElement> makeCanvasShapeDraggable,
             Func<Point, Point> snapToGrid,
@@ -627,7 +627,7 @@ namespace Graphic_Editor
 
             // Создаем ResizableElement
             bool isSnapEnabled = getIsSnapToGridEnabled?.Invoke() ?? false;
-            resizableElements[ellipse] = new ResizableElement(ellipse, mainCanvas, snapToGrid, isSnapEnabled);
+            resizableElements[ellipse] = new ResizableElementManager(ellipse, mainCanvas, snapToGrid, isSnapEnabled);
         }
 
         private void CreateSquareFromData(string[] data)
@@ -650,7 +650,7 @@ namespace Graphic_Editor
 
             // Создаем ResizableElement
             bool isSnapEnabled = getIsSnapToGridEnabled?.Invoke() ?? false;
-            resizableElements[square] = new ResizableElement(square, mainCanvas, snapToGrid, isSnapEnabled);
+            resizableElements[square] = new ResizableElementManager(square, mainCanvas, snapToGrid, isSnapEnabled);
         }
 
         private void CreateDiamondFromData(string[] data)
@@ -675,7 +675,7 @@ namespace Graphic_Editor
 
             // Создаем ResizableElement
             bool isSnapEnabled = getIsSnapToGridEnabled?.Invoke() ?? false;
-            resizableElements[diamond] = new ResizableElement(diamond, mainCanvas, snapToGrid, isSnapEnabled);
+            resizableElements[diamond] = new ResizableElementManager(diamond, mainCanvas, snapToGrid, isSnapEnabled);
         }
 
         private void CreateLineFromData(string[] data)
@@ -699,7 +699,7 @@ namespace Graphic_Editor
 
             // Создаем ResizableElement
             bool isSnapEnabled = getIsSnapToGridEnabled?.Invoke() ?? false;
-            resizableElements[line] = new ResizableElement(line, mainCanvas, snapToGrid, isSnapEnabled);
+            resizableElements[line] = new ResizableElementManager(line, mainCanvas, snapToGrid, isSnapEnabled);
         }
 
         private void CreateTextFromData(string[] data)

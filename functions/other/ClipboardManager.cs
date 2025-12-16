@@ -39,7 +39,7 @@ namespace Graphic_Editor
 
         private Canvas mainCanvas;
         private SelectionManager selectionManager;
-        private Dictionary<UIElement, ResizableElement> resizableElements;
+        private Dictionary<UIElement, ResizableElementManager> resizableElements;
         private GridManager gridManager;
         private Action<UIElement> makeCanvasShapeDraggable;
         private Stack<UndoAction> undoStack = new Stack<UndoAction>();
@@ -60,7 +60,7 @@ namespace Graphic_Editor
         public ClipboardManager(
             Canvas mainCanvas,
             SelectionManager selectionManager,
-            Dictionary<UIElement, ResizableElement> resizableElements,
+            Dictionary<UIElement, ResizableElementManager> resizableElements,
             GridManager gridManager,
             Action<UIElement> makeCanvasShapeDraggable = null)
         {
@@ -210,7 +210,7 @@ namespace Graphic_Editor
                     }
 
                     // Создаем ResizableElement для нового элемента
-                    resizableElements[newElement] = new ResizableElement(
+                    resizableElements[newElement] = new ResizableElementManager(
                         newElement,
                         mainCanvas,
                         gridManager.SnapToGrid,
@@ -394,7 +394,7 @@ namespace Graphic_Editor
                     makeCanvasShapeDraggable?.Invoke(elementToRestore);
 
                     // Создаем ResizableElement для восстановленного элемента
-                    resizableElements[elementToRestore] = new ResizableElement(
+                    resizableElements[elementToRestore] = new ResizableElementManager(
                         elementToRestore,
                         mainCanvas,
                         gridManager.SnapToGrid,
@@ -436,7 +436,7 @@ namespace Graphic_Editor
                     makeCanvasShapeDraggable?.Invoke(elementToAdd);
 
                     // Создаем ResizableElement для добавленного элемента
-                    resizableElements[elementToAdd] = new ResizableElement(
+                    resizableElements[elementToAdd] = new ResizableElementManager(
                         elementToAdd,
                         mainCanvas,
                         gridManager.SnapToGrid,

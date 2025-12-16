@@ -10,7 +10,7 @@ using System.Windows.Shapes;
 
 namespace Graphic_Editor
 {
-    public class AutoSave
+    public class AutoSaveManager
     {
         #region Поля
 
@@ -27,7 +27,7 @@ namespace Graphic_Editor
 
         #region Конструктор и инициализация
 
-        public AutoSave(Canvas canvas, int intervalSeconds = 60, bool enabled = true)
+        public AutoSaveManager(Canvas canvas, int intervalSeconds = 60, bool enabled = true)
         {
             this.canvas = canvas;
             this.saveIntervalSeconds = intervalSeconds;

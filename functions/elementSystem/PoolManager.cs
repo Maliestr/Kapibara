@@ -21,7 +21,7 @@ namespace Graphic_Editor
         private bool _isSnapToGridEnabled;
         private Func<Point, Point> _snapToGridFunc;
         private Action<UIElement, UndoActionType> _saveToUndoStackAction;
-        private Dictionary<UIElement, ResizableElement> _resizableElements = new Dictionary<UIElement, ResizableElement>(); // ResizableElement для пулов
+        private Dictionary<UIElement, ResizableElementManager> _resizableElements = new Dictionary<UIElement, ResizableElementManager>(); // ResizableElement для пулов
         private Dictionary<UIElement, Pool> _elementToPoolMap = new Dictionary<UIElement, Pool>(); // Карта элементов к пулам
 
         #endregion
@@ -336,7 +336,7 @@ namespace Graphic_Editor
         {
             if (!_resizableElements.ContainsKey(pool.Container))
             {
-                var resizableElement = new ResizableElement(
+                var resizableElement = new ResizableElementManager(
                     pool.Container,
                     _mainCanvas,
                     _snapToGridFunc,

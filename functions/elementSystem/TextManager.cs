@@ -42,7 +42,7 @@ namespace Graphic_Editor
         private ComboBox fontSizeComboBox;
         private Border textPanel;
         private bool isSnapToGridEnabled;
-        private Dictionary<UIElement, ResizableElement> resizableElements;
+        private Dictionary<UIElement, ResizableElementManager> resizableElements;
 
         // Делегаты для взаимодействия с MainWindow
         private Action<UIElement> bringToFrontAction;
@@ -78,7 +78,7 @@ namespace Graphic_Editor
             ComboBox fontStyleComboBox,
             ComboBox fontSizeComboBox,
             Border textPanel,
-            Dictionary<UIElement, ResizableElement> resizableElements,
+            Dictionary<UIElement, ResizableElementManager> resizableElements,
             bool isSnapToGridEnabled,
             Action<UIElement> bringToFront,
             Action<UIElement> selectElement,

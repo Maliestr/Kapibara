@@ -57,20 +57,20 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="functions\ArrowManager.cs" />
-    <Compile Include="functions\CanvasPanningManager.cs" />
-    <Compile Include="functions\ClipboardManager.cs" />
-    <Compile Include="functions\CommentManager.cs" />
-    <Compile Include="functions\DragManager.cs" />
+    <Compile Include="functions\elementSystem\ArrowManager.cs" />
+    <Compile Include="functions\moveSystem\CanvasPanningManager.cs" />
+    <Compile Include="functions\other\ClipboardManager.cs" />
+    <Compile Include="functions\elementSystem\CommentManager.cs" />
+    <Compile Include="functions\moveSystem\DragManager.cs" />
     <Compile Include="functions\fileSystem\FileManager.cs" />
-    <Compile Include="functions\FillStrokeManager.cs" />
-    <Compile Include="functions\GridManager.cs" />
-    <Compile Include="functions\Help.cs" />
-    <Compile Include="functions\fileSystem\AutoSave.cs" />
-    <Compile Include="functions\PoolManager.cs" />
-    <Compile Include="functions\RectangleSelectionManager.cs" />
-    <Compile Include="functions\ResizableElement.cs" />
-    <Compile Include="functions\SelectionManager.cs" />
+    <Compile Include="functions\other\FillStrokeManager.cs" />
+    <Compile Include="functions\other\GridManager.cs" />
+    <Compile Include="functions\other\HelpManager.cs" />
+    <Compile Include="functions\fileSystem\AutoSaveManager.cs" />
+    <Compile Include="functions\elementSystem\PoolManager.cs" />
+    <Compile Include="functions\selectionSystem\RectangleSelectionManager.cs" />
+    <Compile Include="functions\selectionSystem\ResizableElementManager.cs" />
+    <Compile Include="functions\selectionSystem\SelectionManager.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -79,8 +79,8 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="functions\TextManager.cs" />
-    <Compile Include="functions\ZoomManager.cs" />
+    <Compile Include="functions\elementSystem\TextManager.cs" />
+    <Compile Include="functions\moveSystem\ZoomManager.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>

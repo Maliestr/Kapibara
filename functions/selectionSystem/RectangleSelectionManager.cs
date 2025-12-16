@@ -17,7 +17,7 @@ namespace Graphic_Editor
 
         private Canvas canvas;
         private SelectionManager selectionManager;
-        private Dictionary<UIElement, ResizableElement> resizableElements;
+        private Dictionary<UIElement, ResizableElementManager> resizableElements;
         private GridManager gridManager;
 
         // Состояние выделения
@@ -42,7 +42,7 @@ namespace Graphic_Editor
         public RectangleSelectionManager(
             Canvas canvas,
             SelectionManager selectionManager,
-            Dictionary<UIElement, ResizableElement> resizableElements,
+            Dictionary<UIElement, ResizableElementManager> resizableElements,
             GridManager gridManager)
         {
             this.canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
@@ -235,7 +235,7 @@ namespace Graphic_Editor
                             snapFunction = gridManager.SnapToGrid;
                         }
 
-                        resizableElements[element] = new ResizableElement(
+                        resizableElements[element] = new ResizableElementManager(
                             element,
                             canvas,
                             snapFunction,
@@ -292,7 +292,7 @@ namespace Graphic_Editor
                             snapFunction = gridManager.SnapToGrid;
                         }
 
-                        resizableElements[element] = new ResizableElement(
+                        resizableElements[element] = new ResizableElementManager(
                             element,
                             canvas,
                             snapFunction,

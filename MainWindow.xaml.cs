@@ -25,9 +25,9 @@ namespace Graphic_Editor
         private List<UIElement> canvasElements = new List<UIElement>(); // Список всех элементов на холсте
 
         // Добавляем поле для хранения скопированных элементов
-        private Dictionary<UIElement, ResizableElement> resizableElements =
-            new Dictionary<UIElement, ResizableElement>(); // Хранит связь между элементами на холсте и их контроллерами изменения размера
-        private ResizableElement currentResizableElement; // Текущий активный изменяемый в размерах элемент
+        private Dictionary<UIElement, ResizableElementManager> resizableElements =
+            new Dictionary<UIElement, ResizableElementManager>(); // Хранит связь между элементами на холсте и их контроллерами изменения размера
+        private ResizableElementManager currentResizableElement; // Текущий активный изменяемый в размерах элемент
 
         // Управление интерфейсом
         private bool arePanelsVisible = true; // Видимость всех панелей инструментов
@@ -47,7 +47,7 @@ namespace Graphic_Editor
         private PoolManager poolManager; // Система управления пулами (swimlanes)
         private CanvasPanningManager canvasPanningManager;
         private ZoomManager zoomManager; // Система масштабирования
-        private AutoSave autoSave; // Система автоматического сохранения проекта
+        private AutoSaveManager autoSave; // Система автоматического сохранения проекта
 
         // Константы
         private const double WorkAreaTop = 40;    // Отступ сверху (под меню)
@@ -96,7 +96,7 @@ namespace Graphic_Editor
             HeightTextBox.KeyDown += DimensionTextBox_KeyDown;
 
             // Инициализация системы автосохранения (интервал 60 секунд)
-            autoSave = new AutoSave(MainCanvas, intervalSeconds: 60, enabled: true);
+            autoSave = new AutoSaveManager(MainCanvas, intervalSeconds: 60, enabled: true);
 
             // Обработчик закрытия окна для очистки ресурсов
             this.Closing += MainWindow_Closing;
@@ -181,7 +181,7 @@ namespace Graphic_Editor
                     // Создаем или используем существующий ResizableElement для элемента
                     if (!resizableElements.ContainsKey(element))
                     {
-                        resizableElements[element] = new ResizableElement(
+                        resizableElements[element] = new ResizableElementManager(
                             element,
                             MainCanvas,
                             gridManager.SnapToGrid,
@@ -1279,7 +1279,7 @@ namespace Graphic_Editor
             if (!resizableElements.ContainsKey(element))
             {
                 // Создаем новый ResizableElement, передавая состояние сетки
-                resizableElements[element] = new ResizableElement(
+                resizableElements[element] = new ResizableElementManager(
                     element,
                     MainCanvas,
                     gridManager.SnapToGrid, // Используем метод GridManager
