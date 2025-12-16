@@ -1677,14 +1677,22 @@ namespace Graphic_Editor
                 {
                     StrokeWidthPanel.Visibility = Visibility.Collapsed;
                 }
+                if (StrokePanel != null)
+                {
+                    StrokePanel.Visibility = Visibility.Collapsed;
+                }
             };
             
             arrowManager.OnArrowDeselected += () =>
             {
-                // Скрываем панель толщины при снятии выделения со стрелки
+                // Скрываем панели при снятии выделения со стрелки
                 if (StrokeWidthPanel != null)
                 {
                     StrokeWidthPanel.Visibility = Visibility.Collapsed;
+                }
+                if (StrokePanel != null)
+                {
+                    StrokePanel.Visibility = Visibility.Collapsed;
                 }
             };
         }
@@ -1704,6 +1712,11 @@ namespace Graphic_Editor
             try
             {
                 // Показываем панель обводки для стрелки
+                if (StrokePanel != null)
+                {
+                    StrokePanel.Visibility = Visibility.Visible;
+                }
+                
                 if (StrokeWidthPanel != null)
                 {
                     StrokeWidthPanel.Visibility = Visibility.Visible;

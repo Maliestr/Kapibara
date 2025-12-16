@@ -220,6 +220,40 @@ namespace Graphic_Editor
             }
         }
 
+        // Метод для применения цвета обводки к стрелке
+        private void ApplyStrokeColorToArrow(ArrowContainer arrowContainer, string hexColor)
+        {
+            if (arrowContainer?.Line == null || string.IsNullOrEmpty(hexColor)) return;
+
+            try
+            {
+                Color newColor = (Color)ColorConverter.ConvertFromString("#" + hexColor);
+                Brush newBrush = new SolidColorBrush(newColor);
+
+                // Применяем цвет к линии стрелки
+                arrowContainer.Line.Stroke = newBrush;
+
+                // Применяем цвет к наконечнику стрелки
+                if (arrowContainer.Arrowhead != null)
+                {
+                    arrowContainer.Arrowhead.Fill = newBrush;
+                    arrowContainer.Arrowhead.Stroke = newBrush;
+                }
+
+                // Сохраняем новый цвет как оригинальный
+                arrowContainer.OriginalStroke = newBrush.CloneCurrentValue();
+                if (arrowContainer.Arrowhead != null)
+                {
+                    arrowContainer.OriginalArrowheadFill = newBrush.CloneCurrentValue();
+                    arrowContainer.OriginalArrowheadStroke = newBrush.CloneCurrentValue();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Ошибка в ApplyStrokeColorToArrow: {ex.Message}");
+            }
+        }
+
         // Метод обновления комбо-бокса толщины на основе фигуры
         private void UpdateStrokeWidthComboBoxFromShape(UIElement shape)
         {
@@ -412,8 +446,16 @@ namespace Graphic_Editor
                         // Обновляем превью цвета обводки
                         strokeColorPreview.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#" + hexColor));
 
-                        // Применяем цвет обводки к выделенной фигуре
-                        ApplyStrokeColorToSelectedShape(hexColor);
+                        // Сначала проверяем, выделена ли стрелка
+                        if (arrowManager?.SelectedArrowContainer != null)
+                        {
+                            ApplyStrokeColorToArrow(arrowManager.SelectedArrowContainer, hexColor);
+                        }
+                        else
+                        {
+                            // Применяем цвет обводки к выделенной фигуре
+                            ApplyStrokeColorToSelectedShape(hexColor);
+                        }
                     }
                     catch (Exception ex)
                     {
