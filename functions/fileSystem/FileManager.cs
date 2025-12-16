@@ -11,6 +11,7 @@ using System.Windows.Shapes;
 
 namespace Graphic_Editor
 {
+    // Менеджер для управления сохранением и загрузкой файлов проекта, а также экспортом в изображения
     public class FileManager
     {
         #region Поля
@@ -53,6 +54,7 @@ namespace Graphic_Editor
             this.getIsSnapToGridEnabled = getIsSnapToGridEnabled;
         }
 
+        // Установка ссылок на менеджеры для сохранения/загрузки их данных
         public void SetManagers(TextManager textManager, CommentManager commentManager, PoolManager poolManager)
         {
             this.textManager = textManager;
@@ -64,6 +66,7 @@ namespace Graphic_Editor
 
         #region Сохранение файла
 
+        // Сохранение содержимого холста в файл формата GED
         public void SaveToFile(string filePath)
         {
             using (var writer = new StreamWriter(filePath))
@@ -214,6 +217,7 @@ namespace Graphic_Editor
 
         #region Вспомогательные классы для данных
 
+        // Класс для временного хранения данных комментария при сериализации
         private class CommentData
         {
             public double PositionX { get; set; }
@@ -221,6 +225,7 @@ namespace Graphic_Editor
             public string Text { get; set; }
         }
 
+        // Класс для временного хранения данных пула при сериализации
         private class PoolData
         {
             public double PositionX { get; set; }
@@ -235,7 +240,7 @@ namespace Graphic_Editor
 
         #region Вспомогательные методы для сохранения
 
-        // Проверка, является ли Border контейнером пула
+        // Проверка, является ли Border контейнером пула по его структуре и цветам
         private bool IsPoolContainer(Border border)
         {
             if (border == null || border.Child == null) return false;
@@ -280,7 +285,7 @@ namespace Graphic_Editor
             return false;
         }
 
-        // Извлечение данных пула
+        // Извлечение данных пула из его визуального представления
         private PoolData ExtractPoolData(Border poolContainer)
         {
             if (poolContainer?.Child is Grid grid)
@@ -350,7 +355,7 @@ namespace Graphic_Editor
             return null;
         }
 
-        // Проверка, является ли элемент частью пула
+        // Проверка, является ли элемент частью одного из обработанных пулов
         private bool IsPoolPart(UIElement element, HashSet<UIElement> processedPools)
         {
             if (element == null) return false;
@@ -370,7 +375,7 @@ namespace Graphic_Editor
             return false;
         }
 
-        // Проверка, находится ли элемент в Grid
+        // Проверка, находится ли элемент внутри указанного Grid по дереву визуальных элементов
         private bool IsElementInGrid(UIElement element, Grid grid)
         {
             DependencyObject parent = VisualTreeHelper.GetParent(element);
@@ -385,7 +390,7 @@ namespace Graphic_Editor
             return false;
         }
 
-        // Проверка, является ли Border иконкой комментария
+        // Проверка, является ли Border иконкой комментария по размерам и цвету
         private bool IsCommentIcon(Border border)
         {
             if (border == null) return false;
@@ -409,7 +414,7 @@ namespace Graphic_Editor
             return false;
         }
 
-        // Извлечение данных комментария
+        // Извлечение данных комментария из его визуального представления
         private CommentData ExtractCommentData(Border commentIcon)
         {
             if (commentIcon == null) return null;
@@ -457,7 +462,7 @@ namespace Graphic_Editor
             };
         }
 
-        // Проверка, является ли элемент частью комментария
+        // Проверка, является ли элемент частью одного из обработанных комментариев
         private bool IsCommentPart(UIElement element, HashSet<UIElement> processedComments)
         {
             if (element == null) return false;
@@ -491,6 +496,7 @@ namespace Graphic_Editor
 
         #region Загрузка файла
 
+        // Загрузка содержимого холста из файла формата GED
         public void LoadFromFile(string filePath)
         {
             mainCanvas.Children.Clear();
@@ -608,6 +614,7 @@ namespace Graphic_Editor
 
         #region Создание элементов из данных
 
+        // Создание эллипса из данных файла
         private void CreateEllipseFromData(string[] data)
         {
             var ellipse = new Ellipse
@@ -630,6 +637,7 @@ namespace Graphic_Editor
             resizableElements[ellipse] = new ResizableElementManager(ellipse, mainCanvas, snapToGrid, isSnapEnabled);
         }
 
+        // Создание квадрата из данных файла
         private void CreateSquareFromData(string[] data)
         {
             var square = new Border
@@ -653,6 +661,7 @@ namespace Graphic_Editor
             resizableElements[square] = new ResizableElementManager(square, mainCanvas, snapToGrid, isSnapEnabled);
         }
 
+        // Создание ромба (повернутого квадрата) из данных файла
         private void CreateDiamondFromData(string[] data)
         {
             var diamond = new Border
@@ -678,6 +687,7 @@ namespace Graphic_Editor
             resizableElements[diamond] = new ResizableElementManager(diamond, mainCanvas, snapToGrid, isSnapEnabled);
         }
 
+        // Создание линии из данных файла
         private void CreateLineFromData(string[] data)
         {
             var line = new Line
@@ -702,6 +712,7 @@ namespace Graphic_Editor
             resizableElements[line] = new ResizableElementManager(line, mainCanvas, snapToGrid, isSnapEnabled);
         }
 
+        // Создание текстового элемента из данных файла с применением форматирования
         private void CreateTextFromData(string[] data)
         {
             if (data.Length < 9 || textManager == null) return;
@@ -774,6 +785,7 @@ namespace Graphic_Editor
 
         #region Экспорт в изображение
 
+        // Экспорт содержимого холста в изображение (PNG или JPEG)
         public void ExportCanvasToImage(string filePath)
         {
             // Создаем RenderTargetBitmap с размерами холста

@@ -8,6 +8,7 @@ using System.Windows.Shapes;
 
 namespace Graphic_Editor
 {
+    // Менеджер для управления созданием, редактированием и удалением комментариев на холсте
     public class CommentManager
     {
         #region Поля
@@ -36,6 +37,7 @@ namespace Graphic_Editor
 
         #region Вспомогательные классы
 
+        // Класс для представления комментария на холсте
         public class Comment
         {
             public UIElement VisualElement { get; set; }
@@ -44,6 +46,7 @@ namespace Graphic_Editor
             public Point Position { get; set; }
         }
 
+        // Класс для сериализации данных комментария при сохранении в файл
         public class CommentData
         {
             public double PositionX { get; set; }
@@ -77,6 +80,7 @@ namespace Graphic_Editor
             ToggleCommentMode();
         }
 
+        // Переключение режима создания комментариев
         public void ToggleCommentMode()
         {
             _isCommentModeActive = !_isCommentModeActive;
@@ -99,6 +103,7 @@ namespace Graphic_Editor
 
         #region Создание комментариев
 
+        // Создание нового комментария в указанной позиции
         public Comment CreateCommentAtPosition(Point position)
         {
             // Создаем визуальный элемент комментария
@@ -210,6 +215,7 @@ namespace Graphic_Editor
 
         #region Редактирование комментариев
 
+        // Редактирование текста комментария через текстовое поле
         public void EditComment(Comment comment)
         {
             var editTextBox = new TextBox
@@ -292,6 +298,7 @@ namespace Graphic_Editor
 
         #region Удаление комментариев
 
+        // Удаление комментария с холста
         public void DeleteComment(Comment comment)
         {
             if (comment.VisualElement != null)
@@ -310,6 +317,7 @@ namespace Graphic_Editor
 
         #region Обработка событий мыши
 
+        // Обработка клика мыши для создания комментария в режиме комментариев
         public bool HandleMouseClick(Point clickPosition, object originalSource)
         {
             if (!_isCommentModeActive) return false;
@@ -329,6 +337,7 @@ namespace Graphic_Editor
 
         #region Очистка
 
+        // Очистка всех комментариев с холста
         public void ClearAllComments()
         {
             foreach (var comment in _comments.ToArray())

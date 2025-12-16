@@ -53,7 +53,7 @@ namespace Graphic_Editor
         private const double WorkAreaTop = 40;    // Отступ сверху (под меню)
         private const double WorkAreaBottom = 100; // Отступ снизу (над панелью инструментов)
 
-        private bool isCursor = true;
+        private bool isCursor = true; // Флаг активности режима курсора
 
         #endregion
 
@@ -147,6 +147,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Инициализация менеджера перетаскивания объектов
         private void InitializeDragManager()
         {
             dragManager = new DragManager(MainCanvas, NotationCanvas)
@@ -222,6 +223,7 @@ namespace Graphic_Editor
             );
         }
 
+        // Инициализация менеджера сетки
         private void InitializeGridManager()
         {
             gridManager = new GridManager(
@@ -244,6 +246,7 @@ namespace Graphic_Editor
             };
         }
 
+        // Инициализация менеджера комментариев
         private void InitializeCommentManager()
         {
             commentManager = new CommentManager(MainCanvas, comment);
@@ -267,6 +270,7 @@ namespace Graphic_Editor
             };
         }
 
+        // Инициализация менеджера буфера обмена и отмены/повтора
         private void InitializeClipboardManager()
         {
             clipboardManager = new ClipboardManager(
@@ -714,7 +718,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Загружает файл по указанному пути. Используется для открытия файлов из проводника.
+        // Загружает файл по указанному пути. Используется для открытия файлов из проводника и при перетаскивании файлов
         public void LoadFileFromPath(string filePath)
         {
             if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
@@ -838,6 +842,7 @@ namespace Graphic_Editor
 
         #region Меню "Вид"
 
+        // Инициализация менеджера масштабирования
         private void InitializeZoomManager()
         {
             zoomManager = new ZoomManager(MainCanvas, canvasPanningManager);
@@ -951,6 +956,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Обновление заголовка окна с именем текущего файла
         private void UpdateWindowTitle()
         {
             // Используем текст из TextBox, если он доступен, иначе имя файла из файловой системы
@@ -974,6 +980,7 @@ namespace Graphic_Editor
 
         #region Управление панелями
 
+        // Инициализация и регистрация всех панелей инструментов
         private void InitializePanels()
         {
             // Находим все панели по именам
@@ -993,6 +1000,7 @@ namespace Graphic_Editor
             //if (filePanel != null) panels.Add(filePanel);
         }
 
+        // Инициализация блоков свойств элементов - скрывает их при загрузке
         private void InitializePropertyBlocks()
         {
             var dimensionsPanel = FindName("DimensionsPanel") as Border;
@@ -1018,6 +1026,7 @@ namespace Graphic_Editor
             TogglePanelsVisibility();
         }
 
+        // Переключение видимости всех панелей инструментов
         private void TogglePanelsVisibility()
         {
             arePanelsVisible = !arePanelsVisible;
@@ -1032,6 +1041,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Скрытие всех панелей инструментов
         private void HideAllPanels()
         {
             foreach (var panel in panels)
@@ -1048,6 +1058,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Показ всех панелей инструментов в зависимости от выделенного элемента
         private void ShowAllPanels()
         {
             NotationCard.Visibility = Visibility.Visible;
@@ -1079,6 +1090,7 @@ namespace Graphic_Editor
 
         #region Управление элементами
 
+        // Выделение элемента на холсте
         private void SelectElement(FrameworkElement element)
         {
             if (element == null) return;
@@ -1093,17 +1105,20 @@ namespace Graphic_Editor
             }
         }
 
+        // Снятие выделения со всех элементов
         private void DeselectAll()
         {
             selectionManager?.DeselectAll();
         }
 
+        // Выделение фигуры на холсте
         public void SelectShape(UIElement shape)
         {
             if (shape == null) return;
             selectionManager?.SelectShape(shape);
         }
 
+        // Скрытие всех ручек изменения размера для элементов и пулов
         private void HideAllResizeHandles()
         {
             // Скрываем ручки для обычных элементов
@@ -1129,6 +1144,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Снятие выделения с конкретного элемента
         private void DeselectElement(UIElement element)
         {
             if (element == null) return;
@@ -1190,6 +1206,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Применение размеров из текстовых полей к выделенному элементу
         private void ApplyDimensionsFromTextboxes()
         {
             var selectedShape = selectionManager?.SelectedShape;
@@ -1213,6 +1230,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Обновление информации о количестве выделенных элементов
         private void UpdateSelectionInfo()
         {
             if (selectionManager == null) return;
@@ -1235,6 +1253,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Обновление текстовых полей размеров элемента
         public void UpdateDimensions(double width, double height)
         {
             // Обновляем текстовые поля размеров если они существуют
@@ -1249,6 +1268,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Показ ручек изменения размера для указанного элемента
         private void ShowResizeHandlesForElement(UIElement element)
         {
             // Используем DragManager для проверки состояния перетаскивания
@@ -1300,6 +1320,7 @@ namespace Graphic_Editor
 
         #region Управление Z-порядком
 
+        // Перемещение элемента на передний план (поверх других элементов)
         private void BringToFront(FrameworkElement element)
         {
             if (element == null || !MainCanvas.Children.Contains(element)) return;
@@ -1312,6 +1333,7 @@ namespace Graphic_Editor
             MainCanvas.Children.Add(element);
         }
 
+        // Перемещение элемента на задний план (под другие элементы)
         private void SendToBack(FrameworkElement element)
         {
             if (element == null || !MainCanvas.Children.Contains(element)) return;
@@ -1358,6 +1380,7 @@ namespace Graphic_Editor
 
         #region Контекстное меню
 
+        // Создание контекстного меню для элемента
         private void CreateContextMenu(FrameworkElement element)
         {
             ContextMenu contextMenu = new ContextMenu();
@@ -1494,6 +1517,7 @@ namespace Graphic_Editor
 
         #region Вспомогательные методы
 
+        // Проверка, находится ли элемент в панели нотации
         private bool IsElementInNotation(UIElement element)
         {
             if (element == null || NotationCanvas == null) return false;
@@ -1562,6 +1586,7 @@ namespace Graphic_Editor
 
         #region Методы управления внешним видом
 
+        // Анимация появления фигуры при добавлении на холст
         private void AnimateShapeAppearance(UIElement shape)
         {
             // Сохраняем оригинальную трансформацию
@@ -1591,6 +1616,7 @@ namespace Graphic_Editor
             selectionManager?.ApplySelectionVisualFeedback(element, isSelected);
         }
 
+        // Делает фигуру на холсте перетаскиваемой
         private void MakeCanvasShapeDraggable(UIElement shape)
         {
             // Подписываемся на события перетаскивания через DragManager
@@ -1646,6 +1672,7 @@ namespace Graphic_Editor
 
         #region Стрелки
 
+        // Инициализация менеджера стрелок
         private void InitializeArrowManager()
         {
             arrowManager = new ArrowManager(
@@ -1700,6 +1727,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Обновление панелей свойств для выделенной стрелки
         private void UpdateArrowPropertiesInPanels(ArrowContainer arrowContainer)
         {
             if (arrowContainer?.Line == null) return;
@@ -1754,6 +1782,7 @@ namespace Graphic_Editor
 
         #region Система выделения
 
+        // Инициализация системы выделения элементов
         private void InitializeSelectionSystem()
         {
             // Создаем менеджер выделения
@@ -1808,6 +1837,7 @@ namespace Graphic_Editor
             MainCanvas.MouseRightButtonDown += MainCanvas_MouseRightButtonDown;
         }
 
+        // Инициализация менеджера прямоугольного выделения
         private void InitializeRectangleSelectionManager()
         {
             rectangleSelectionManager = new RectangleSelectionManager(
@@ -1821,6 +1851,7 @@ namespace Graphic_Editor
 
         #region Заливка и обводка
 
+        // Инициализация менеджера заливки и обводки
         private void InitializeFillStrokeManager()
         {
             var fillColorComboBox = FindName("FillColorComboBox") as ComboBox;
@@ -1894,6 +1925,7 @@ namespace Graphic_Editor
 
         #region Текст
 
+        // Инициализация менеджера текста
         private void InitializeTextManager()
         {
             var fontComboBox = FindName("FontComboBox") as ComboBox;
@@ -1952,6 +1984,7 @@ namespace Graphic_Editor
 
         #region Файлы
 
+        // Инициализация менеджера файлов
         private void InitializeFileManager()
         {
             fileManager = new FileManager(
@@ -1978,6 +2011,7 @@ namespace Graphic_Editor
 
         #region Пулы (Swimlanes)
 
+        // Инициализация менеджера пулов (swimlanes)
         private void InitializePoolManager()
         {
             poolManager = new PoolManager(
@@ -2155,6 +2189,7 @@ namespace Graphic_Editor
             isActiveCursor();
         }
 
+        // Обновление визуального состояния кнопки курсора
         private void isActiveCursor()
         {
             if (isCursor)

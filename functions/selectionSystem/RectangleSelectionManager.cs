@@ -72,6 +72,7 @@ namespace Graphic_Editor
 
         #region Обработка выделения
 
+        // Обработка нажатия левой кнопки мыши для начала прямоугольного выделения
         public bool HandleMouseLeftButtonDown(MouseButtonEventArgs e, UIElement clickedElement)
         {
             // Если клик был на элементе, не начинаем прямоугольное выделение
@@ -106,6 +107,7 @@ namespace Graphic_Editor
             return true;
         }
 
+        // Обработка перемещения мыши для обновления прямоугольного выделения
         public void HandleMouseMove(MouseEventArgs e)
         {
             if (!isSelecting || isMouseDownOnElement || isUpdatingSelection) return;
@@ -147,6 +149,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Обработка отпускания левой кнопки мыши для завершения прямоугольного выделения
         public void HandleMouseLeftButtonUp(MouseButtonEventArgs e)
         {
             if (!isSelecting) return;
@@ -458,6 +461,7 @@ namespace Graphic_Editor
 
         public bool IsSelecting => isSelecting;
 
+        // Отмена текущего прямоугольного выделения
         public void CancelSelection()
         {
             if (isSelecting)
@@ -469,6 +473,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Обновление привязки к сетке для всех ResizableElement после изменения настройки
         public void UpdateSnapToGrid()
         {
             if (gridManager != null)

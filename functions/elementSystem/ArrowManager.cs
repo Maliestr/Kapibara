@@ -129,6 +129,7 @@ namespace Graphic_Editor
         #endregion
 
         #region Управление режимом рисования стрелок
+        // Переключение режима рисования стрелок
         public void ToggleArrowMode()
         {
             isArrowModeActive = !isArrowModeActive;
@@ -156,6 +157,7 @@ namespace Graphic_Editor
 
         #region Рисование стрелок
 
+        // Начало рисования новой стрелки в указанной точке
         public void StartArrowDrawing(Point startPoint)
         {
             arrowStartPoint = startPoint;
@@ -181,7 +183,7 @@ namespace Graphic_Editor
             Canvas.SetZIndex(currentArrow, 500);
         }
 
-        // Метод обновления рисования ломаной стрелки
+        // Обновление рисования ломаной стрелки - добавление новой точки при перемещении мыши
         public void UpdateArrowDrawing(Point currentPoint)
         {
             if (currentArrow != null && currentArrow.Points.Count >= 1)
@@ -202,7 +204,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Метод добавления излома (нового сегмента)
+        // Добавление новой точки излома (нового сегмента) в стрелку
         public void AddArrowSegment(Point point)
         {
             if (currentArrow != null && currentArrow.Points.Count >= 2)
@@ -212,6 +214,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Завершение рисования стрелки и создание наконечника
         public void CompleteArrow()
         {
             if (currentArrow != null && currentArrow.Points.Count >= 2)
@@ -807,7 +810,7 @@ namespace Graphic_Editor
 
         #region Выделение и визуальное оформление
 
-        // Выделение стрелки
+        // Выделение стрелки и обновление панелей свойств
         public void SelectArrow(Polyline arrow)
         {
             if (arrow == null) return;
@@ -960,7 +963,7 @@ namespace Graphic_Editor
 
         #region Удаление стрелок
 
-        // Удаление стрелки
+        // Удаление стрелки с холста
         public void DeleteArrow(Polyline arrow)
         {
             if (arrow == null) return;
@@ -1038,7 +1041,7 @@ namespace Graphic_Editor
 
         #region Загрузка из файла
 
-        // Создание стрелки из данных файла
+        // Создание стрелки из данных загруженного файла
         public void CreateArrowFromData(string[] data)
         {
             if (data.Length >= 4)
@@ -1434,7 +1437,7 @@ namespace Graphic_Editor
 
         #region Очистка
 
-        // Очистка всех стрелок (для очистки холста)
+        // Очистка всех стрелок с холста (используется при очистке холста)
         public void ClearAllArrows()
         {
             foreach (var arrowContainer in arrows.ToList())

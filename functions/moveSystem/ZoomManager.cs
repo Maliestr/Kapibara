@@ -172,6 +172,7 @@ namespace Graphic_Editor
             _panningManager.SetPanningOffset(new Point(offsetX, offsetY));
         }
 
+        // Увеличение масштаба относительно центра видимой области
         public void ZoomIn()
         {
             // Масштабируем относительно центра видимой области
@@ -190,6 +191,7 @@ namespace Graphic_Editor
             ZoomAtPoint(centerPoint, 1 + ZoomStep);
         }
 
+        // Уменьшение масштаба относительно центра видимой области
         public void ZoomOut()
         {
             // Масштабируем относительно центра видимой области
@@ -208,6 +210,7 @@ namespace Graphic_Editor
             ZoomAtPoint(centerPoint, 1 - ZoomStep);
         }
 
+        // Сброс масштаба к 100%
         public void ResetZoom()
         {
             // Сохраняем текущее смещение панорамирования
@@ -223,6 +226,7 @@ namespace Graphic_Editor
             _panningManager.SetPanningOffset(panningOffset);
         }
 
+        // Установка конкретного значения масштаба
         public void SetZoom(double zoom)
         {
             if (zoom < MinZoom || zoom > MaxZoom)
@@ -249,6 +253,7 @@ namespace Graphic_Editor
 
         #region Публичные методы
 
+        // Получение текущего масштаба в процентах
         public int GetZoomPercentage()
         {
             return (int)Math.Round(CurrentZoom * 100);

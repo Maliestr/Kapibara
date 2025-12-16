@@ -79,6 +79,7 @@ namespace Graphic_Editor
             public List<AttachedElement> AttachedElements { get; set; } = new List<AttachedElement>(); // Прикрепленные элементы
         }
 
+        // Класс для сериализации данных пула при сохранении в файл
         public class PoolData
         {
             public double PositionX { get; set; }
@@ -123,6 +124,7 @@ namespace Graphic_Editor
 
         #region Управление режимом создания пулов
 
+        // Переключение режима создания пулов
         public void TogglePoolMode()
         {
             _isPoolModeActive = !_isPoolModeActive;
@@ -145,6 +147,7 @@ namespace Graphic_Editor
 
         #region Создание пулов
 
+        // Обработка клика мыши для создания пула в режиме пулов
         public bool HandleMouseClick(Point clickPosition, object originalSource)
         {
             if (!_isPoolModeActive) return false;
@@ -169,6 +172,7 @@ namespace Graphic_Editor
             return false; // Не обработано
         }
 
+        // Создание нового пула в указанной позиции
         public Pool CreatePoolAtPosition(Point position, bool isVertical = true)
         {
             // Создаем основной контейнер в стиле программы
@@ -760,6 +764,7 @@ namespace Graphic_Editor
             _elementToPoolMap.Remove(element);
         }
 
+        // Обработка перемещения элемента для прикрепления/открепления от пулов
         public void HandleElementMove(UIElement element, Point newPosition)
         {
             if (element == null) return;
@@ -877,6 +882,7 @@ namespace Graphic_Editor
 
         #region Редактирование пулов
 
+        // Редактирование названия пула через текстовое поле
         public void EditPoolName(Pool pool)
         {
             var editTextBox = new TextBox
@@ -938,6 +944,7 @@ namespace Graphic_Editor
 
         #region Удаление пулов
 
+        // Удаление пула с холста
         public void DeletePool(Pool pool)
         {
             // Удаляем ResizableElement
@@ -956,6 +963,7 @@ namespace Graphic_Editor
             PoolDeleted?.Invoke(pool);
         }
 
+        // Очистка всех пулов с холста
         public void ClearAllPools()
         {
             foreach (var pool in _pools.ToArray())

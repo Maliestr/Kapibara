@@ -7,6 +7,7 @@ using System.Windows.Shapes;
 
 namespace Graphic_Editor
 {
+    // Менеджер для управления сеткой на холсте и привязкой элементов к сетке
     public class GridManager
     {
         #region Поля
@@ -171,6 +172,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Переключение видимости сетки на холсте
         public void ToggleGridVisibility()
         {
             // Не позволяем отключить сетку, если включена привязка
@@ -208,6 +210,7 @@ namespace Graphic_Editor
             OnGridToggled?.Invoke(isGridEnabled);
         }
 
+        // Переключение привязки элементов к сетке
         public void ToggleSnapToGrid()
         {
             // Не позволяем включить привязку, если сетка не включена
@@ -262,6 +265,7 @@ namespace Graphic_Editor
 
         #region Привязка к сетке
 
+        // Привязка точки к ближайшей точке сетки
         public Point SnapToGrid(Point originalPoint)
         {
             if (!isSnapToGridEnabled || GridSize <= 0) return originalPoint;
@@ -272,6 +276,7 @@ namespace Graphic_Editor
             return new Point(snappedX, snappedY);
         }
 
+        // Привязка всех элементов на холсте к сетке
         public void SnapAllElementsToGrid()
         {
             foreach (UIElement element in mainCanvas.Children)

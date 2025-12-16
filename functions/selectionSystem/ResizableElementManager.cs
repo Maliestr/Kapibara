@@ -8,6 +8,7 @@ using System.Diagnostics;
 
 namespace Graphic_Editor
 {
+    // Менеджер для управления ручками изменения размера элементов на холсте
     public class ResizableElementManager
     {
         #region Поля
@@ -30,6 +31,7 @@ namespace Graphic_Editor
 
         #region Перечисления
 
+        // Направления изменения размера элемента
         private enum ResizeDirection
         {
             None,
@@ -215,6 +217,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Показ ручек изменения размера элемента
         public void ShowResizeHandles()
         {
             if (element == null) return;
@@ -238,6 +241,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Скрытие ручек изменения размера элемента
         public void HideResizeHandles()
         {
             handlesVisible = false;

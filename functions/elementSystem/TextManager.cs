@@ -9,6 +9,7 @@ namespace Graphic_Editor
 {
     #region Вспомогательные классы
 
+    // Класс для хранения параметров форматирования текста
     public class TextFormatting
     {
         public FontFamily FontFamily { get; set; }
@@ -19,6 +20,7 @@ namespace Graphic_Editor
 
     #endregion
 
+    // Менеджер для управления созданием, редактированием и форматированием текстовых элементов
     public class TextManager
     {
         #region Поля
@@ -122,6 +124,7 @@ namespace Graphic_Editor
 
         #region Управление режимом текста
 
+        // Активация режима создания текста
         public void ActivateTextMode()
         {
             if (isTextModeActive) return;
@@ -134,7 +137,7 @@ namespace Graphic_Editor
 
         #region Создание и редактирование текста
 
-        // Обработка клика мыши для создания текста в месте клика
+        // Обработка клика мыши для создания текста в месте клика (в режиме текста)
         public bool HandleMouseClick(Point position, object originalSource)
         {
             if (!isTextModeActive) return false;
@@ -201,6 +204,7 @@ namespace Graphic_Editor
             textBox.LostFocus += (s, e) => DeactivateTextMode();
         }
 
+        // Деактивация режима создания текста и создание текстового элемента из активного текстбокса
         public void DeactivateTextMode()
         {
             // Если есть активный текстбокс, обрабатываем его
@@ -226,11 +230,13 @@ namespace Graphic_Editor
             OnTextModeDeactivated?.Invoke();
         }
 
+        // Создание текстового элемента с цветом по умолчанию (белый)
         public void CreateTextElement(string text, double left, double top)
         {
             CreateTextElementWithColor(text, left, top, Brushes.White);
         }
 
+        // Создание текстового элемента с указанным текстом, позицией и цветом
         public void CreateTextElementWithColor(string text, double left, double top, Brush color)
         {
             //    
@@ -434,6 +440,7 @@ namespace Graphic_Editor
 
         #region Редактирование текста
 
+        // Редактирование текстового элемента через текстовое поле
         public void EditTextElement(TextBlock textBlock)
         {
             // ,   

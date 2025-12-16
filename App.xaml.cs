@@ -8,9 +8,10 @@ using System.Windows;
 
 namespace Graphic_Editor
 {
-    // Логика взаимодействия для App.xaml
+    // Логика взаимодействия для App.xaml - точка входа приложения
     public partial class App : Application
     {
+        // Обработка запуска приложения - создание главного окна и загрузка файла из аргументов командной строки
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);

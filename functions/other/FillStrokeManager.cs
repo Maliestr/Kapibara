@@ -64,6 +64,7 @@ namespace Graphic_Editor
 
         #region Управление толщиной обводки
 
+        // Получение текущей толщины обводки из комбо-бокса
         public double GetCurrentStrokeThickness()
         {
             if (strokeWidthComboBox?.SelectedItem is ComboBoxItem selectedItem)
@@ -93,6 +94,7 @@ namespace Graphic_Editor
             return 3; // Значение по умолчанию, если комбо-бокс недоступен
         }
 
+        // Обновление видимости панели толщины обводки в зависимости от выделенного элемента
         public void UpdateStrokeWidthPanelVisibility()
         {
             // Если все панели скрыты - не показываем панель ширины обводки
@@ -119,7 +121,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Обработчик изменения толщины обводки
+        // Обработчик изменения выбора толщины обводки в комбо-боксе
         public void StrokeWidthComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (strokeWidthComboBox.SelectedItem is ComboBoxItem selectedItem)
@@ -169,7 +171,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Вспомогательный метод для применения толщины обводки к конкретной фигуре
+        // Применение толщины обводки к конкретной фигуре
         public void ApplyStrokeThicknessToShape(UIElement shape, double thickness)
         {
             UpdateStrokeThicknessInAllReferences(shape, thickness);
@@ -390,7 +392,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Вспомогательный метод для применения цвета заливки к конкретной фигуре
+        // Применение цвета заливки к конкретной фигуре
         public void ApplyFillColorToShape(UIElement shape, Brush brush)
         {
             if (shape is Ellipse ellipse)
@@ -494,7 +496,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Вспомогательный метод для применения цвета обводки к конкретной фигуре
+        // Применение цвета обводки к конкретной фигуре
         public void ApplyStrokeColorToShape(UIElement shape, Brush brush)
         {
             if (shape is Ellipse ellipse)
@@ -539,7 +541,7 @@ namespace Graphic_Editor
             UpdateColorComboBoxSelection(comboBox, hexColor);
         }
 
-        // Метод обновления комбо-боксов на основе цветов фигуры
+        // Обновление комбо-боксов цветов на основе цветов выделенной фигуры
         public void UpdateColorComboBoxesFromShape(UIElement shape)
         {
             if (shape == null) return;
@@ -726,7 +728,7 @@ namespace Graphic_Editor
             strokeColorPreview.Background = Brushes.Transparent;
         }
 
-        // Метод для сохранения оригинальных стилей с правильной толщиной из копии
+        // Сохранение оригинальных стилей из копии элемента в SelectionManager
         public void SetOriginalStylesFromCopy(UIElement copy, UIElement original)
         {
             if (copy == null || original == null || selectionManager == null) return;

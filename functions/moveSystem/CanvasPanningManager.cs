@@ -457,6 +457,7 @@ namespace Graphic_Editor
 
         #region Публичные методы
 
+        // Сброс панорамирования к начальной позиции
         public void ResetPanning()
         {
             _transformMatrix.OffsetX = 0;
@@ -466,6 +467,7 @@ namespace Graphic_Editor
             PanningChanged?.Invoke(new Point(0, 0));
         }
 
+        // Установка смещения панорамирования с ограничением границами
         public void SetPanningOffset(Point offset)
         {
             _transformMatrix.OffsetX = ClampPanningOffsetX(offset.X);
@@ -475,11 +477,13 @@ namespace Graphic_Editor
             PanningChanged?.Invoke(new Point(_transformMatrix.OffsetX, _transformMatrix.OffsetY));
         }
 
+        // Получение текущего смещения панорамирования
         public Point GetPanningOffset()
         {
             return new Point(_transformMatrix.OffsetX, _transformMatrix.OffsetY);
         }
 
+        // Включение/отключение панорамирования
         public void SetEnabled(bool enabled)
         {
             IsEnabled = enabled;

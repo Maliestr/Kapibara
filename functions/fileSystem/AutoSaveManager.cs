@@ -10,6 +10,7 @@ using System.Windows.Shapes;
 
 namespace Graphic_Editor
 {
+    // Менеджер для автоматического сохранения проекта через заданные интервалы времени
     public class AutoSaveManager
     {
         #region Поля
@@ -55,6 +56,7 @@ namespace Graphic_Editor
 
         #region Управление автосохранением
 
+        // Запуск автосохранения с заданным интервалом
         public void Start()
         {
             if (autoSaveTimer != null)
@@ -66,6 +68,7 @@ namespace Graphic_Editor
             autoSaveTimer = new Timer(SaveCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(saveIntervalSeconds));
         }
 
+        // Остановка автосохранения
         public void Stop()
         {
             isEnabled = false;
@@ -76,6 +79,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Установка нового интервала автосохранения
         public void SetInterval(int seconds)
         {
             if (seconds <= 0)
@@ -90,6 +94,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Принудительное сохранение холста в файл немедленно
         public void SaveNow()
         {
             if (isSaving)
@@ -120,6 +125,7 @@ namespace Graphic_Editor
 
         #region Вспомогательные методы
 
+        // Очистка старых файлов автосохранения, оставляет только последние keepCount файлов
         public void CleanupOldSaves(int keepCount = 10)
         {
             try
@@ -154,6 +160,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Получение пути к последнему файлу автосохранения
         public string GetLastAutoSavePath()
         {
             return currentAutoSavePath;
@@ -163,6 +170,7 @@ namespace Graphic_Editor
 
         #region Сохранение
 
+        // Обработчик таймера для выполнения автосохранения в фоновом потоке
         private void SaveCallback(object state)
         {
             if (!isEnabled || isSaving)
@@ -200,6 +208,7 @@ namespace Graphic_Editor
             });
         }
 
+        // Выполнение сохранения холста в файл автосохранения
         private void PerformSave()
         {
             if (canvas == null || canvas.Dispatcher == null)
@@ -237,6 +246,7 @@ namespace Graphic_Editor
             });
         }
 
+        // Сохранение содержимого холста в файл (упрощенная версия без комментариев и пулов)
         private void SaveCanvasToFile(string filePath)
         {
             using (StreamWriter writer = new StreamWriter(filePath))

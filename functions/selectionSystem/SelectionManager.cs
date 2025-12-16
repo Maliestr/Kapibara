@@ -9,7 +9,7 @@ using System.Windows.Shapes;
 
 namespace Graphic_Editor
 {
-    // Управляет системой выделения элементов на холсте
+    // Менеджер системы выделения элементов на холсте с поддержкой множественного выделения
     public class SelectionManager
     {
         #region Поля
@@ -71,6 +71,7 @@ namespace Graphic_Editor
 
         #region Основные методы выделения
 
+        // Выделение элемента с поддержкой множественного выделения через Ctrl
         public void SelectElement(FrameworkElement element)
         {
             if (element == null) return;
@@ -101,6 +102,7 @@ namespace Graphic_Editor
             }
         }
 
+        // Выделение фигуры и добавление в список выделенных элементов
         public void SelectShape(UIElement shape)
         {
             if (shape == null) return;
@@ -124,6 +126,7 @@ namespace Graphic_Editor
             OnElementSelected?.Invoke(shape as FrameworkElement);
         }
 
+        // Снятие выделения с конкретного элемента
         public void DeselectElement(UIElement element)
         {
             if (element == null) return;
@@ -156,6 +159,7 @@ namespace Graphic_Editor
             OnElementDeselected?.Invoke(element as FrameworkElement);
         }
 
+        // Снятие выделения со всех элементов
         public void DeselectAll()
         {
             foreach (var element in selectedElements.ToList())
@@ -172,6 +176,7 @@ namespace Graphic_Editor
             DeselectAll();
         }
 
+        // Выделение всех элементов на холсте
         public void SelectAllElements()
         {
             ClearSelection();
@@ -268,6 +273,7 @@ namespace Graphic_Editor
 
         #region Визуальное выделение
 
+        // Применение визуального обратного отклика при выделении/снятии выделения с элемента
         public void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
         {
             if (element == null) return;
@@ -409,6 +415,7 @@ namespace Graphic_Editor
             OnSelectionVisualFeedbackChanged?.Invoke(element);
         }
 
+        // Сохранение оригинальных цветов и толщины элемента для последующего восстановления
         public void SaveOriginalColors(UIElement shape)
         {
             if (shape == null) return;

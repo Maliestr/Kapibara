@@ -11,12 +11,14 @@ namespace Graphic_Editor
 {
     #region Вспомогательные классы
 
+    // Типы действий для системы отмены/повтора
     public enum UndoActionType
     {
         Add,    // Элемент был добавлен
         Remove  // Элемент был удален
     }
 
+    // Класс для представления действия в стеке отмены/повтора
     public class UndoAction
     {
         public UndoActionType ActionType { get; set; }
@@ -33,6 +35,7 @@ namespace Graphic_Editor
 
     #endregion
 
+    // Менеджер для управления буфером обмена, копированием, вставкой и системой отмены/повтора действий
     public class ClipboardManager
     {
         #region Поля
@@ -75,7 +78,7 @@ namespace Graphic_Editor
 
         #region Основные операции с буфером обмена
 
-        // Копирование выделенного элемента
+        // Копирование выделенных элементов в буфер обмена
         public void CopySelectedElement()
         {
             var selectedElements = selectionManager?.SelectedElements.ToList() ?? new List<UIElement>();
@@ -99,7 +102,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Вырезание выделенного элемента
+        // Вырезание выделенных элементов (копирование и удаление)
         public void CutSelectedElement()
         {
             var selectedElements = selectionManager?.SelectedElements.ToList() ?? new List<UIElement>();
@@ -141,7 +144,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Вставка элемента
+        // Вставка элементов из буфера обмена на холст
         public void PasteElement()
         {
             if (copiedElements != null && copiedElements.Count > 0)
@@ -246,7 +249,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Удаление выделенного элемента
+        // Удаление выделенных элементов с холста
         public void DeleteSelectedElement()
         {
             var selectedElements = selectionManager?.SelectedElements.ToList() ?? new List<UIElement>();
@@ -350,7 +353,7 @@ namespace Graphic_Editor
 
         #region Система отмены/повтора
 
-        // Отмена последнего действия
+        // Отмена последнего действия из стека отмены
         public void UndoLastAction()
         {
             if (undoStack.Count > 0)
@@ -411,7 +414,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Повтор последнего действия
+        // Повтор последнего отмененного действия из стека повтора
         public void RedoLastAction()
         {
             if (redoStack.Count > 0)
@@ -472,7 +475,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Сохранение в стек отмены
+        // Сохранение действия с элементом в стек отмены для возможности отмены/повтора
         public void SaveToUndoStack(UIElement element, UndoActionType actionType = UndoActionType.Add)
         {
             if (element == null) return;
@@ -508,7 +511,7 @@ namespace Graphic_Editor
 
         #region Вспомогательные методы
 
-        // Клонирование UI элемента
+        // Клонирование UI элемента для копирования/буфера обмена
         private FrameworkElement CloneUIElement(UIElement original)
         {
             if (original is Ellipse originalEllipse)

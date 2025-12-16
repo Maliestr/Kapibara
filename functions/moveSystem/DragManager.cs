@@ -10,6 +10,7 @@ using System.Windows.Shapes;
 
 namespace Graphic_Editor
 {
+    // Менеджер для управления перетаскиванием элементов из панели инструментов и на холсте
     public class DragManager
     {
         #region Поля
@@ -98,6 +99,7 @@ namespace Graphic_Editor
 
         #region Перетаскивание из панели инструментов
 
+        // Делает все указанные фигуры перетаскиваемыми из панели инструментов
         public void MakeAllShapesDraggable(params UIElement[] shapes)
         {
             foreach (var element in shapes)
@@ -106,7 +108,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Добавляет обработчики перетаскивания
+        // Добавление обработчиков событий перетаскивания для элемента
         private void AddDragHandlers(UIElement element)
         {
             if (element == null) return;
@@ -121,7 +123,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Обработчик начала перетаскивания из панели инструментов
+        // Обработчик начала перетаскивания фигуры из панели инструментов
         private void Shape_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             var element = sender as UIElement;
@@ -181,7 +183,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Обработчик перемещения при перетаскивании из панели
+        // Обработчик перемещения мыши при перетаскивании фигуры из панели инструментов
         private void Shape_MouseMove(object sender, MouseEventArgs e)
         {
             if (isDragging && shapeCopy != null && e.LeftButton == MouseButtonState.Pressed)
@@ -220,7 +222,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Обработчик завершения перетаскивания из панели
+        // Обработчик завершения перетаскивания фигуры из панели инструментов и добавления на холст
         private void Shape_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             var element = sender as UIElement;
@@ -708,7 +710,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Визуальный фидбэк при перетаскивании
+        // Применение визуального обратного отклика при перетаскивании элемента на холсте
         private void ApplyCanvasDragVisualFeedback(UIElement element, bool isDragging)
         {
             if (isDragging)
@@ -756,7 +758,7 @@ namespace Graphic_Editor
             }
         }
 
-        // Создание копии фигуры
+        // Создание визуальной копии фигуры для перетаскивания
         private UIElement CreateShapeCopy(UIElement original)
         {
             if (original == null) return null;

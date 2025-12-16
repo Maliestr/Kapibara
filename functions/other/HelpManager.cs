@@ -10,6 +10,7 @@ using System.Windows.Media.Imaging;
 
 namespace Graphic_Editor
 {
+    // Статический класс для отображения справочной информации о приложении
     public static class HelpSystem
     {
         #region Публичные методы
