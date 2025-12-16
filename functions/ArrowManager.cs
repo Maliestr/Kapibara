@@ -280,17 +280,7 @@ namespace Graphic_Editor
 
             try
             {
-                // Более заметное выделение - как у блоков
-                arrowContainer.Line.Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#AC1C1C"));
-                arrowContainer.Line.StrokeThickness = (arrowContainer.OriginalThickness > 0 ? arrowContainer.OriginalThickness : 4) + 2;
-
-                if (arrowContainer.Arrowhead != null)
-                {
-                    arrowContainer.Arrowhead.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#AC1C1C"));
-                    arrowContainer.Arrowhead.Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#AC1C1C"));
-                    arrowContainer.Arrowhead.StrokeThickness = 2;
-                }
-
+                // Оставляем оригинальный цвет стрелки, не меняем его на красный
                 // Показываем маркеры точек при выделении
                 ShowPointMarkers(arrowContainer);
             }
@@ -355,15 +345,8 @@ namespace Graphic_Editor
 
             if (isDragging)
             {
-                // Визуальный фидбэк при перетаскивании - как у блоков
-                arrowContainer.Line.Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
-                arrowContainer.Line.StrokeThickness = (arrowContainer.OriginalThickness > 0 ? arrowContainer.OriginalThickness : 4) + 1;
-
-                if (arrowContainer.Arrowhead != null)
-                {
-                    arrowContainer.Arrowhead.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
-                    arrowContainer.Arrowhead.Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3939"));
-                }
+                // При перетаскивании оставляем оригинальный цвет, не меняем на красный
+                // Визуальный фидбэк обеспечивается маркерами точек
             }
             else
             {
@@ -629,6 +612,16 @@ namespace Graphic_Editor
                     {
                         Point currentPosition = e.GetPosition(mainCanvas);
                         
+                        // Прикрепление к элементам только для крайних точек (первой и последней)
+                        if (pointIndex == 0 || pointIndex == arrowContainer.Line.Points.Count - 1)
+                        {
+                            Point snappedToElement = SnapPointToElement(currentPosition, arrowContainer.Line);
+                            if (snappedToElement != currentPosition)
+                            {
+                                currentPosition = snappedToElement;
+                            }
+                        }
+                        
                         // Применяем привязку к сетке, если включена
                         if (snapToGridFunc != null)
                         {
@@ -663,8 +656,27 @@ namespace Graphic_Editor
                         isDragging = false;
                         marker.ReleaseMouseCapture();
                         
+                        bool wasSnappedToElement = false;
+                        
+                        // Прикрепление к элементам только для крайних точек (первой и последней) при завершении
+                        if (pointIndex == 0 || pointIndex == arrowContainer.Line.Points.Count - 1)
+                        {
+                            Point currentPoint = arrowContainer.Line.Points[pointIndex];
+                            Point snappedToElement = SnapPointToElement(currentPoint, arrowContainer.Line);
+                            if (snappedToElement != currentPoint)
+                            {
+                                wasSnappedToElement = true;
+                                var newPoints = new PointCollection(arrowContainer.Line.Points);
+                                newPoints[pointIndex] = snappedToElement;
+                                arrowContainer.Line.Points = newPoints;
+                                Canvas.SetLeft(marker, snappedToElement.X - 5);
+                                Canvas.SetTop(marker, snappedToElement.Y - 5);
+                            }
+                        }
+                        
                         // Применяем привязку к сетке при завершении перетаскивания
-                        if (arrowContainer.Line.Points != null && snapToGridFunc != null)
+                        // Для точек, прикрепленных к элементам, привязку к сетке не применяем, чтобы сохранить прикрепление
+                        if (arrowContainer.Line.Points != null && snapToGridFunc != null && !wasSnappedToElement)
                         {
                             var newPoints = new PointCollection();
                             foreach (Point pt in arrowContainer.Line.Points)
@@ -677,13 +689,13 @@ namespace Graphic_Editor
                             Point snappedPoint = arrowContainer.Line.Points[pointIndex];
                             Canvas.SetLeft(marker, snappedPoint.X - 5);
                             Canvas.SetTop(marker, snappedPoint.Y - 5);
-                            
-                            // Обновляем наконечник если это последняя или предпоследняя точка
-                            if (pointIndex == arrowContainer.Line.Points.Count - 1 || 
-                                pointIndex == arrowContainer.Line.Points.Count - 2)
-                            {
-                                UpdateArrowheadPosition(arrowContainer);
-                            }
+                        }
+                        
+                        // Обновляем наконечник если это последняя или предпоследняя точка
+                        if (pointIndex == arrowContainer.Line.Points.Count - 1 || 
+                            pointIndex == arrowContainer.Line.Points.Count - 2)
+                        {
+                            UpdateArrowheadPosition(arrowContainer);
                         }
                         
                         arrowContainer.OriginalPoints = null;
@@ -1173,6 +1185,157 @@ namespace Graphic_Editor
                 Canvas.SetLeft(marker, pt.X - 5);
                 Canvas.SetTop(marker, pt.Y - 5);
             }
+        }
+
+        // Прикрепление точки к ближайшему элементу
+        private Point SnapPointToElement(Point point, Polyline currentArrowLine)
+        {
+            if (mainCanvas == null) return point;
+
+            const double snapDistance = 20; // Максимальное расстояние для прикрепления в пикселях
+            Point bestSnapPoint = point;
+            double minDistance = snapDistance;
+
+            // Находим контейнер текущей стрелки для исключения её маркеров
+            ArrowContainer currentContainer = arrows?.FirstOrDefault(a => a?.Line == currentArrowLine);
+            HashSet<UIElement> excludedElements = new HashSet<UIElement> { currentArrowLine };
+            if (currentContainer?.Arrowhead != null)
+            {
+                excludedElements.Add(currentContainer.Arrowhead);
+            }
+            if (currentContainer?.PointMarkers != null)
+            {
+                foreach (var marker in currentContainer.PointMarkers)
+                {
+                    excludedElements.Add(marker);
+                }
+            }
+
+            // Проходим по всем элементам на холсте
+            foreach (UIElement element in mainCanvas.Children)
+            {
+                // Пропускаем саму стрелку, её наконечник и маркеры
+                if (excludedElements.Contains(element))
+                    continue;
+                
+                // Пропускаем другие наконечники стрелок (Polygon)
+                if (element is Polygon)
+                {
+                    // Проверяем, не является ли это наконечником другой стрелки
+                    bool isOtherArrowhead = arrows?.Any(a => a?.Arrowhead == element) ?? false;
+                    if (isOtherArrowhead)
+                        continue;
+                }
+
+                // Получаем границы элемента
+                Rect elementBounds = GetElementBounds(element);
+                if (elementBounds.IsEmpty) continue;
+
+                // Находим ближайшую точку на границе элемента
+                Point snapPoint = GetClosestPointOnBounds(point, elementBounds);
+                double distance = Distance(point, snapPoint);
+
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    bestSnapPoint = snapPoint;
+                }
+            }
+
+            return bestSnapPoint;
+        }
+
+        // Получить границы элемента на холсте
+        private Rect GetElementBounds(UIElement element)
+        {
+            if (element == null) return Rect.Empty;
+
+            try
+            {
+                FrameworkElement fe = element as FrameworkElement;
+                if (fe == null) return Rect.Empty;
+
+                double left = Canvas.GetLeft(fe);
+                double top = Canvas.GetTop(fe);
+
+                // Если элемент не имеет позиции на Canvas, возвращаем пустой Rect
+                if (double.IsNaN(left) || double.IsNaN(top))
+                {
+                    // Пытаемся получить через TransformToVisual
+                    GeneralTransform transform = fe.TransformToVisual(mainCanvas);
+                    if (transform != null)
+                    {
+                        Point topLeft = transform.Transform(new Point(0, 0));
+                        left = topLeft.X;
+                        top = topLeft.Y;
+                    }
+                    else
+                    {
+                        return Rect.Empty;
+                    }
+                }
+
+                double width = fe.ActualWidth > 0 ? fe.ActualWidth : (fe.Width > 0 ? fe.Width : 0);
+                double height = fe.ActualHeight > 0 ? fe.ActualHeight : (fe.Height > 0 ? fe.Height : 0);
+
+                if (width <= 0 || height <= 0) return Rect.Empty;
+
+                return new Rect(left, top, width, height);
+            }
+            catch
+            {
+                return Rect.Empty;
+            }
+        }
+
+        // Найти ближайшую точку на границе прямоугольника к заданной точке
+        private Point GetClosestPointOnBounds(Point point, Rect bounds)
+        {
+            // Вычисляем ближайшую точку на каждой стороне прямоугольника
+            Point[] candidates = new Point[]
+            {
+                new Point(bounds.Left, point.Y), // Левая сторона
+                new Point(bounds.Right, point.Y), // Правая сторона
+                new Point(point.X, bounds.Top), // Верхняя сторона
+                new Point(point.X, bounds.Bottom), // Нижняя сторона
+                new Point(bounds.Left, bounds.Top), // Верхний левый угол
+                new Point(bounds.Right, bounds.Top), // Верхний правый угол
+                new Point(bounds.Left, bounds.Bottom), // Нижний левый угол
+                new Point(bounds.Right, bounds.Bottom) // Нижний правый угол
+            };
+
+            // Ограничиваем точки кандидатов границами прямоугольника
+            for (int i = 0; i < 4; i++) // Первые 4 - стороны
+            {
+                if (candidates[i].X < bounds.Left) candidates[i].X = bounds.Left;
+                if (candidates[i].X > bounds.Right) candidates[i].X = bounds.Right;
+                if (candidates[i].Y < bounds.Top) candidates[i].Y = bounds.Top;
+                if (candidates[i].Y > bounds.Bottom) candidates[i].Y = bounds.Bottom;
+            }
+
+            // Находим ближайшую точку
+            Point closest = candidates[0];
+            double minDist = Distance(point, closest);
+
+            for (int i = 1; i < candidates.Length; i++)
+            {
+                double dist = Distance(point, candidates[i]);
+                if (dist < minDist)
+                {
+                    minDist = dist;
+                    closest = candidates[i];
+                }
+            }
+
+            return closest;
+        }
+
+        // Вычислить расстояние между двумя точками
+        private double Distance(Point p1, Point p2)
+        {
+            double dx = p2.X - p1.X;
+            double dy = p2.Y - p1.Y;
+            return Math.Sqrt(dx * dx + dy * dy);
         }
 
         // Перенести стрелку на передний план (линия и наконечник вместе)
