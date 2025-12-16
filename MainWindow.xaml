@@ -19,8 +19,7 @@
         Width="1200"
         Background="#FF252525"
         FontFamily="Gotham Pro">
-    <!--Widht и Height нужны для правильной визуализации окна-->
-    <!--есть тесты-->
+
     <Window.Resources>
         <!-- Общий стиль для кнопок заголовка (минимизация/максимизация) с подсветкой при наведении -->
         <Style x:Key="TitleBarButtonStyle" TargetType="Button">
@@ -740,18 +739,17 @@
             <!-- Прямоугольная панель снизу -->
             <Border x:Name="ControlPanel"
                     CornerRadius="10" Grid.Column="1"
-                    Background="#FF343434" Width="290" 
+                    Background="#FF343434" Width="248" 
                     Height="52" Margin="80" BorderBrush="#CCCCCC"
                     BorderThickness="1" Grid.Row="2" 
                     HorizontalAlignment="Center" 
                     VerticalAlignment="Bottom" Cursor="">
                 <StackPanel Orientation="Horizontal"
-                        VerticalAlignment="Center" Width="290" Height="52" HorizontalAlignment="Center">
+                        VerticalAlignment="Center" Width="248" Height="52" HorizontalAlignment="Center">
                     <Grid Width="{Binding ActualWidth, ElementName=ControlPanel}"
                           Height="{Binding ActualHeight, ElementName=ControlPanel}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="8"/>
-                            <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
@@ -840,23 +838,6 @@
                             FocusVisualStyle="{x:Null}"
                             ToolTip="Комментарий">
                             <Image Source="/Icons/Com.png"
-                                Width="30" 
-                                Height="30"
-                                   RenderOptions.BitmapScalingMode="HighQuality"
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Center"/>
-                        </Button>
-                        <!-- Пулы (Swimlanes) -->
-                        <Button x:Name="dash" Style="{StaticResource ControlButtonStyle}"
-                            Width="34" 
-                            Height="34"
-                            Cursor="Hand"
-                            Grid.Column="6"
-                            Background="#FF343434"
-                            BorderBrush="Transparent"
-                            FocusVisualStyle="{x:Null}"
-                            ToolTip="Пулы (Swimlanes) - создание разделителей участников">
-                            <Image Source="/Icons/dashboard.png"
                                 Width="30" 
                                 Height="30"
                                    RenderOptions.BitmapScalingMode="HighQuality"
