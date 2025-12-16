@@ -149,7 +149,7 @@ namespace Graphic_Editor
 
             currentArrow = new Polyline
             {
-                Stroke = Brushes.Black,
+                Stroke = Brushes.White,
                 StrokeThickness = strokeThickness,
                 StrokeLineJoin = PenLineJoin.Round,
                 StrokeStartLineCap = PenLineCap.Flat,
