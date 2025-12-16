@@ -1,4 +1,4 @@
-﻿<Window x:Class="Graphic_Editor.MainWindow"
+<Window x:Class="Graphic_Editor.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -10,6 +10,7 @@
         WindowStyle="None"
         AllowsTransparency="False"
         ResizeMode="CanResize"
+        AllowDrop="True"
         Icon="/Icons/L.png"
         Title="Kapibara"
         MinHeight="800"
@@ -18,8 +19,7 @@
         Width="1200"
         Background="#FF252525"
         FontFamily="Gotham Pro">
-    <!--Widht и Height нужны для правильной визуализации окна-->
-    <!--есть тесты-->
+
     <Window.Resources>
         <!-- Общий стиль для кнопок заголовка (минимизация/максимизация) с подсветкой при наведении -->
         <Style x:Key="TitleBarButtonStyle" TargetType="Button">
@@ -136,6 +136,32 @@
                                             Margin="{TemplateBinding Padding}"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Стиль для Popup внутри ContextMenu - отключаем анимацию -->
+        <Style TargetType="Popup">
+            <Setter Property="PopupAnimation" Value="None"/>
+        </Style>
+
+        <!-- Стиль для контекстного меню -->
+        <Style TargetType="ContextMenu">
+            <Setter Property="Background" Value="#FF343434"/>
+            <Setter Property="BorderBrush" Value="#555555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
@@ -713,18 +739,17 @@
             <!-- Прямоугольная панель снизу -->
             <Border x:Name="ControlPanel"
                     CornerRadius="10" Grid.Column="1"
-                    Background="#FF343434" Width="290" 
+                    Background="#FF343434" Width="248" 
                     Height="52" Margin="80" BorderBrush="#CCCCCC"
                     BorderThickness="1" Grid.Row="2" 
                     HorizontalAlignment="Center" 
                     VerticalAlignment="Bottom" Cursor="">
                 <StackPanel Orientation="Horizontal"
-                        VerticalAlignment="Center" Width="290" Height="52" HorizontalAlignment="Center">
+                        VerticalAlignment="Center" Width="248" Height="52" HorizontalAlignment="Center">
                     <Grid Width="{Binding ActualWidth, ElementName=ControlPanel}"
                           Height="{Binding ActualHeight, ElementName=ControlPanel}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="8"/>
-                            <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
@@ -819,32 +844,68 @@
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center"/>
                         </Button>
-                        <!-- Пулы (Swimlanes) -->
-                        <Button x:Name="dash" Style="{StaticResource ControlButtonStyle}"
-                            Width="34" 
-                            Height="34"
-                            Cursor="Hand"
-                            Grid.Column="6"
-                            Background="#FF343434"
-                            BorderBrush="Transparent"
-                            FocusVisualStyle="{x:Null}"
-                            ToolTip="Пулы (Swimlanes) - создание разделителей участников">
-                            <Image Source="/Icons/dashboard.png"
-                                Width="30" 
-                                Height="30"
-                                   RenderOptions.BitmapScalingMode="HighQuality"
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Center"/>
-                        </Button>
                     </Grid>
                 </StackPanel>
+            </Border>
+
+            <!-- Блок отображения процента масштаба -->
+            <Border x:Name="ZoomDisplayPanel"
+                    CornerRadius="10" Grid.Column="2"
+                    Background="#FF343434" Width="80" 
+                    Height="32" Margin="0,0,30,80" BorderBrush="#CCCCCC"
+                    BorderThickness="1" 
+                    HorizontalAlignment="Right" 
+                    VerticalAlignment="Bottom">
+                <TextBlock x:Name="ZoomPercentageTextBlock"
+                           Text="100%"
+                           Foreground="White"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
             </Border>
 
             <StackPanel x:Name="PropertiesPanel" 
                         Grid.Column="2"
                         Width="270" 
                         VerticalAlignment="Top"
-                        Margin="0,20,0,0">
+                        Margin="0,0,0,0">
+                <!-- Панель с информацией о выделенных элементах -->
+                <Border x:Name="SelectionInfoPanel" CornerRadius="10"
+                        BorderBrush="#CCCCCC"
+                        BorderThickness="1"
+                        Background="#FF343434" 
+                        Width="270" 
+                        Height="84"
+                        Margin="0,20,0,0" 
+                        HorizontalAlignment="Center" 
+                        VerticalAlignment="Top"
+                        >
+                    <StackPanel Orientation="Vertical" 
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Width="200">
+
+                        <TextBlock Text="Выделение" 
+                            Foreground="White" 
+                            FontSize="14"
+                            FontWeight="Bold"
+                            HorizontalAlignment="Center"
+                            Margin="0,0,0,10"/>
+
+                        <StackPanel Orientation="Horizontal" 
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                            <TextBlock x:Name="SelectedCountTextBlock"
+                                Text="Выделено элементов: 0" 
+                                Foreground="White" 
+                                FontSize="12"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <!-- Панель с размерами -->
                 <Border x:Name="DimensionsPanel" CornerRadius="10"
                                 Background="#FF343434" 
@@ -852,7 +913,7 @@
                                 Height="84"
                         BorderBrush="#CCCCCC"
                         BorderThickness="1"
-                                Margin="0,0,0,0" HorizontalAlignment="Center"
+                                Margin="0,20,0,0" HorizontalAlignment="Center"
                                 VerticalAlignment="Top">
                     <StackPanel Orientation="Vertical" 
                             HorizontalAlignment="Center"
@@ -1268,6 +1329,7 @@
                             Background="#D9D9D9"
                             BorderThickness="0"
                             HorizontalAlignment="Center"
+                            SelectedIndex="2"
                             SelectionChanged="StrokeWidthComboBox_SelectionChanged">
                             <ComboBoxItem Content="1 px" Tag="1"/>
                             <ComboBoxItem Content="2 px" Tag="2"/>
