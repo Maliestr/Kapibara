@@ -12,6 +12,8 @@ namespace Graphic_Editor
 {
     public static class HelpSystem
     {
+        #region Публичные методы
+
         public static void ShowHelp()
         {
             var helpWindow = new Window
@@ -191,6 +193,10 @@ namespace Graphic_Editor
             helpWindow.ShowDialog();
         }
 
+        #endregion
+
+        #region Вспомогательные методы
+
         private static string GetHelpText()
         {
             return @"Kapibara — это минималистичное и сфокусированное приложение для создания профессиональных диаграмм в нотации UML Activity. Следуя принципу «только диаграммы, ничего лишнего», оно предоставляет все необходимые инструменты для эффективного моделирования процессов без перегруженного интерфейса.
@@ -266,5 +272,7 @@ Kapibara — ваш надежный инструмент для чистого 
 
 ";
         }
+
+        #endregion
     }
 }

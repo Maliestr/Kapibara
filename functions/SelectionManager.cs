@@ -9,11 +9,11 @@ using System.Windows.Shapes;
 
 namespace Graphic_Editor
 {
-    /// <summary>
-    /// Управляет системой выделения элементов на холсте
-    /// </summary>
+    // Управляет системой выделения элементов на холсте
     public class SelectionManager
     {
+        #region Поля
+
         private Canvas canvas;
         private MainWindow mainWindow;
 
@@ -32,11 +32,19 @@ namespace Graphic_Editor
         private Dictionary<UIElement, Brush> originalFillColors = new Dictionary<UIElement, Brush>();
         private Dictionary<UIElement, double> originalStrokeThickness = new Dictionary<UIElement, double>();
 
+        #endregion
+
+        #region События
+
         // События для уведомления MainWindow
         public event Action<FrameworkElement> OnElementSelected;
         public event Action<FrameworkElement> OnElementDeselected;
         public event Action OnSelectionCleared;
         public event Action<UIElement> OnSelectionVisualFeedbackChanged;
+
+        #endregion
+
+        #region Конструктор и инициализация
 
         public SelectionManager(Canvas canvas, MainWindow mainWindow)
         {
@@ -45,9 +53,6 @@ namespace Graphic_Editor
             InitializeSelectionSystem();
         }
 
-        /// <summary>
-        /// Инициализация системы выделения
-        /// </summary>
         private void InitializeSelectionSystem()
         {
             selectionRect = new Rectangle
@@ -62,11 +67,10 @@ namespace Graphic_Editor
             Panel.SetZIndex(selectionRect, 1000);
         }
 
+        #endregion
+
         #region Основные методы выделения
 
-        /// <summary>
-        /// Выделяет элемент
-        /// </summary>
         public void SelectElement(FrameworkElement element)
         {
             if (element == null) return;
@@ -97,9 +101,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Выделяет фигуру (альтернативный метод)
-        /// </summary>
         public void SelectShape(UIElement shape)
         {
             if (shape == null) return;
@@ -123,9 +124,6 @@ namespace Graphic_Editor
             OnElementSelected?.Invoke(shape as FrameworkElement);
         }
 
-        /// <summary>
-        /// Снимает выделение с элемента
-        /// </summary>
         public void DeselectElement(UIElement element)
         {
             if (element == null) return;
@@ -158,9 +156,6 @@ namespace Graphic_Editor
             OnElementDeselected?.Invoke(element as FrameworkElement);
         }
 
-        /// <summary>
-        /// Снимает выделение со всех элементов
-        /// </summary>
         public void DeselectAll()
         {
             foreach (var element in selectedElements.ToList())
@@ -172,17 +167,11 @@ namespace Graphic_Editor
             OnSelectionCleared?.Invoke();
         }
 
-        /// <summary>
-        /// Очищает выделение (аналог DeselectAll)
-        /// </summary>
         public void ClearSelection()
         {
             DeselectAll();
         }
 
-        /// <summary>
-        /// Выделяет все элементы на холсте
-        /// </summary>
         public void SelectAllElements()
         {
             ClearSelection();
@@ -200,9 +189,6 @@ namespace Graphic_Editor
 
         #region Прямоугольное выделение
 
-        /// <summary>
-        /// Начинает процесс прямоугольного выделения
-        /// </summary>
         public void StartSelection(Point position)
         {
             // Сбрасываем предыдущее выделение, если не зажат Ctrl
@@ -223,9 +209,6 @@ namespace Graphic_Editor
             canvas.CaptureMouse();
         }
 
-        /// <summary>
-        /// Обновляет прямоугольное выделение в реальном времени
-        /// </summary>
         public void UpdateSelectionInRealTime(Rect selectionBounds)
         {
             foreach (UIElement element in canvas.Children)
@@ -255,9 +238,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Завершает процесс прямоугольного выделения
-        /// </summary>
         public void EndSelection()
         {
             isSelecting = false;
@@ -265,9 +245,6 @@ namespace Graphic_Editor
             selectionRect.Visibility = Visibility.Collapsed;
         }
 
-        /// <summary>
-        /// Обновляет размер прямоугольника выделения
-        /// </summary>
         public void UpdateSelectionRect(Point currentPosition)
         {
             if (!isSelecting) return;
@@ -285,18 +262,12 @@ namespace Graphic_Editor
             UpdateSelectionInRealTime(new Rect(x, y, width, height));
         }
 
-        /// <summary>
-        /// Проверяет, идет ли процесс выделения
-        /// </summary>
         public bool IsSelecting => isSelecting;
 
         #endregion
 
         #region Визуальное выделение
 
-        /// <summary>
-        /// Применяет визуальное выделение к элементу
-        /// </summary>
         public void ApplySelectionVisualFeedback(UIElement element, bool isSelected)
         {
             if (element == null) return;
@@ -438,9 +409,6 @@ namespace Graphic_Editor
             OnSelectionVisualFeedbackChanged?.Invoke(element);
         }
 
-        /// <summary>
-        /// Сохраняет оригинальные цвета и толщину элемента
-        /// </summary>
         public void SaveOriginalColors(UIElement shape)
         {
             if (shape == null) return;
@@ -507,9 +475,6 @@ namespace Graphic_Editor
 
         #region Вспомогательные методы
 
-        /// <summary>
-        /// Получает границы элемента
-        /// </summary>
         private Rect GetElementBounds(UIElement element)
         {
             if (element == null) return new Rect(0, 0, 0, 0);
@@ -549,9 +514,6 @@ namespace Graphic_Editor
             return new Rect(left, top, width, height);
         }
 
-        /// <summary>
-        /// Проверяет, можно ли выделить элемент
-        /// </summary>
         private bool IsSelectableElement(UIElement element)
         {
             return element != null &&
@@ -562,9 +524,6 @@ namespace Graphic_Editor
         // Делегат для снятия выделения стрелки (устанавливается из MainWindow)
         public Action OnDeselectArrow { get; set; }
 
-        /// <summary>
-        /// Снимает выделение со стрелки (интеграция с системой стрелок)
-        /// </summary>
         private void DeselectArrow()
         {
             OnDeselectArrow?.Invoke();
@@ -572,63 +531,33 @@ namespace Graphic_Editor
 
         #endregion
 
-        #region Публичные свойства и методы для доступа к состоянию
+        #region Публичные свойства и методы
 
-        /// <summary>
-        /// Текущий выделенный элемент
-        /// </summary>
         public FrameworkElement SelectedElement => selectedElement;
-
-        /// <summary>
-        /// Выделенная фигура
-        /// </summary>
         public UIElement SelectedShape => selectedShape;
-
-        /// <summary>
-        /// Список всех выделенных элементов
-        /// </summary>
         public IReadOnlyList<UIElement> SelectedElements => selectedElements.AsReadOnly();
-
-        /// <summary>
-        /// Количество выделенных элементов
-        /// </summary>
         public int SelectedCount => selectedElements.Count;
 
-        /// <summary>
-        /// Проверяет, выделен ли элемент
-        /// </summary>
         public bool IsElementSelected(UIElement element)
         {
             return selectedElements.Contains(element);
         }
 
-        /// <summary>
-        /// Получает оригинальный цвет обводки элемента
-        /// </summary>
         public Brush GetOriginalStrokeColor(UIElement element)
         {
             return originalStrokeColors.ContainsKey(element) ? originalStrokeColors[element] : null;
         }
 
-        /// <summary>
-        /// Получает оригинальный цвет заливки элемента
-        /// </summary>
         public Brush GetOriginalFillColor(UIElement element)
         {
             return originalFillColors.ContainsKey(element) ? originalFillColors[element] : null;
         }
 
-        /// <summary>
-        /// Получает оригинальную толщину обводки элемента
-        /// </summary>
         public double GetOriginalStrokeThickness(UIElement element)
         {
             return originalStrokeThickness.ContainsKey(element) ? originalStrokeThickness[element] : 0;
         }
 
-        /// <summary>
-        /// Очищает сохраненные оригинальные стили для элемента
-        /// </summary>
         public void ClearOriginalStyles(UIElement element)
         {
             originalStrokeColors.Remove(element);
@@ -636,9 +565,6 @@ namespace Graphic_Editor
             originalStrokeThickness.Remove(element);
         }
 
-        /// <summary>
-        /// Очищает все сохраненные оригинальные стили
-        /// </summary>
         public void ClearAllOriginalStyles()
         {
             originalStrokeColors.Clear();
@@ -646,9 +572,6 @@ namespace Graphic_Editor
             originalStrokeThickness.Clear();
         }
 
-        /// <summary>
-        /// Обновляет оригинальную толщину обводки элемента
-        /// </summary>
         public void UpdateOriginalStrokeThickness(UIElement element, double thickness)
         {
             if (element != null)
@@ -657,9 +580,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Обновляет оригинальный цвет обводки элемента
-        /// </summary>
         public void UpdateOriginalStrokeColor(UIElement element, Brush color)
         {
             if (element != null && color != null)
@@ -668,9 +588,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Обновляет оригинальный цвет заливки элемента
-        /// </summary>
         public void UpdateOriginalFillColor(UIElement element, Brush color)
         {
             if (element != null && color != null)
@@ -679,9 +596,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Устанавливает оригинальные стили для элемента (для копирования)
-        /// </summary>
         public void SetOriginalStyles(UIElement element, Brush strokeColor, Brush fillColor, double strokeThickness)
         {
             if (element != null)
@@ -694,9 +608,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Копирует оригинальные стили с одного элемента на другой
-        /// </summary>
         public void CopyOriginalStyles(UIElement from, UIElement to)
         {
             if (from == null || to == null) return;
@@ -709,9 +620,6 @@ namespace Graphic_Editor
                 originalStrokeThickness[to] = originalStrokeThickness[from];
         }
 
-        /// <summary>
-        /// Проверяет, есть ли сохраненная оригинальная толщина для элемента
-        /// </summary>
         public bool HasOriginalStrokeThickness(UIElement element)
         {
             return element != null && originalStrokeThickness.ContainsKey(element);

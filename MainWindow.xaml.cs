@@ -714,9 +714,7 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Загружает файл по указанному пути. Используется для открытия файлов из проводника.
-        /// </summary>
+        // Загружает файл по указанному пути. Используется для открытия файлов из проводника.
         public void LoadFileFromPath(string filePath)
         {
             if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
@@ -1106,9 +1104,6 @@ namespace Graphic_Editor
             selectionManager?.SelectShape(shape);
         }
 
-        /// <summary>
-        /// Скрывает все ручки изменения размера ResizableElement
-        /// </summary>
         private void HideAllResizeHandles()
         {
             // Скрываем ручки для обычных элементов

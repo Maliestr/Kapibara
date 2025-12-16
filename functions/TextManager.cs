@@ -7,7 +7,8 @@ using System.Windows.Media;
 
 namespace Graphic_Editor
 {
-    //    
+    #region Вспомогательные классы
+
     public class TextFormatting
     {
         public FontFamily FontFamily { get; set; }
@@ -16,22 +17,24 @@ namespace Graphic_Editor
         public FontWeight FontWeight { get; set; }
     }
 
-    //     
+    #endregion
+
     public class TextManager
     {
-        //   
+        #region Поля
+
         private bool isTextModeActive = false;
         private TextBox textBox;
         private Dictionary<UIElement, TextFormatting> textFormatting = new Dictionary<UIElement, TextFormatting>();
         private Dictionary<UIElement, Point> textDragOffsets = new Dictionary<UIElement, Point>();
 
-        //   
+        // Текущие настройки форматирования
         private string currentFontFamily = "Gotham Pro";
         private double currentFontSize = 14;
         private FontStyle currentFontStyle = FontStyles.Normal;
         private FontWeight currentFontWeight = FontWeights.Normal;
 
-        //  ( MainWindow)
+        // Зависимости (передаются из MainWindow)
         private Canvas mainCanvas;
         private SelectionManager selectionManager;
         private ComboBox fontComboBox;
@@ -41,7 +44,7 @@ namespace Graphic_Editor
         private bool isSnapToGridEnabled;
         private Dictionary<UIElement, ResizableElement> resizableElements;
 
-        //    MainWindow
+        // Делегаты для взаимодействия с MainWindow
         private Action<UIElement> bringToFrontAction;
         private Action<UIElement> selectElementAction;
         private Action<UIElement> selectShapeAction;
@@ -50,14 +53,24 @@ namespace Graphic_Editor
         private Func<Point, Point> snapToGridFunc;
         private Action<UIElement> saveToUndoStackAction;
 
-        //   MainWindow
-        public event Action OnTextModeActivated;
-        public event Action OnTextModeDeactivated;
+        #endregion
+
+        #region Свойства
 
         public bool IsTextModeActive => isTextModeActive;
         public Dictionary<UIElement, TextFormatting> TextFormatting => textFormatting;
 
-        // 
+        #endregion
+
+        #region События
+
+        public event Action OnTextModeActivated;
+        public event Action OnTextModeDeactivated;
+
+        #endregion
+
+        #region Конструктор и инициализация
+
         public TextManager(
             Canvas canvas,
             SelectionManager selectionManager,
@@ -91,7 +104,7 @@ namespace Graphic_Editor
             this.snapToGridFunc = snapToGrid;
             this.saveToUndoStackAction = saveToUndoStack;
 
-            //  -
+            // Подписываемся на события комбо-боксов
             if (fontComboBox != null)
                 fontComboBox.SelectionChanged += FontComboBox_SelectionChanged;
             if (fontStyleComboBox != null)
@@ -100,13 +113,15 @@ namespace Graphic_Editor
                 fontSizeComboBox.SelectionChanged += FontSizeComboBox_SelectionChanged;
         }
 
-        //    
         public void UpdateDependencies(bool snapToGridEnabled)
         {
             this.isSnapToGridEnabled = snapToGridEnabled;
         }
 
-        //    
+        #endregion
+
+        #region Управление режимом текста
+
         public void ActivateTextMode()
         {
             if (isTextModeActive) return;
@@ -115,9 +130,11 @@ namespace Graphic_Editor
             // Текстбокс будет создан при клике на Canvas через HandleMouseClick
         }
 
-        /// <summary>
-        /// Обработка клика мыши для создания текста в месте клика
-        /// </summary>
+        #endregion
+
+        #region Создание и редактирование текста
+
+        // Обработка клика мыши для создания текста в месте клика
         public bool HandleMouseClick(Point position, object originalSource)
         {
             if (!isTextModeActive) return false;
@@ -136,9 +153,6 @@ namespace Graphic_Editor
             return true;
         }
 
-        /// <summary>
-        /// Создание текстбокса в указанной позиции
-        /// </summary>
         private void CreateTextBoxAtPosition(Point position)
         {
             // Применяем привязку к сетке, если включена
@@ -187,7 +201,6 @@ namespace Graphic_Editor
             textBox.LostFocus += (s, e) => DeactivateTextMode();
         }
 
-        //    
         public void DeactivateTextMode()
         {
             // Если есть активный текстбокс, обрабатываем его
@@ -213,13 +226,11 @@ namespace Graphic_Editor
             OnTextModeDeactivated?.Invoke();
         }
 
-        //     
         public void CreateTextElement(string text, double left, double top)
         {
             CreateTextElementWithColor(text, left, top, Brushes.White);
         }
 
-        //     
         public void CreateTextElementWithColor(string text, double left, double top, Brush color)
         {
             //    
@@ -286,7 +297,10 @@ namespace Graphic_Editor
             }
         }
 
-        //     
+        #endregion
+
+        #region Перетаскивание текста
+
         private void TextElement_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             var textBlock = sender as TextBlock;
@@ -416,7 +430,10 @@ namespace Graphic_Editor
             }
         }
 
-        //    
+        #endregion
+
+        #region Редактирование текста
+
         public void EditTextElement(TextBlock textBlock)
         {
             // ,   
@@ -537,7 +554,10 @@ namespace Graphic_Editor
             }
         }
 
-        //   
+        #endregion
+
+        #region Обработчики событий комбо-боксов
+
         private void FontComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (fontComboBox.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content != null)
@@ -588,7 +608,10 @@ namespace Graphic_Editor
             }
         }
 
-        //     
+        #endregion
+
+        #region Применение форматирования
+
         private void ApplyTextFormattingToSelected()
         {
             //     
@@ -746,7 +769,10 @@ namespace Graphic_Editor
             textFormatting[textBlock].FontWeight = textBlock.FontWeight;
         }
 
-        //  -   
+        #endregion
+
+        #region Вспомогательные методы
+
         private void ResetTextComboBoxesToEmpty()
         {
             //   
@@ -769,5 +795,7 @@ namespace Graphic_Editor
         {
             return TextElement_MouseLeftButtonDown;
         }
+
+        #endregion
     }
 }

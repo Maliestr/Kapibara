@@ -9,6 +9,8 @@ using System.Windows.Shapes;
 
 namespace Graphic_Editor
 {
+    #region Вспомогательные классы
+
     // Класс для хранения стрелки и её наконечника вместе
     public class ArrowContainer
     {
@@ -22,9 +24,13 @@ namespace Graphic_Editor
         public List<Ellipse> PointMarkers { get; set; } = new List<Ellipse>(); // Маркеры точек стрелки
     }
 
+    #endregion
+
     // Менеджер для управления всеми операциями со стрелками
     public class ArrowManager
     {
+        #region Поля
+
         // Поля для состояния стрелок
         private bool isArrowModeActive = false;
         private Polyline currentArrow;
@@ -63,16 +69,26 @@ namespace Graphic_Editor
         private Action<ArrowContainer> updateArrowPropertiesInPanelsAction;
         private Func<double> getCurrentStrokeThicknessFunc; // Функция для получения текущей толщины из комбо-бокса
         
-        // События для уведомления об изменениях
-        public event Action OnArrowDeleted; // Вызывается при удалении выделенной стрелки
-        public event Action OnArrowDeselected; // Вызывается при снятии выделения со стрелки
+        #endregion
+
+        #region Свойства
 
         public bool IsArrowModeActive => isArrowModeActive;
         public Polyline CurrentArrow => currentArrow;
         public List<ArrowContainer> Arrows => arrows;
         public ArrowContainer SelectedArrowContainer => selectedArrowContainer;
 
-        // Конструктор
+        #endregion
+
+        #region События
+
+        // События для уведомления об изменениях
+        public event Action OnArrowDeleted; // Вызывается при удалении выделенной стрелки
+        public event Action OnArrowDeselected; // Вызывается при снятии выделения со стрелки
+
+        #endregion
+
+        #region Конструктор и инициализация
         public ArrowManager(
             Canvas canvas,
             Button pencil,
@@ -105,13 +121,14 @@ namespace Graphic_Editor
             getCurrentStrokeThicknessFunc = getCurrentStrokeThickness;
         }
 
-        // Метод для обновления зависимостей (если они изменяются)
         public void UpdateDependencies(bool snapToGridEnabled)
         {
             isSnapToGridEnabled = snapToGridEnabled;
         }
 
-        // Переключение режима рисования стрелок
+        #endregion
+
+        #region Управление режимом рисования стрелок
         public void ToggleArrowMode()
         {
             isArrowModeActive = !isArrowModeActive;
@@ -135,7 +152,10 @@ namespace Graphic_Editor
             }
         }
 
-        // Методы для рисования стрелок
+        #endregion
+
+        #region Рисование стрелок
+
         public void StartArrowDrawing(Point startPoint)
         {
             arrowStartPoint = startPoint;
@@ -242,6 +262,10 @@ namespace Graphic_Editor
                 ToggleArrowMode();
             }
         }
+
+        #endregion
+
+        #region Регистрация и управление стрелками
 
         private void RegisterArrowContainer(ArrowContainer arrowContainer)
         {
@@ -779,6 +803,10 @@ namespace Graphic_Editor
             }
         }
 
+        #endregion
+
+        #region Выделение и визуальное оформление
+
         // Выделение стрелки
         public void SelectArrow(Polyline arrow)
         {
@@ -928,6 +956,10 @@ namespace Graphic_Editor
             dialog.ShowDialog();
         }
 
+        #endregion
+
+        #region Удаление стрелок
+
         // Удаление стрелки
         public void DeleteArrow(Polyline arrow)
         {
@@ -1001,6 +1033,10 @@ namespace Graphic_Editor
                 System.Diagnostics.Debug.WriteLine($"Ошибка в SaveArrowToUndoStack: {ex.Message}");
             }
         }
+
+        #endregion
+
+        #region Загрузка из файла
 
         // Создание стрелки из данных файла
         public void CreateArrowFromData(string[] data)
@@ -1187,6 +1223,10 @@ namespace Graphic_Editor
             }
         }
 
+        #endregion
+
+        #region Вспомогательные методы
+
         // Прикрепление точки к ближайшему элементу
         private Point SnapPointToElement(Point point, Polyline currentArrowLine)
         {
@@ -1338,6 +1378,10 @@ namespace Graphic_Editor
             return Math.Sqrt(dx * dx + dy * dy);
         }
 
+        #endregion
+
+        #region Управление порядком отображения
+
         // Перенести стрелку на передний план (линия и наконечник вместе)
         private void BringArrowToFront(ArrowContainer arrowContainer)
         {
@@ -1386,6 +1430,10 @@ namespace Graphic_Editor
             }
         }
 
+        #endregion
+
+        #region Очистка
+
         // Очистка всех стрелок (для очистки холста)
         public void ClearAllArrows()
         {
@@ -1397,6 +1445,8 @@ namespace Graphic_Editor
             selectedArrowContainer = null;
             currentArrow = null;
         }
+
+        #endregion
     }
 }
 

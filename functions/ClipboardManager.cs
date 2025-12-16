@@ -9,14 +9,14 @@ using System.Windows.Shapes;
 
 namespace Graphic_Editor
 {
-    // Перенесено из MainWindow.xaml.cs
+    #region Вспомогательные классы
+
     public enum UndoActionType
     {
         Add,    // Элемент был добавлен
         Remove  // Элемент был удален
     }
 
-    // Перенесено из MainWindow.xaml.cs
     public class UndoAction
     {
         public UndoActionType ActionType { get; set; }
@@ -31,13 +31,12 @@ namespace Graphic_Editor
         }
     }
 
+    #endregion
+
     public class ClipboardManager
     {
-        // События для обновления интерфейса
-        public event Action SelectionChanged;
-        public event Action UndoRedoStackChanged;
+        #region Поля
 
-        // Приватные поля
         private Canvas mainCanvas;
         private SelectionManager selectionManager;
         private Dictionary<UIElement, ResizableElement> resizableElements;
@@ -46,6 +45,17 @@ namespace Graphic_Editor
         private Stack<UndoAction> undoStack = new Stack<UndoAction>();
         private Stack<UndoAction> redoStack = new Stack<UndoAction>();
         private List<FrameworkElement> copiedElements = new List<FrameworkElement>();
+
+        #endregion
+
+        #region События
+
+        public event Action SelectionChanged;
+        public event Action UndoRedoStackChanged;
+
+        #endregion
+
+        #region Конструктор и инициализация
 
         public ClipboardManager(
             Canvas mainCanvas,
@@ -60,6 +70,8 @@ namespace Graphic_Editor
             this.gridManager = gridManager;
             this.makeCanvasShapeDraggable = makeCanvasShapeDraggable;
         }
+
+        #endregion
 
         #region Основные операции с буфером обмена
 

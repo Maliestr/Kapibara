@@ -10,6 +10,8 @@ namespace Graphic_Editor
 {
     public class ResizableElement
     {
+        #region Поля
+
         private UIElement element;
         private Canvas canvas;
         private Rectangle[] cornerHandles;
@@ -24,6 +26,10 @@ namespace Graphic_Editor
         private Func<Point, Point> snapToGridFunction; // Функция привязки к сетке
         private bool isSnapToGridEnabled; // Флаг включения привязки к сетке
 
+        #endregion
+
+        #region Перечисления
+
         private enum ResizeDirection
         {
             None,
@@ -37,6 +43,10 @@ namespace Graphic_Editor
             BottomRight
         }
 
+        #endregion
+
+        #region Конструктор и инициализация
+
         public ResizableElement(UIElement element, Canvas canvas, Func<Point, Point> snapToGridFunction = null, bool isSnapToGridEnabled = false)
         {
             this.element = element;
@@ -47,13 +57,16 @@ namespace Graphic_Editor
             AttachElementEvents();
             InitializeResizeHandles();
         }
-        
-        // Метод для обновления функции привязки к сетке
+
         public void UpdateSnapToGrid(Func<Point, Point> snapToGridFunction, bool isSnapToGridEnabled)
         {
             this.snapToGridFunction = snapToGridFunction;
             this.isSnapToGridEnabled = isSnapToGridEnabled;
         }
+
+        #endregion
+
+        #region Инициализация ручек изменения размера
 
         private void AttachElementEvents()
         {
@@ -592,5 +605,7 @@ namespace Graphic_Editor
 
             ResetCursor();
         }
+
+        #endregion
     }
 }

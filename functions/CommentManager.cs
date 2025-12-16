@@ -10,17 +10,31 @@ namespace Graphic_Editor
 {
     public class CommentManager
     {
+        #region Поля
+
         private Canvas _mainCanvas;
         private bool _isCommentModeActive = false;
         private List<Comment> _comments = new List<Comment>();
         private Button _commentButton;
 
+        #endregion
+
+        #region Свойства
+
+        public bool IsCommentModeActive => _isCommentModeActive;
+        public List<Comment> Comments => _comments;
+
+        #endregion
+
+        #region События
+
         public event Action<bool> CommentModeChanged;
         public event Action<Comment> CommentCreated;
         public event Action<Comment> CommentDeleted;
 
-        public bool IsCommentModeActive => _isCommentModeActive;
-        public List<Comment> Comments => _comments;
+        #endregion
+
+        #region Вспомогательные классы
 
         public class Comment
         {
@@ -29,6 +43,17 @@ namespace Graphic_Editor
             public string Text { get; set; }
             public Point Position { get; set; }
         }
+
+        public class CommentData
+        {
+            public double PositionX { get; set; }
+            public double PositionY { get; set; }
+            public string Text { get; set; }
+        }
+
+        #endregion
+
+        #region Конструктор и инициализация
 
         public CommentManager(Canvas mainCanvas, Button commentButton)
         {
@@ -43,13 +68,15 @@ namespace Graphic_Editor
             _commentButton.Click += CommentButton_Click;
         }
 
-        // Обработчик кнопки комментариев
+        #endregion
+
+        #region Управление режимом комментариев
+
         private void CommentButton_Click(object sender, RoutedEventArgs e)
         {
             ToggleCommentMode();
         }
 
-        // Переключение режима комментариев
         public void ToggleCommentMode()
         {
             _isCommentModeActive = !_isCommentModeActive;
@@ -68,7 +95,10 @@ namespace Graphic_Editor
             CommentModeChanged?.Invoke(_isCommentModeActive);
         }
 
-        // Создание комментария в указанной позиции
+        #endregion
+
+        #region Создание комментариев
+
         public Comment CreateCommentAtPosition(Point position)
         {
             // Создаем визуальный элемент комментария
@@ -132,7 +162,10 @@ namespace Graphic_Editor
             return comment;
         }
 
-        // Настройка обработчиков событий для комментария
+        #endregion
+
+        #region Обработчики событий
+
         private void SetupCommentEventHandlers(Comment comment)
         {
             var commentIcon = comment.VisualElement as Border;
@@ -173,8 +206,10 @@ namespace Graphic_Editor
             };
         }
 
-        // Редактирование комментария
-        // Редактирование комментария
+        #endregion
+
+        #region Редактирование комментариев
+
         public void EditComment(Comment comment)
         {
             var editTextBox = new TextBox
@@ -253,7 +288,10 @@ namespace Graphic_Editor
             };
         }
 
-        // Удаление комментария
+        #endregion
+
+        #region Удаление комментариев
+
         public void DeleteComment(Comment comment)
         {
             if (comment.VisualElement != null)
@@ -268,7 +306,10 @@ namespace Graphic_Editor
             CommentDeleted?.Invoke(comment);
         }
 
-        // Обработка клика мыши в режиме комментариев
+        #endregion
+
+        #region Обработка событий мыши
+
         public bool HandleMouseClick(Point clickPosition, object originalSource)
         {
             if (!_isCommentModeActive) return false;
@@ -284,7 +325,10 @@ namespace Graphic_Editor
             return false; // Не обработано
         }
 
-        // Очистка всех комментариев
+        #endregion
+
+        #region Очистка
+
         public void ClearAllComments()
         {
             foreach (var comment in _comments.ToArray())
@@ -293,7 +337,10 @@ namespace Graphic_Editor
             }
         }
 
-        // Получение комментария по элементу
+        #endregion
+
+        #region Поиск комментариев
+
         public Comment GetCommentByElement(UIElement element)
         {
             foreach (var comment in _comments)
@@ -306,7 +353,10 @@ namespace Graphic_Editor
             return null;
         }
 
-        // Сохранение комментариев (для сериализации)
+        #endregion
+
+        #region Сериализация
+
         public List<CommentData> GetCommentsData()
         {
             var data = new List<CommentData>();
@@ -322,7 +372,6 @@ namespace Graphic_Editor
             return data;
         }
 
-        // Загрузка комментариев (для десериализации)
         public void LoadComments(List<CommentData> commentsData)
         {
             ClearAllComments();
@@ -341,11 +390,6 @@ namespace Graphic_Editor
             }
         }
 
-        public class CommentData
-        {
-            public double PositionX { get; set; }
-            public double PositionY { get; set; }
-            public string Text { get; set; }
-        }
+        #endregion
     }
 }

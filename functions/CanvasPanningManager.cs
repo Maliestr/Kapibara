@@ -6,11 +6,11 @@ using System.Windows.Media;
 
 namespace Graphic_Editor
 {
-    /// <summary>
-    /// Менеджер для управления перемещением (панорамированием) Canvas
-    /// </summary>
+    // Менеджер для управления перемещением (панорамированием) Canvas
     public class CanvasPanningManager
     {
+        #region Поля
+
         private Canvas _canvas;
         private bool _isPanning = false;
         private Point _lastMousePosition;
@@ -20,9 +20,10 @@ namespace Graphic_Editor
         private CacheMode _originalCanvasCacheMode;
         private bool _hasOriginalCacheMode = false;
 
-        /// <summary>
-        /// Тип панорамирования
-        /// </summary>
+        #endregion
+
+        #region Перечисления
+
         public enum PanningMode
         {
             MiddleButton,      // Средняя кнопка мыши (колесико)
@@ -30,25 +31,23 @@ namespace Graphic_Editor
             CtrlRightButton    // Ctrl + Правая кнопка мыши
         }
 
-        /// <summary>
-        /// Текущий режим панорамирования
-        /// </summary>
-        public PanningMode Mode { get; set; } = PanningMode.MiddleButton;
+        #endregion
 
-        /// <summary>
-        /// Включено ли панорамирование
-        /// </summary>
+        #region Свойства
+
+        public PanningMode Mode { get; set; } = PanningMode.MiddleButton;
         public bool IsEnabled { get; set; } = true;
 
-        /// <summary>
-        /// Событие изменения позиции панорамирования
-        /// </summary>
+        #endregion
+
+        #region События
+
         public event Action<Point> PanningChanged;
 
-        /// <summary>
-        /// Конструктор
-        /// </summary>
-        /// <param name="canvas">Canvas для управления</param>
+        #endregion
+
+        #region Конструктор и инициализация
+
         public CanvasPanningManager(Canvas canvas)
         {
             _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
@@ -57,10 +56,6 @@ namespace Graphic_Editor
             AttachEventHandlers();
         }
 
-
-        /// <summary>
-        /// Инициализация трансформации для перемещения
-        /// </summary>
         private void InitializeTransform()
         {
             // Используем MatrixTransform для более гибкого управления
@@ -89,9 +84,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Прикрепление обработчиков событий Canvas
-        /// </summary>
         private void AttachEventHandlers()
         {
             // Используем обычные события мыши
@@ -102,9 +94,6 @@ namespace Graphic_Editor
         }
 
 
-        /// <summary>
-        /// Открепление обработчиков событий
-        /// </summary>
         private void DetachEventHandlers()
         {
             _canvas.MouseDown -= Canvas_MouseDown;
@@ -113,9 +102,10 @@ namespace Graphic_Editor
             _canvas.MouseLeave -= Canvas_MouseLeave;
         }
 
-        /// <summary>
-        /// Проверка, должна ли начаться панорамирование
-        /// </summary>
+        #endregion
+
+        #region Обработка панорамирования
+
         private bool ShouldStartPanning(MouseButtonEventArgs e)
         {
             if (!IsEnabled || _isPanning) return false;
@@ -135,9 +125,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Проверка, должна ли прекратиться панорамирование
-        /// </summary>
         private bool ShouldStopPanning(MouseButtonEventArgs e)
         {
             if (!_isPanning) return false;
@@ -156,9 +143,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Обработчик нажатия кнопки мыши на Canvas (обычное событие)
-        /// </summary>
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
             // Если уже начали панорамирование, не обрабатываем снова
@@ -174,9 +158,6 @@ namespace Graphic_Editor
 
 
 
-        /// <summary>
-        /// Проверка, должна ли продолжаться панорамирование
-        /// </summary>
         private bool ShouldContinuePanning()
         {
             if (!_isPanning) return false;
@@ -196,9 +177,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Обработчик движения мыши на Canvas
-        /// </summary>
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
             if (!IsEnabled || !_isPanning) return;
@@ -216,9 +194,6 @@ namespace Graphic_Editor
             e.Handled = true;
         }
 
-        /// <summary>
-        /// Обработчик отпускания кнопки мыши на Canvas
-        /// </summary>
         private void Canvas_MouseUp(object sender, MouseButtonEventArgs e)
         {
             if (ShouldStopPanning(e))
@@ -228,9 +203,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Обработчик выхода мыши за пределы Canvas
-        /// </summary>
         private void Canvas_MouseLeave(object sender, MouseEventArgs e)
         {
             if (_isPanning)
@@ -240,9 +212,10 @@ namespace Graphic_Editor
         }
 
 
-        /// <summary>
-        /// Начало панорамирования
-        /// </summary>
+        #endregion
+
+        #region Управление панорамированием
+
         private void StartPanning(Point mousePosition)
         {
             if (_isPanning) return;
@@ -291,9 +264,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Обновление позиции панорамирования
-        /// </summary>
         private void UpdatePanning(Point currentMousePosition)
         {
             if (!_isPanning) return;
@@ -344,9 +314,10 @@ namespace Graphic_Editor
             _lastMousePosition = currentScreenPosition;
         }
 
-        /// <summary>
-        /// Ограничение смещения по X границами Canvas
-        /// </summary>
+        #endregion
+
+        #region Вспомогательные методы
+
         private double ClampPanningOffsetX(double offsetX)
         {
             // Получаем размеры Canvas
@@ -407,9 +378,6 @@ namespace Graphic_Editor
             return Math.Max(minOffset, Math.Min(maxOffset, offsetX));
         }
 
-        /// <summary>
-        /// Ограничение смещения по Y границами Canvas
-        /// </summary>
         private double ClampPanningOffsetY(double offsetY)
         {
             // Получаем размеры Canvas
@@ -460,9 +428,6 @@ namespace Graphic_Editor
             return Math.Max(minOffset, Math.Min(maxOffset, offsetY));
         }
 
-        /// <summary>
-        /// Остановка панорамирования
-        /// </summary>
         private void StopPanning()
         {
             if (!_isPanning) return;
@@ -488,9 +453,10 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Сброс позиции панорамирования (возврат к исходной позиции)
-        /// </summary>
+        #endregion
+
+        #region Публичные методы
+
         public void ResetPanning()
         {
             _transformMatrix.OffsetX = 0;
@@ -500,10 +466,6 @@ namespace Graphic_Editor
             PanningChanged?.Invoke(new Point(0, 0));
         }
 
-        /// <summary>
-        /// Установка позиции панорамирования
-        /// </summary>
-        /// <param name="offset">Смещение относительно исходной позиции</param>
         public void SetPanningOffset(Point offset)
         {
             _transformMatrix.OffsetX = ClampPanningOffsetX(offset.X);
@@ -513,18 +475,11 @@ namespace Graphic_Editor
             PanningChanged?.Invoke(new Point(_transformMatrix.OffsetX, _transformMatrix.OffsetY));
         }
 
-        /// <summary>
-        /// Получение текущего смещения панорамирования
-        /// </summary>
-        /// <returns>Текущее смещение</returns>
         public Point GetPanningOffset()
         {
             return new Point(_transformMatrix.OffsetX, _transformMatrix.OffsetY);
         }
 
-        /// <summary>
-        /// Включение/выключение панорамирования
-        /// </summary>
         public void SetEnabled(bool enabled)
         {
             IsEnabled = enabled;
@@ -535,15 +490,13 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Освобождение ресурсов
-        /// </summary>
         public void Dispose()
         {
             StopPanning();
             DetachEventHandlers();
             _canvas = null;
         }
+
+        #endregion
     }
 }
-

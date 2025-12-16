@@ -12,6 +12,8 @@ namespace Graphic_Editor
 {
     public class AutoSave
     {
+        #region Поля
+
         private Canvas canvas;
         private Timer autoSaveTimer;
         private bool isEnabled;
@@ -20,6 +22,10 @@ namespace Graphic_Editor
         private string currentAutoSavePath;
         private bool isSaving = false;
         private readonly object saveLock = new object();
+
+        #endregion
+
+        #region Конструктор и инициализация
 
         public AutoSave(Canvas canvas, int intervalSeconds = 60, bool enabled = true)
         {
@@ -45,8 +51,10 @@ namespace Graphic_Editor
             }
         }
 
+        #endregion
 
-        // Запускает систему автосохранения
+        #region Управление автосохранением
+
         public void Start()
         {
             if (autoSaveTimer != null)
@@ -58,8 +66,6 @@ namespace Graphic_Editor
             autoSaveTimer = new Timer(SaveCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(saveIntervalSeconds));
         }
 
-
-        // Останавливает систему автосохранения
         public void Stop()
         {
             isEnabled = false;
@@ -70,8 +76,6 @@ namespace Graphic_Editor
             }
         }
 
-
-        // Устанавливает интервал автосохранения в секундах
         public void SetInterval(int seconds)
         {
             if (seconds <= 0)
@@ -86,7 +90,6 @@ namespace Graphic_Editor
             }
         }
 
-        // Принудительно выполняет сохранение немедленно
         public void SaveNow()
         {
             if (isSaving)
@@ -113,7 +116,10 @@ namespace Graphic_Editor
             }
         }
 
-        // Очищает старые файлы автосохранения (оставляет только последние N файлов)
+        #endregion
+
+        #region Вспомогательные методы
+
         public void CleanupOldSaves(int keepCount = 10)
         {
             try
@@ -148,13 +154,15 @@ namespace Graphic_Editor
             }
         }
 
-        // Получает путь к последнему файлу автосохранения
         public string GetLastAutoSavePath()
         {
             return currentAutoSavePath;
         }
 
-        // Колбэк для таймера
+        #endregion
+
+        #region Сохранение
+
         private void SaveCallback(object state)
         {
             if (!isEnabled || isSaving)
@@ -192,8 +200,6 @@ namespace Graphic_Editor
             });
         }
 
-
-        // Выполняет фактическое сохранение
         private void PerformSave()
         {
             if (canvas == null || canvas.Dispatcher == null)
@@ -231,7 +237,6 @@ namespace Graphic_Editor
             });
         }
 
-        // Сохраняет состояние холста в файл
         private void SaveCanvasToFile(string filePath)
         {
             using (StreamWriter writer = new StreamWriter(filePath))
@@ -302,11 +307,16 @@ namespace Graphic_Editor
             }
         }
 
-        // Освобождает ресурсы
+        #endregion
+
+        #region Освобождение ресурсов
+
         public void Dispose()
         {
             Stop();
         }
+
+        #endregion
     }
 }
 

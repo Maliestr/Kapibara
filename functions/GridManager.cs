@@ -9,6 +9,8 @@ namespace Graphic_Editor
 {
     public class GridManager
     {
+        #region Поля
+
         // Ссылки на элементы UI
         private Canvas mainCanvas;
         private Rectangle gridRectangle; // Используем Rectangle вместо Path для более быстрого рендеринга
@@ -19,13 +21,34 @@ namespace Graphic_Editor
         // Состояние сетки
         private bool isGridEnabled = false;
         private bool isSnapToGridEnabled = false;
-        private const double GridSize = 20; // Размер ячейки сетки в пикселях
         private bool isGridCreating = false; // Флаг для предотвращения множественных одновременных созданий
         private bool isGridInitialized = false; // Флаг для ленивой инициализации
+
+        #endregion
+
+        #region Константы
+
+        private const double GridSize = 20; // Размер ячейки сетки в пикселях
+
+        #endregion
+
+        #region События
 
         // Делегаты для обратного вызова
         public Action<bool> OnGridToggled;
         public Action<bool> OnSnapToggled;
+
+        #endregion
+
+        #region Свойства
+
+        public bool IsGridEnabled => isGridEnabled;
+        public bool IsSnapToGridEnabled => isSnapToGridEnabled;
+        public double GridCellSize => GridSize;
+
+        #endregion
+
+        #region Конструктор и инициализация
 
         public GridManager(
             Canvas canvas,
@@ -235,6 +258,10 @@ namespace Graphic_Editor
             OnSnapToggled?.Invoke(isSnapToGridEnabled);
         }
 
+        #endregion
+
+        #region Привязка к сетке
+
         public Point SnapToGrid(Point originalPoint)
         {
             if (!isSnapToGridEnabled || GridSize <= 0) return originalPoint;
@@ -310,18 +337,19 @@ namespace Graphic_Editor
             return false;
         }
 
-        // Свойства для доступа к состоянию
-        public bool IsGridEnabled => isGridEnabled;
-        public bool IsSnapToGridEnabled => isSnapToGridEnabled;
-        public double GridCellSize => GridSize;
+        #endregion
 
-        // Методы для установки зависимостей
+        #region Управление зависимостями
+
         public void SetDragManager(DragManager manager)
         {
             dragManager = manager;
         }
 
-        // Методы для обработки событий из меню
+        #endregion
+
+        #region Обработка событий меню
+
         public void HandleGridToggleClick(object sender, RoutedEventArgs e)
         {
             // Сохраняем текущее состояние перед проверкой
@@ -362,10 +390,15 @@ namespace Graphic_Editor
             ToggleSnapToGrid();
         }
 
-        // Метод для обновления привязки в существующих ResizableElement (если нужно)
+        #endregion
+
+        #region Вспомогательные методы
+
         public void UpdateResizableElements(Action<UIElement, bool> updateAction)
         {
             // Этот метод будет вызываться из MainWindow для обновления ResizableElement
         }
+
+        #endregion
     }
 }

@@ -13,6 +13,8 @@ namespace Graphic_Editor
 {
     public class FileManager
     {
+        #region Поля
+
         private Canvas mainCanvas;
         private TextBox fileNameTextBox;
         private ArrowManager arrowManager;
@@ -26,6 +28,10 @@ namespace Graphic_Editor
         private Action<UIElement> makeCanvasShapeDraggable;
         private Func<Point, Point> snapToGrid;
         private Func<bool> getIsSnapToGridEnabled;
+
+        #endregion
+
+        #region Конструктор и инициализация
 
         public FileManager(
             Canvas mainCanvas,
@@ -54,9 +60,13 @@ namespace Graphic_Editor
             this.poolManager = poolManager;
         }
 
+        #endregion
+
+        #region Сохранение файла
+
         public void SaveToFile(string filePath)
         {
-            using (StreamWriter writer = new StreamWriter(filePath))
+            using (var writer = new StreamWriter(filePath))
             {
                 writer.WriteLine("GEDv1.0"); // Заголовок файла
                 
@@ -65,10 +75,10 @@ namespace Graphic_Editor
                 writer.WriteLine($"FILENAME|{fileName}"); // Метаданные: имя файла
 
                 // Собираем данные комментариев и пулов при первом проходе
-                HashSet<UIElement> processedComments = new HashSet<UIElement>();
-                HashSet<UIElement> processedPools = new HashSet<UIElement>();
-                List<CommentData> commentsData = new List<CommentData>();
-                List<PoolData> poolsData = new List<PoolData>();
+                var processedComments = new HashSet<UIElement>();
+                var processedPools = new HashSet<UIElement>();
+                var commentsData = new List<CommentData>();
+                var poolsData = new List<PoolData>();
 
                 // Сначала собираем пулы
                 foreach (UIElement element in mainCanvas.Children)
@@ -200,7 +210,10 @@ namespace Graphic_Editor
             }
         }
 
-        // Вспомогательные классы для данных
+        #endregion
+
+        #region Вспомогательные классы для данных
+
         private class CommentData
         {
             public double PositionX { get; set; }
@@ -217,6 +230,10 @@ namespace Graphic_Editor
             public bool IsVertical { get; set; }
             public string Name { get; set; }
         }
+
+        #endregion
+
+        #region Вспомогательные методы для сохранения
 
         // Проверка, является ли Border контейнером пула
         private bool IsPoolContainer(Border border)
@@ -470,6 +487,10 @@ namespace Graphic_Editor
             return false;
         }
 
+        #endregion
+
+        #region Загрузка файла
+
         public void LoadFromFile(string filePath)
         {
             mainCanvas.Children.Clear();
@@ -478,10 +499,10 @@ namespace Graphic_Editor
             commentManager?.ClearAllComments();
             poolManager?.ClearAllPools();
 
-            List<CommentManager.CommentData> commentsData = new List<CommentManager.CommentData>();
-            List<PoolManager.PoolData> poolsData = new List<PoolManager.PoolData>();
+            var commentsData = new List<CommentManager.CommentData>();
+            var poolsData = new List<PoolManager.PoolData>();
 
-            using (StreamReader reader = new StreamReader(filePath))
+            using (var reader = new StreamReader(filePath))
             {
                 string header = reader.ReadLine();
                 if (header != "GEDv1.0")
@@ -583,6 +604,10 @@ namespace Graphic_Editor
             }
         }
 
+        #endregion
+
+        #region Создание элементов из данных
+
         private void CreateEllipseFromData(string[] data)
         {
             var ellipse = new Ellipse
@@ -677,41 +702,6 @@ namespace Graphic_Editor
             resizableElements[line] = new ResizableElement(line, mainCanvas, snapToGrid, isSnapEnabled);
         }
 
-        public void ExportCanvasToImage(string filePath)
-        {
-            // Создаем RenderTargetBitmap с размерами холста
-            var renderTargetBitmap = new RenderTargetBitmap(
-                (int)mainCanvas.ActualWidth,
-                (int)mainCanvas.ActualHeight,
-                96, 96, PixelFormats.Pbgra32);
-
-            renderTargetBitmap.Render(mainCanvas);
-
-            // Создаем encoder в зависимости от расширения файла
-            BitmapEncoder encoder;
-            string extension = System.IO.Path.GetExtension(filePath).ToLower();
-
-            switch (extension)
-            {
-                case ".jpg":
-                case ".jpeg":
-                    encoder = new JpegBitmapEncoder();
-                    break;
-                case ".png":
-                default:
-                    encoder = new PngBitmapEncoder();
-                    break;
-            }
-
-            encoder.Frames.Add(BitmapFrame.Create(renderTargetBitmap));
-
-            // Сохраняем файл
-            using (var fileStream = new FileStream(filePath, FileMode.Create))
-            {
-                encoder.Save(fileStream);
-            }
-        }
-
         private void CreateTextFromData(string[] data)
         {
             if (data.Length < 9 || textManager == null) return;
@@ -779,6 +769,47 @@ namespace Graphic_Editor
                 System.Diagnostics.Debug.WriteLine($"Ошибка при создании текста: {ex.Message}");
             }
         }
+
+        #endregion
+
+        #region Экспорт в изображение
+
+        public void ExportCanvasToImage(string filePath)
+        {
+            // Создаем RenderTargetBitmap с размерами холста
+            var renderTargetBitmap = new RenderTargetBitmap(
+                (int)mainCanvas.ActualWidth,
+                (int)mainCanvas.ActualHeight,
+                96, 96, PixelFormats.Pbgra32);
+
+            renderTargetBitmap.Render(mainCanvas);
+
+            // Создаем encoder в зависимости от расширения файла
+            BitmapEncoder encoder;
+            string extension = System.IO.Path.GetExtension(filePath).ToLower();
+
+            switch (extension)
+            {
+                case ".jpg":
+                case ".jpeg":
+                    encoder = new JpegBitmapEncoder();
+                    break;
+                case ".png":
+                default:
+                    encoder = new PngBitmapEncoder();
+                    break;
+            }
+
+            encoder.Frames.Add(BitmapFrame.Create(renderTargetBitmap));
+
+            // Сохраняем файл
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                encoder.Save(fileStream);
+            }
+        }
+
+        #endregion
     }
 }
 

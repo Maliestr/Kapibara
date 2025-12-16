@@ -12,6 +12,8 @@ namespace Graphic_Editor
 {
     public class DragManager
     {
+        #region Поля
+
         // Состояние перетаскивания
         private bool isDragging = false;
         private UIElement draggedElement;
@@ -21,9 +23,37 @@ namespace Graphic_Editor
         private Point dragStartPoint;
         private Point draggedElementStartPosition; // Начальная позиция перетаскиваемого элемента
 
+        // Canvas для работы
+        private Canvas mainCanvas;
+        private Canvas notationCanvas;
+        
+        // Состояние для группового перемещения
+        private Dictionary<UIElement, Point> selectedElementsStartPositions = new Dictionary<UIElement, Point>();
+
+        // Дополнительные свойства
+        private bool isSnapToGridEnabled = false;
+
+        // Ссылка на FillStrokeManager для сохранения оригинальных стилей
+        private FillStrokeManager fillStrokeManager;
+
+        #endregion
+
+        #region Константы
+
         // Константы для ограничения перемещения
         private const double WorkAreaTop = 40;
         private const double WorkAreaBottom = 100;
+
+        #endregion
+
+        #region Свойства
+
+        public bool IsDragging => isDragging;
+        public UIElement DraggedElement => draggedElement;
+
+        #endregion
+
+        #region Делегаты
 
         // Делегаты для взаимодействия с основным окном
         public Func<Point, Point> SnapToGrid { get; set; }
@@ -40,52 +70,34 @@ namespace Graphic_Editor
         public Func<UIElement, bool> IsShapeFromNotation { get; set; }
         public Func<UIElement, string> GetShapeType { get; set; }
         public Action<UIElement, Point> OnElementMoved { get; set; } // Обработчик перемещения элемента
+        public Func<List<UIElement>> GetSelectedElements { get; set; } // Получение списка выделенных элементов
+        public Action<UIElement> HideResizeHandlesForElement { get; set; } // Скрытие ручек изменения размера
+        public Action<UIElement> ShowResizeHandlesForElement { get; set; } // Показ ручек изменения размера
         
-        // Ссылка на FillStrokeManager для сохранения оригинальных стилей
-        private FillStrokeManager fillStrokeManager;
-        
-        public void SetFillStrokeManager(FillStrokeManager manager)
-        {
-            fillStrokeManager = manager;
-        }
+        #endregion
 
-        // Добавляем ссылку на ResizableElement
-        public Func<UIElement, bool> GetIsDragging { get; set; }
-        
-        // Доступ к выделенным элементам для группового перемещения
-        public Func<List<UIElement>> GetSelectedElements { get; set; }
-        
-        // Делегаты для управления ручками изменения размера
-        public Action<UIElement> HideResizeHandlesForElement { get; set; }
-        public Action<UIElement> ShowResizeHandlesForElement { get; set; }
+        #region Конструктор и инициализация
 
-        // Canvas для работы
-        private Canvas mainCanvas;
-        private Canvas notationCanvas;
-        
-        // Состояние для группового перемещения
-        private Dictionary<UIElement, Point> selectedElementsStartPositions = new Dictionary<UIElement, Point>();
-
-        // Дополнительные свойства
-        private bool isSnapToGridEnabled = false;
-
-        public bool IsDragging => isDragging;
-        public UIElement DraggedElement => draggedElement;
-
-        // Конструктор
         public DragManager(Canvas mainCanvas, Canvas notationCanvas)
         {
             this.mainCanvas = mainCanvas;
             this.notationCanvas = notationCanvas;
         }
 
-        // Установка состояния привязки к сетке
+        public void SetFillStrokeManager(FillStrokeManager manager)
+        {
+            fillStrokeManager = manager;
+        }
+
         public void SetSnapToGridEnabled(bool enabled)
         {
             isSnapToGridEnabled = enabled;
         }
 
-        // Делает фигуры в панели инструментов перетаскиваемыми
+        #endregion
+
+        #region Перетаскивание из панели инструментов
+
         public void MakeAllShapesDraggable(params UIElement[] shapes)
         {
             foreach (var element in shapes)
@@ -288,7 +300,10 @@ namespace Graphic_Editor
             }
         }
 
-        // Обработчик начала перетаскивания элемента на Canvas
+        #endregion
+
+        #region Перетаскивание элементов на Canvas
+
         public void CanvasShape_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             var element = sender as FrameworkElement;
@@ -1017,7 +1032,10 @@ namespace Graphic_Editor
             return null;
         }
 
-        // Остановка перетаскивания
+        #endregion
+
+        #region Вспомогательные методы
+
         public void StopDragging()
         {
             if (isDragging && draggedElement != null)
@@ -1028,10 +1046,11 @@ namespace Graphic_Editor
             }
         }
 
-        // Проверка состояния перетаскивания (для ShowResizeHandlesForElement)
         public bool GetIsDraggingState()
         {
             return isDragging;
         }
+
+        #endregion
     }
 }

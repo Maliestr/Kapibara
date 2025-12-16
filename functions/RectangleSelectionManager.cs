@@ -10,11 +10,11 @@ using System.Windows.Threading;
 
 namespace Graphic_Editor
 {
-    /// <summary>
-    /// Управляет прямоугольным выделением элементов по нажатию и удержанию ЛКМ
-    /// </summary>
+    // Управляет прямоугольным выделением элементов по нажатию и удержанию ЛКМ
     public class RectangleSelectionManager
     {
+        #region Поля
+
         private Canvas canvas;
         private SelectionManager selectionManager;
         private Dictionary<UIElement, ResizableElement> resizableElements;
@@ -35,6 +35,10 @@ namespace Graphic_Editor
         private bool isUpdatePending = false;
         private Rect pendingSelectionBounds;
 
+        #endregion
+
+        #region Конструктор и инициализация
+
         public RectangleSelectionManager(
             Canvas canvas,
             SelectionManager selectionManager,
@@ -49,9 +53,6 @@ namespace Graphic_Editor
             InitializeSelectionRectangle();
         }
 
-        /// <summary>
-        /// Инициализация визуального прямоугольника выделения
-        /// </summary>
         private void InitializeSelectionRectangle()
         {
             selectionRectangle = new Rectangle
@@ -67,9 +68,10 @@ namespace Graphic_Editor
             Panel.SetZIndex(selectionRectangle, 1000);
         }
 
-        /// <summary>
-        /// Обработка начала выделения (нажатие ЛКМ)
-        /// </summary>
+        #endregion
+
+        #region Обработка выделения
+
         public bool HandleMouseLeftButtonDown(MouseButtonEventArgs e, UIElement clickedElement)
         {
             // Если клик был на элементе, не начинаем прямоугольное выделение
@@ -104,9 +106,6 @@ namespace Graphic_Editor
             return true;
         }
 
-        /// <summary>
-        /// Обработка движения мыши во время выделения
-        /// </summary>
         public void HandleMouseMove(MouseEventArgs e)
         {
             if (!isSelecting || isMouseDownOnElement || isUpdatingSelection) return;
@@ -148,9 +147,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Обработка завершения выделения (отпускание ЛКМ)
-        /// </summary>
         public void HandleMouseLeftButtonUp(MouseButtonEventArgs e)
         {
             if (!isSelecting) return;
@@ -171,9 +167,10 @@ namespace Graphic_Editor
             CreateResizableElementsForSelected();
         }
 
-        /// <summary>
-        /// Обновляет выделение элементов в реальном времени на основе прямоугольной области
-        /// </summary>
+        #endregion
+
+        #region Обновление выделения
+
         private void UpdateSelectionInRealTime(Rect selectionBounds)
         {
             // Защита от рекурсивных вызовов
@@ -272,9 +269,10 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Создает ResizableElement для всех выделенных элементов
-        /// </summary>
+        #endregion
+
+        #region Управление ResizableElement
+
         private void CreateResizableElementsForSelected()
         {
             var selectedElements = selectionManager.SelectedElements.ToList();
@@ -320,9 +318,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Очищает все ResizableElement
-        /// </summary>
         private void ClearAllResizableElements()
         {
             foreach (var resizableElement in resizableElements.Values)
@@ -331,9 +326,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Выделяет элемент напрямую без проверки Ctrl (для множественного выделения)
-        /// </summary>
         private void SelectElementDirectly(FrameworkElement element)
         {
             if (element == null) return;
@@ -346,9 +338,6 @@ namespace Graphic_Editor
             selectionManager.SelectShape(element);
         }
 
-        /// <summary>
-        /// Удаляет ResizableElement для элемента
-        /// </summary>
         private void RemoveResizableElement(UIElement element)
         {
             if (resizableElements.ContainsKey(element))
@@ -357,9 +346,10 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Получает границы элемента
-        /// </summary>
+        #endregion
+
+        #region Вспомогательные методы
+
         private Rect GetElementBounds(UIElement element)
         {
             if (element == null) return new Rect(0, 0, 0, 0);
@@ -420,17 +410,11 @@ namespace Graphic_Editor
             return new Rect(left, top, width, height);
         }
 
-        /// <summary>
-        /// Проверяет, является ли элемент прямоугольником выделения
-        /// </summary>
         private bool IsSelectionRectangle(UIElement element)
         {
             return element == selectionRectangle;
         }
 
-        /// <summary>
-        /// Проверяет, находится ли элемент в панели нотации
-        /// </summary>
         private bool IsElementInNotation(UIElement element)
         {
             if (element == null) return false;
@@ -456,9 +440,6 @@ namespace Graphic_Editor
             return false;
         }
 
-        /// <summary>
-        /// Проверяет, является ли элемент элементом сетки
-        /// </summary>
         private bool IsGridElement(UIElement element)
         {
             // Проверяем, является ли элемент частью сетки
@@ -471,14 +452,12 @@ namespace Graphic_Editor
             return false;
         }
 
-        /// <summary>
-        /// Проверяет, идет ли процесс выделения
-        /// </summary>
+        #endregion
+
+        #region Публичные свойства и методы
+
         public bool IsSelecting => isSelecting;
 
-        /// <summary>
-        /// Отменяет текущее выделение
-        /// </summary>
         public void CancelSelection()
         {
             if (isSelecting)
@@ -490,9 +469,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Обновляет функцию привязки к сетке для всех ResizableElement
-        /// </summary>
         public void UpdateSnapToGrid()
         {
             if (gridManager != null)
@@ -505,5 +481,7 @@ namespace Graphic_Editor
                 }
             }
         }
+
+        #endregion
     }
 }

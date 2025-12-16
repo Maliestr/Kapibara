@@ -8,9 +8,7 @@ using System.Windows;
 
 namespace Graphic_Editor
 {
-    /// <summary>
-    /// Логика взаимодействия для App.xaml
-    /// </summary>
+    // Логика взаимодействия для App.xaml
     public partial class App : Application
     {
         protected override void OnStartup(StartupEventArgs e)

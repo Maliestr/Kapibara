@@ -9,11 +9,11 @@ using System.Windows.Shapes;
 
 namespace Graphic_Editor
 {
-    /// <summary>
-    /// Менеджер для управления пулами (swimlanes) в UML Activity диаграммах
-    /// </summary>
+    // Менеджер для управления пулами (swimlanes) в UML Activity диаграммах
     public class PoolManager
     {
+        #region Поля
+
         private Canvas _mainCanvas;
         private bool _isPoolModeActive = false;
         private List<Pool> _pools = new List<Pool>();
@@ -24,6 +24,10 @@ namespace Graphic_Editor
         private Dictionary<UIElement, ResizableElement> _resizableElements = new Dictionary<UIElement, ResizableElement>(); // ResizableElement для пулов
         private Dictionary<UIElement, Pool> _elementToPoolMap = new Dictionary<UIElement, Pool>(); // Карта элементов к пулам
 
+        #endregion
+
+        #region Константы
+
         // Константы для пулов
         private const double DefaultPoolWidth = 150; // Ширина вертикального пула
         private const double DefaultPoolHeight = 300; // Начальная высота вертикального пула
@@ -33,25 +37,33 @@ namespace Graphic_Editor
         private const double MinPoolHeight = 100; // Минимальная высота (включая заголовок)
         private const double HeaderHeight = 30; // Высота заголовка пула
 
-        public event Action<bool> PoolModeChanged;
-        public event Action<Pool> PoolCreated;
-        public event Action<Pool> PoolDeleted;
+        #endregion
+
+        #region Свойства
 
         public bool IsPoolModeActive => _isPoolModeActive;
         public List<Pool> Pools => _pools;
 
-        /// <summary>
-        /// Класс для представления прикрепленного элемента
-        /// </summary>
+        #endregion
+
+        #region События
+
+        public event Action<bool> PoolModeChanged;
+        public event Action<Pool> PoolCreated;
+        public event Action<Pool> PoolDeleted;
+
+        #endregion
+
+        #region Вспомогательные классы
+
+        // Класс для представления прикрепленного элемента
         public class AttachedElement
         {
             public UIElement Element { get; set; }
             public Point RelativePosition { get; set; } // Относительная позиция относительно пула
         }
 
-        /// <summary>
-        /// Класс для представления пула
-        /// </summary>
+        // Класс для представления пула
         public class Pool
         {
             public Border Container { get; set; } // Основной контейнер пула
@@ -66,6 +78,20 @@ namespace Graphic_Editor
             public double Height { get; set; }
             public List<AttachedElement> AttachedElements { get; set; } = new List<AttachedElement>(); // Прикрепленные элементы
         }
+
+        public class PoolData
+        {
+            public double PositionX { get; set; }
+            public double PositionY { get; set; }
+            public double Width { get; set; }
+            public double Height { get; set; }
+            public bool IsVertical { get; set; }
+            public string Name { get; set; }
+        }
+
+        #endregion
+
+        #region Конструктор и инициализация
 
         public PoolManager(
             Canvas mainCanvas,
@@ -93,9 +119,10 @@ namespace Graphic_Editor
             TogglePoolMode();
         }
 
-        /// <summary>
-        /// Переключение режима создания пулов
-        /// </summary>
+        #endregion
+
+        #region Управление режимом создания пулов
+
         public void TogglePoolMode()
         {
             _isPoolModeActive = !_isPoolModeActive;
@@ -114,9 +141,10 @@ namespace Graphic_Editor
             PoolModeChanged?.Invoke(_isPoolModeActive);
         }
 
-        /// <summary>
-        /// Обработка клика мыши для создания пула
-        /// </summary>
+        #endregion
+
+        #region Создание пулов
+
         public bool HandleMouseClick(Point clickPosition, object originalSource)
         {
             if (!_isPoolModeActive) return false;
@@ -141,9 +169,6 @@ namespace Graphic_Editor
             return false; // Не обработано
         }
 
-        /// <summary>
-        /// Создание пула в указанной позиции
-        /// </summary>
         public Pool CreatePoolAtPosition(Point position, bool isVertical = true)
         {
             // Создаем основной контейнер в стиле программы
@@ -303,9 +328,10 @@ namespace Graphic_Editor
             return pool;
         }
 
-        /// <summary>
-        /// Создание ResizableElement для пула
-        /// </summary>
+        #endregion
+
+        #region Управление размерами пулов
+
         private void CreateResizableElementForPool(Pool pool)
         {
             if (!_resizableElements.ContainsKey(pool.Container))
@@ -333,9 +359,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Обработчик изменения размера пула
-        /// </summary>
         private void OnPoolSizeChanged(Pool pool)
         {
             if (pool.Container is FrameworkElement container)
@@ -425,9 +448,10 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Настройка обработчиков событий для пула
-        /// </summary>
+        #endregion
+
+        #region Обработчики событий
+
         private void SetupPoolEventHandlers(Pool pool)
         {
             // Обработчик двойного клика для редактирования названия
@@ -481,9 +505,10 @@ namespace Graphic_Editor
         private Pool _potentialDragPool;
         private const double DragThreshold = 10.0; // Минимальное расстояние для начала перетаскивания
 
-        /// <summary>
-        /// Обработчик движения мыши для начала перетаскивания
-        /// </summary>
+        #endregion
+
+        #region Перетаскивание пулов
+
         private void PoolContainer_MouseMove(object sender, MouseEventArgs e)
         {
             if (!_isMouseDown || _potentialDragPool == null || _isDragging) return;
@@ -519,25 +544,16 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Обработчик отпускания кнопки мыши без начала перетаскивания
-        /// </summary>
         private void PoolContainer_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             CancelPotentialDrag();
         }
 
-        /// <summary>
-        /// Обработчик потери захвата мыши без начала перетаскивания
-        /// </summary>
         private void PoolContainer_LostMouseCapture(object sender, MouseEventArgs e)
         {
             CancelPotentialDrag();
         }
 
-        /// <summary>
-        /// Отмена потенциального перетаскивания
-        /// </summary>
         private void CancelPotentialDrag()
         {
             if (_isMouseDown)
@@ -562,9 +578,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Начало перетаскивания пула
-        /// </summary>
         private void StartPoolDrag(Pool pool, Point startPoint)
         {
             // Проверяем, не идет ли уже перетаскивание
@@ -627,9 +640,10 @@ namespace Graphic_Editor
             UpdateAttachedElementsPosition(_draggedPool);
         }
 
-        /// <summary>
-        /// Обновление позиций прикрепленных элементов при перемещении пула
-        /// </summary>
+        #endregion
+
+        #region Прикрепление элементов к пулам
+
         private void UpdateAttachedElementsPosition(Pool pool)
         {
             if (pool == null) return;
@@ -647,9 +661,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Проверка, попадает ли элемент в границы пула
-        /// </summary>
         private bool IsElementInsidePool(UIElement element, Pool pool)
         {
             if (element == null || pool == null || pool.Container == null) return false;
@@ -703,9 +714,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Прикрепление элемента к пулу
-        /// </summary>
         private void AttachElementToPool(UIElement element, Pool pool)
         {
             if (element == null || pool == null) return;
@@ -737,9 +745,6 @@ namespace Graphic_Editor
             _elementToPoolMap[element] = pool;
         }
 
-        /// <summary>
-        /// Открепление элемента от пула
-        /// </summary>
         private void DetachElementFromPool(UIElement element)
         {
             if (element == null || !_elementToPoolMap.ContainsKey(element)) return;
@@ -755,9 +760,6 @@ namespace Graphic_Editor
             _elementToPoolMap.Remove(element);
         }
 
-        /// <summary>
-        /// Обработка перемещения элемента - проверка попадания в пул
-        /// </summary>
         public void HandleElementMove(UIElement element, Point newPosition)
         {
             if (element == null) return;
@@ -842,9 +844,10 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Показать ручки изменения размера для пула
-        /// </summary>
+        #endregion
+
+        #region Управление ручками изменения размера
+
         public void ShowResizeHandlesForPool(Pool pool)
         {
             if (pool != null && pool.Container != null)
@@ -862,9 +865,6 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Скрыть ручки изменения размера для пула
-        /// </summary>
         public void HideResizeHandlesForPool(Pool pool)
         {
             if (pool != null && _resizableElements.TryGetValue(pool.Container, out var resizable))
@@ -873,9 +873,10 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Редактирование названия пула
-        /// </summary>
+        #endregion
+
+        #region Редактирование пулов
+
         public void EditPoolName(Pool pool)
         {
             var editTextBox = new TextBox
@@ -933,9 +934,10 @@ namespace Graphic_Editor
             editTextBox.LostFocus += (s, e) => FinishEditing();
         }
 
-        /// <summary>
-        /// Удаление пула
-        /// </summary>
+        #endregion
+
+        #region Удаление пулов
+
         public void DeletePool(Pool pool)
         {
             // Удаляем ResizableElement
@@ -954,9 +956,6 @@ namespace Graphic_Editor
             PoolDeleted?.Invoke(pool);
         }
 
-        /// <summary>
-        /// Очистка всех пулов
-        /// </summary>
         public void ClearAllPools()
         {
             foreach (var pool in _pools.ToArray())
@@ -965,9 +964,10 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Получение пула по элементу
-        /// </summary>
+        #endregion
+
+        #region Поиск пулов
+
         public Pool GetPoolByElement(UIElement element)
         {
             foreach (var pool in _pools)
@@ -981,9 +981,10 @@ namespace Graphic_Editor
             return null;
         }
 
-        /// <summary>
-        /// Обновление состояния привязки к сетке
-        /// </summary>
+        #endregion
+
+        #region Привязка к сетке
+
         public void UpdateSnapToGrid(bool enabled)
         {
             _isSnapToGridEnabled = enabled;
@@ -995,22 +996,10 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Данные пула для сериализации
-        /// </summary>
-        public class PoolData
-        {
-            public double PositionX { get; set; }
-            public double PositionY { get; set; }
-            public double Width { get; set; }
-            public double Height { get; set; }
-            public bool IsVertical { get; set; }
-            public string Name { get; set; }
-        }
+        #endregion
 
-        /// <summary>
-        /// Получение данных пулов для сохранения
-        /// </summary>
+        #region Сериализация
+
         public List<PoolData> GetPoolsData()
         {
             var data = new List<PoolData>();
@@ -1029,9 +1018,6 @@ namespace Graphic_Editor
             return data;
         }
 
-        /// <summary>
-        /// Загрузка пулов из данных
-        /// </summary>
         public void LoadPools(List<PoolData> poolsData)
         {
             ClearAllPools();
@@ -1062,6 +1048,8 @@ namespace Graphic_Editor
                 }
             }
         }
+
+        #endregion
     }
 }
 

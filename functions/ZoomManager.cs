@@ -6,11 +6,11 @@ using System.Windows.Media;
 
 namespace Graphic_Editor
 {
-    /// <summary>
-    /// Менеджер для управления масштабированием Canvas
-    /// </summary>
+    // Менеджер для управления масштабированием Canvas
     public class ZoomManager
     {
+        #region Поля
+
         private Canvas _canvas;
         private CanvasPanningManager _panningManager;
         private ScaleTransform _scaleTransform;
@@ -18,14 +18,21 @@ namespace Graphic_Editor
         private TransformGroup _transformGroup;
         
         private double _currentZoom = 1.0;
+
+        #endregion
+
+        #region Константы
+
         private const double MinZoom = 0.1;
         private const double MaxZoom = 5.0;
         private const double ZoomStep = 0.1;
         private const double ZoomWheelStep = 0.05;
 
-        /// <summary>
-        /// Текущий уровень масштабирования (1.0 = 100%)
-        /// </summary>
+        #endregion
+
+        #region Свойства
+
+        // Текущий уровень масштабирования (1.0 = 100%)
         public double CurrentZoom
         {
             get => _currentZoom;
@@ -36,16 +43,16 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Событие изменения масштаба
-        /// </summary>
+        #endregion
+
+        #region События
+
         public event Action<double> OnZoomChanged;
 
-        /// <summary>
-        /// Конструктор
-        /// </summary>
-        /// <param name="canvas">Canvas для управления</param>
-        /// <param name="panningManager">Менеджер панорамирования для совместной работы</param>
+        #endregion
+
+        #region Конструктор и инициализация
+
         public ZoomManager(Canvas canvas, CanvasPanningManager panningManager)
         {
             _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
@@ -55,9 +62,6 @@ namespace Graphic_Editor
             AttachEventHandlers();
         }
 
-        /// <summary>
-        /// Инициализация трансформации для масштабирования
-        /// </summary>
         private void InitializeTransform()
         {
             // Создаем ScaleTransform для масштабирования
@@ -103,25 +107,20 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Прикрепление обработчиков событий
-        /// </summary>
         private void AttachEventHandlers()
         {
             _canvas.PreviewMouseWheel += Canvas_PreviewMouseWheel;
         }
 
-        /// <summary>
-        /// Открепление обработчиков событий
-        /// </summary>
         private void DetachEventHandlers()
         {
             _canvas.PreviewMouseWheel -= Canvas_PreviewMouseWheel;
         }
 
-        /// <summary>
-        /// Обработчик колесика мыши для масштабирования
-        /// </summary>
+        #endregion
+
+        #region Обработка событий
+
         private void Canvas_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
             // Масштабируем только при зажатом Ctrl
@@ -140,11 +139,10 @@ namespace Graphic_Editor
             }
         }
 
-        /// <summary>
-        /// Масштабирование относительно определенной точки
-        /// </summary>
-        /// <param name="point">Точка относительно Canvas, относительно которой масштабируем</param>
-        /// <param name="zoomFactor">Коэффициент масштабирования</param>
+        #endregion
+
+        #region Масштабирование
+
         private void ZoomAtPoint(Point point, double zoomFactor)
         {
             double newZoom = CurrentZoom * zoomFactor;
@@ -174,9 +172,6 @@ namespace Graphic_Editor
             _panningManager.SetPanningOffset(new Point(offsetX, offsetY));
         }
 
-        /// <summary>
-        /// Увеличение масштаба
-        /// </summary>
         public void ZoomIn()
         {
             // Масштабируем относительно центра видимой области
@@ -195,9 +190,6 @@ namespace Graphic_Editor
             ZoomAtPoint(centerPoint, 1 + ZoomStep);
         }
 
-        /// <summary>
-        /// Уменьшение масштаба
-        /// </summary>
         public void ZoomOut()
         {
             // Масштабируем относительно центра видимой области
@@ -216,9 +208,6 @@ namespace Graphic_Editor
             ZoomAtPoint(centerPoint, 1 - ZoomStep);
         }
 
-        /// <summary>
-        /// Сброс масштаба до 100%
-        /// </summary>
         public void ResetZoom()
         {
             // Сохраняем текущее смещение панорамирования
@@ -234,10 +223,6 @@ namespace Graphic_Editor
             _panningManager.SetPanningOffset(panningOffset);
         }
 
-        /// <summary>
-        /// Установка конкретного уровня масштаба
-        /// </summary>
-        /// <param name="zoom">Уровень масштаба (1.0 = 100%)</param>
         public void SetZoom(double zoom)
         {
             if (zoom < MinZoom || zoom > MaxZoom)
@@ -260,24 +245,23 @@ namespace Graphic_Editor
             ZoomAtPoint(centerPoint, zoomFactor);
         }
 
-        /// <summary>
-        /// Получение процента масштаба для отображения
-        /// </summary>
-        /// <returns>Процент масштаба (например, 100 для 100%)</returns>
+        #endregion
+
+        #region Публичные методы
+
         public int GetZoomPercentage()
         {
             return (int)Math.Round(CurrentZoom * 100);
         }
 
-        /// <summary>
-        /// Освобождение ресурсов
-        /// </summary>
         public void Dispose()
         {
             DetachEventHandlers();
             _canvas = null;
             _panningManager = null;
         }
+
+        #endregion
     }
 }
 

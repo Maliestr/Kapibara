@@ -10,6 +10,8 @@ namespace Graphic_Editor
     // Менеджер для управления всеми операциями с заливкой и обводкой
     public class FillStrokeManager
     {
+        #region Поля
+
         // Зависимости
         private SelectionManager selectionManager;
         private ToggleButton togglePanelsButton;
@@ -24,6 +26,10 @@ namespace Graphic_Editor
         private Border fillPanel;
         private Border strokePanel;
         private Border strokeWidthPanel;
+
+        #endregion
+
+        #region Конструктор и инициализация
 
         public FillStrokeManager(
             SelectionManager selectionManager,
@@ -49,13 +55,15 @@ namespace Graphic_Editor
             this.strokeWidthPanel = strokeWidthPanel;
         }
 
-        // Метод для установки ссылки на ArrowManager
         public void SetArrowManager(ArrowManager arrowManager)
         {
             this.arrowManager = arrowManager;
         }
 
-        // Метод для получения текущей толщины из комбо-бокса
+        #endregion
+
+        #region Управление толщиной обводки
+
         public double GetCurrentStrokeThickness()
         {
             if (strokeWidthComboBox?.SelectedItem is ComboBoxItem selectedItem)
@@ -85,7 +93,6 @@ namespace Graphic_Editor
             return 3; // Значение по умолчанию, если комбо-бокс недоступен
         }
 
-        // Метод для показа/скрытия панели толщины обводки
         public void UpdateStrokeWidthPanelVisibility()
         {
             // Если все панели скрыты - не показываем панель ширины обводки
@@ -735,6 +742,7 @@ namespace Graphic_Editor
                 selectionManager.SetOriginalStyles(copyBorder, originalBorder.BorderBrush, originalBorder.Background, copyBorder.BorderThickness.Left);
             }
         }
+
+        #endregion
     }
 }
-
